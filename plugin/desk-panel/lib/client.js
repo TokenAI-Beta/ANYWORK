@@ -17,8 +17,9 @@ window.__ModuleLoader__.load({
     }
 
     function DeskUsageSection() {
-      var state = React.useState({ phase: "loading" })[0];
-      var setState = React.useState({ phase: "loading" })[1];
+      var pair = React.useState({ phase: "loading" });
+      var state = pair[0];
+      var setState = pair[1];
       React.useEffect(function () {
         var alive = true;
         fetch("/portal/api/usage", { headers: { accept: "application/json" } })
