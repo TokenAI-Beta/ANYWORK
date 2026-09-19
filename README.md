@@ -6,7 +6,7 @@
 
 Each member signs in with their own account and works in their own isolated workspace. The model API key stays on the server, and usage is metered per person — so a team can share one agent setup without sharing keys, files, or bills.
 
-> **Status: building in public, early stage.** P0 (feasibility) and P1 (model gateway + per-person metering) are done and verified end-to-end against the real API. P2 is in progress — login and the usage portal are live; the instance login-gate/proxy is next. Full roadmap and 22-task plan in [`docs/PLAN.md`](docs/PLAN.md); verified findings in [`docs/BASELINE.md`](docs/BASELINE.md); daily progress in [`docs/devlog/`](docs/devlog/).
+> **Status: building in public, early stage.** P0 (feasibility), P1 (model gateway + per-person metering) and P2 (accounts, login, portal, per-member instance proxy) are done and verified on the LAN. P3 (instance management & autostart) is next. Roadmap and 22-task plan in [`docs/PLAN.md`](docs/PLAN.md); verified findings in [`docs/BASELINE.md`](docs/BASELINE.md); daily progress in [`docs/devlog/`](docs/devlog/).
 
 ## What this is
 
@@ -34,7 +34,7 @@ Member browser → Portal (login gate + reverse proxy)
 |---|---|---|
 | P0 | Feasibility checks: multi-instance, launch flags, gateway interception, LAN access | 🟡 phone check pending |
 | P1 | Model gateway + per-person metering | ✅ verified end-to-end |
-| P2 | Accounts, login, portal | 🟡 login & portal live; instance proxy next |
+| P2 | Accounts, login, portal | ✅ login, portal & instance proxy live |
 | P3 | Per-member workspaces (instance management, autostart) | ⬜ |
 | P4 | Delivery: install, backup, acceptance | ⬜ |
 
@@ -53,17 +53,20 @@ chmod 600 ~/.desk/keys.env
 # 2. Portal + model gateway (one process; portal :8080, gateway :8100 on loopback)
 node src/server.ts
 
-# 3. CLI: users, passwords, budgets, usage
+# 3. CLI: users, passwords, budgets, instance ports, usage
 node src/cli.ts user add alice             # prints her virtual key once
 node src/cli.ts user passwd alice <password>   # portal login password
 node src/cli.ts user budget alice 50       # monthly budget in CNY (or: off)
+node src/cli.ts user agent alice 3301      # bind her dsh instance port
 node src/cli.ts usage alice --month
 ```
 
-Open the portal at `http://<machine>:8080` — each member signs in and sees their own usage; admins manage members at `/portal/admin`. Point any dsh instance at the gateway with the member's virtual key:
+Open the portal at `http://<machine>:8080` — each member signs in, sees their own usage, and lands in their own dsh instance. Admins manage members at `/portal/admin`.
+
+Start a member's dsh instance with the helper (reads `~/.desk/agents/<user>.key`, adds `--trusted-host` for the portal authority automatically):
 
 ```sh
-DEEPSEEK_BASE_URL=http://127.0.0.1:8100 DEEPSEEK_API_KEY=sk-desk-… dsh web --port 3301
+DESK_PORTAL_AUTHORITY=<portal host:port> scripts/start-agent.sh alice 3301 ~/desk-test/u1
 ```
 
 ## License

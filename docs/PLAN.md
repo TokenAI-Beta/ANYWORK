@@ -1,8 +1,8 @@
 # DSH-ANYWORK 团队工作台 — 实施计划
 
-**状态：** 实施中（P0 ✅ / P1 ✅ / P2 进行中：12·13 ✅） · **日期：** 2026-09-18（2026-09-19 更新） · **底座：** 官方 DeepSeek Harness（`@deepseek-ai/dsh`，MIT） · **托管：** github.com/bugbyc0922/DSH-ANYWORK（公开） · **明确不做：** 不采用 TDHarness-coding 的任何代码，独立实现。
+**状态：** 实施中（P0 ✅ / P1 ✅ / P2 ✅；下一步 P3） · **日期：** 2026-09-18（2026-09-19 更新） · **底座：** 官方 DeepSeek Harness（`@deepseek-ai/dsh`，MIT） · **托管：** github.com/bugbyc0922/DSH-ANYWORK（公开） · **明确不做：** 不采用 TDHarness-coding 的任何代码，独立实现。
 
-> 更新（2026-09-19）：P0 全部通过、P1 完成并实机验证（见 [`BASELINE.md`](BASELINE.md) 与 [`devlog/2026-09-19.md`](devlog/2026-09-19.md)）；P2 登录 + 门户页已上线（12·13 ✅），14/15（闸门反代、信任自动化）进行中。
+> 更新（2026-09-19）：P0 全部通过、P1 完成、**P2 全部完成**（12–15 ✅：登录 / 门户 / 登录闸门+反代 / 信任自动化，均实机验证）—— 见 [`BASELINE.md`](BASELINE.md) 与 [`devlog/2026-09-19.md`](devlog/2026-09-19.md)。
 
 ---
 
@@ -28,7 +28,7 @@
 6. **`--host` 说法不一**：参考文档称 CLI 有意不支持 `0.0.0.0` 并直接报用法错误 —— 不影响本方案：实例只绑回环，由门户代理对外。
 7. **现有环境**：dsh 在 WSL `~/deepseek-harness`（0.1.0-rc.5，已 build）；node 24 + pnpm 就绪；KRouter 已挂 headless。
 
-P0 复核结果：第 3 条已实测（`--port` 有效；非回环假 Host 对 `/api` 返回 **403**，放行侧待补测）；WSL 局域网方案已定案（portproxy + 防火墙，见 BASELINE）；**流式 usage 随末块返回已确认**（dsh 自带 `stream_options.include_usage:true`）。
+P0 复核结果：第 3 条已实测（`--port` 有效；非回环假 Host 对 `/api` 返回 **403**；放行侧已补测 `--trusted-host` 生效）；WSL 局域网方案已定案（portproxy + 防火墙，见 BASELINE）；**流式 usage 随末块返回已确认**（dsh 自带 `stream_options.include_usage:true`）。
 
 ## 三、总体架构
 
@@ -70,16 +70,17 @@ P0 复核结果：第 3 条已实测（`--port` 有效；非回环假 Host 对 `
 ~/dsh-anywork/
 ├─ src/
 │  ├─ server.ts        # 入口：门户 :8080 + 网关 :8100（一个进程）
-│  ├─ portal.ts        # 门户：登录/登出、我的用量、成员管理（内联 HTML，无构建）
+│  ├─ portal.ts        # 门户：登录/登出、我的用量、成员管理、登录闸门 + 反代（内联 HTML）
 │  ├─ gateway.ts       # /chat/completions、/models 转发 + 计量 + 预算
 │  ├─ auth.ts          # 密码散列（scrypt）+ 会话 Cookie
 │  ├─ db.ts            # SQLite schema + 迁移（node:sqlite，零依赖）
 │  ├─ pricing.ts       # 价格表读取 + 费用计算（峰谷）
 │  ├─ keys.ts          # 虚拟钥匙生成 / 哈希（只存 sha256）
-│  └─ cli.ts           # desk user / passwd / budget / usage
+│  └─ cli.ts           # desk user / passwd / budget / agent / usage
 ├─ config/
 │  └─ prices.json      # 模型价格表（JSON；缓存命中/未命中分开）
-├─ scripts/            # setup.sh / start.sh / backup.sh（P4）
+├─ scripts/
+│  └─ start-agent.sh   # 实例启动（自动带 --trusted-host；setup/backup 脚本在 P4）
 └─ tests/              # 测试（P2+ 补）
 ```
 
@@ -92,22 +93,22 @@ P0 复核结果：第 3 条已实测（`--port` 有效；非回环假 Host 对 `
 - `budgets`(user_id, period, limit_cny, warn_ratio)
 - `audit_events`(id, ts, actor_user_id, action, detail_json)
 
-已落地：`users`（含 `monthly_budget_cny`、`password_hash`）、`api_keys`、`usage_events`、`login_sessions`；其余表随对应阶段建。
+已落地：`users`（含 `monthly_budget_cny`、`password_hash`、`agent_port`）、`api_keys`、`usage_events`、`login_sessions`；其余表随对应阶段建。
 
 ## 六、对外接口（草案）
 
 - 网关：`POST /chat/completions`（Bearer 虚拟钥匙）、`GET /models`、`GET /healthz`
-- 门户：`GET|POST /login`、`POST /logout`、`GET /portal/me`、`GET|POST /portal/admin/users`、`GET /portal/api/usage`（后两项逐步齐备）
-- CLI：`desk user add|passwd|disable|reset <u>`、`desk agent start|stop|status <u>`、`desk usage <u> [--today|--month]`、`desk backup`
+- 门户：`GET|POST /login`、`POST /logout`、`GET /portal/me`、`GET|POST /portal/admin/users`；其余路径 → 本人实例（HTTP + WS）
+- CLI（已实现）：`user add|list|passwd|budget|agent`、`usage [u] [--month]`；`desk agent start|stop|status`、`desk backup`（后续阶段）
 
 ## 七、阶段与任务（共 22 项，一次做一项，每项有绿线）
 
 ### P0 可行性验证 ✅（2026-09-19 全部过线）
 
 1. ✅ **dsh 多实例**：两个 DSH_HOME + 两个端口各起 web 实例。绿线：两实例并存，会话互不可见。
-2. ◐ **启动参数实测**：`--port`、`--trusted-host` 实机行为（含非回环 Host 对 /api 的拒绝/放行）。绿线：curl 假 Host/Origin 结果符合预期，命令原文记进 BASELINE。（`--port` ✅；拒绝侧 403 ✅；放行侧待补测）
+2. ✅ **启动参数实测**：`--port`、`--trusted-host` 实机行为（含非回环 Host 对 /api 的拒绝/放行）。绿线：curl 假 Host/Origin 结果符合预期，命令原文记进 BASELINE。（`--port` ✅；拒绝侧 403 ✅；放行侧已补测：Host=门户 authority → 200）
 3. ✅ **网关截获**：DEEPSEEK_BASE_URL 指向临时假服务器，观察 dsh 真实请求（路径/头/流式格式），并回一段假流式。绿线：假服务器完整记录一轮，dsh UI 正常出字。
-4. ◐ **局域网开放**：Windows→WSL 方案定案（netsh portproxy 或 .wslconfig mirrored）。绿线：手机/另一台电脑能打开测试页。（Windows 侧 200 ✅；手机实测待确认）
+4. ◐ **局域网开放**：Windows→WSL 方案定案（netsh portproxy 或 .wslconfig mirrored）。绿线：手机/另一台电脑能打开测试页。（Windows 侧 ✅；手机实测待确认）
    → 产出 `docs/BASELINE.md`（事实 + 命令原文）。✅
 
 ### P1 模型网关 + 按人计量 ✅（2026-09-19 完成并实机验证）
@@ -120,14 +121,14 @@ P0 复核结果：第 3 条已实测（`--port` 有效；非回环假 Host 对 `
 10. ✅ **预算拦截**：月预算 + 超限 429（`DESK_BUDGET_WARN_ONLY=1` 可切告警模式）。绿线：预算设低，下一个请求被拒。
 11. ✅ **dsh 实测接入**：web 实例指向网关跑一轮。绿线：会话正常 + 计量落库 + UI 统计正常。（u3：7653 输入 tokens 入账。）
 
-### P2 账号、登录、门户（进行中：12·13 ✅）
+### P2 账号、登录、门户 ✅（2026-09-19 完成）
 
 12. ✅ **登录**：httpOnly cookie + 登录/登出页。绿线：错密码拒绝、对密码进入。（实现口径：密码散列用内建 **scrypt** 代替 argon2，维持零依赖；登录失败 5 次限速 60 秒。）
 13. ✅ **门户页**：`/portal/me`（我的用量）、`/portal/admin`（成员管理 + 页面建号发钥匙）。绿线：两页可用，数字来自 P1 账本。
-14. **登录闸门 + 反代**：未登录跳登录；登录后根路径透传本人实例；WS 透传；跨成员拒绝。绿线：两台设备两个账号互测，谁都进不了对方工作台。
-15. **信任自动化**：实例启动自动带 `--trusted-host <门户 authority>`。绿线：去掉手工参数重起，页面照常。
+14. ✅ **登录闸门 + 反代**：未登录跳登录；登录后根路径透传本人实例；WS 透传；跨成员拒绝。绿线：两台设备两个账号互测，谁都进不了对方工作台。（实现：Host/Origin 原样透传 + 实例 `--trusted-host` 信任门户 authority；三账号三实例隔离实测通过，WS 101。）
+15. ✅ **信任自动化**：实例启动自动带 `--trusted-host <门户 authority>`。绿线：去掉手工参数重起，页面照常。（`scripts/start-agent.sh`；已用该脚本重起三实例验证。）
 
-### P3 每人独立工作区
+### P3 每人独立工作区（下一步）
 
 16. **实例管理**：`desk agent start/stop/status`（模板 DSH_HOME 复制、端口分配、cwd、env 注入、日志）。绿线：一条命令起停；日志进 logs/。
 17. **工作区规范**：`users/<u>/workspace` + AGENTS.md 模板 + 权限收紧。绿线：A 的 agent 写文件只落 A 目录。
@@ -143,7 +144,8 @@ P0 复核结果：第 3 条已实测（`--port` 有效；非回环假 Host 对 `
 ## 八、安全与边界（如实说）
 
 - 真 key 只存在网关（`~/.desk/keys.env`，chmod 600；不入库、不进 git、不进日志）。建议为工作台**单独开一枚 key**（先用现有 key 过渡）。
-- 用户只拿虚拟钥匙，可单独吊销，不影响别人。门户密码只存 scrypt 散列；会话 Cookie httpOnly + SameSite=Lax。
+- 用户只拿虚拟钥匙（服务器留档 `~/.desk/agents/<u>.key`，600），可单独吊销，不影响别人。门户密码只存 scrypt 散列；会话 Cookie httpOnly + SameSite=Lax。
+- 反代信任模型：实例只信任回环 + `--trusted-host` 声明的门户 authority；未登录一律跳登录，跨成员按会话映射天然隔离。
 - 隔离强度：同一 OS 账号下的"目录级 + 进程级"隔离，够 1–3 人内部试用；升级路径 = 独立系统用户 / 容器 / 独立机器。
 - 门户先只开局域网；对公网暴露前需加 HTTPS、限速、审计（本期不做）。
 
