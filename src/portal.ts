@@ -311,7 +311,7 @@ ${banner}
 
       // —— 登录 ——
       if (req.method === 'GET' && path === '/login') {
-        if (user) return redirect(res, '/portal/me')
+        if (user) return redirect(res, '/')
         const err = url.searchParams.get('err')
         const msg = err === '1' ? '<div class="err">用户名或密码错误</div>' : err === '2' ? '<div class="err">尝试次数过多，请稍后再试</div>' : ''
         return html(
@@ -355,7 +355,7 @@ ${banner}
         fails.delete(lockKey)
         const token = createSession(db, urow.id, ip, req.headers['user-agent'])
         db.prepare(`UPDATE users SET last_login_at = datetime('now') WHERE id = ?`).run(urow.id)
-        return redirect(res, '/portal/me', `desk_session=${token}; HttpOnly; SameSite=Lax; Path=/; Max-Age=604800`)
+        return redirect(res, '/', `desk_session=${token}; HttpOnly; SameSite=Lax; Path=/; Max-Age=604800`)
       }
 
       if (path === '/logout') {
