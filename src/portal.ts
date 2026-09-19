@@ -12,7 +12,8 @@ import {
   type SessionUser,
 } from './auth.ts'
 import { hashToken, newVirtualKey } from './keys.ts'
-import { costOf, monthStartUtc, prices } from './pricing.ts'
+import { eventCost, monthStartUtc, prices } from './pricing.ts'
+import { addChannel, listChannels, removeChannel, setChannelEnabled } from './channel.ts'
 import { kbSearch } from './kb.ts'
 import { listDrive, resolveInDrive, saveToDrive, MAX_UPLOAD } from './drive.ts'
 import { createReadStream, existsSync, statSync } from 'node:fs'
@@ -25,6 +26,8 @@ export interface PortalOptions {
 
 interface UsageRow {
   model: string | null
+  channel?: string | null
+  cost_cny?: number | null
   ts: string
   prompt_tokens: number
   completion_tokens: number
@@ -120,7 +123,7 @@ function aggregate(rows: UsageRow[]): Agg {
     a.hit += r.cache_hit_tokens
     a.miss += r.cache_miss_tokens
     a.out += r.completion_tokens
-    a.cost += costOf(r)
+    a.cost += eventCost(r)
   }
   return a
 }
@@ -250,7 +253,7 @@ const DESK_USAGE_JS = `
     h += '<div class="row"><span class="muted">今日</span><span>' + fmt(d.day.cost) + ' · ' + d.day.events + ' 次</span></div>'
     h += '<table>'
     for (var i = 0; i < d.recent.length; i++) {
-      h += '<tr><td class="muted">' + esc(d.recent[i].time) + '</td><td>' + esc(d.recent[i].model) + '</td><td style="text-align:right">' + fmt(d.recent[i].cost) + '</td></tr>'
+      h += '<tr><td class="muted">' + esc(d.recent[i].time) + '</td><td>' + esc(d.recent[i].model) + (d.recent[i].channel ? ' <span class="muted">@' + esc(d.recent[i].channel) + '</span>' : '') + '</td><td style="text-align:right">' + fmt(d.recent[i].cost) + '</td></tr>'
     }
     if (!d.recent.length) h += '<tr><td class="muted">暂无记录</td></tr>'
     h += '</table>'
@@ -319,7 +322,7 @@ export function startPortal(opts: PortalOptions) {
     const rows = recent
       .map(
         (r) =>
-          `<tr><td>${esc(bjtime(r.ts))}</td><td>${esc(r.model ?? '-')}</td><td>${r.cache_hit_tokens} / ${r.cache_miss_tokens} / ${r.completion_tokens}</td><td>¥${costOf(r).toFixed(4)}</td></tr>`,
+          `<tr><td>${esc(bjtime(r.ts))}</td><td>${esc(r.model ?? '-')}${r.channel ? ' <span class="muted">@' + esc(r.channel) + '</span>' : ''}</td><td>${r.cache_hit_tokens} / ${r.cache_miss_tokens} / ${r.completion_tokens}</td><td>¥${eventCost(r).toFixed(4)}</td></tr>`,
       )
       .join('')
 
@@ -374,13 +377,42 @@ export function startPortal(opts: PortalOptions) {
       })
       .join('')
 
+    const channels = listChannels(db)
+    const chRows = channels
+      .map(
+        (c) =>
+          `<tr><td>${c.id}</td><td>${esc(c.name)}</td><td class="muted">${esc(c.base_url)}</td><td>${esc(c.models.join(', '))}</td><td>${Object.keys(c.prices).length ? Object.keys(c.prices).length + ' 条' : '—'}</td><td class="muted">${c.api_key ? esc(c.api_key.slice(0, 6)) + '…' : '未设'}</td><td>${c.enabled === 1 ? '启用' : '停用'}</td><td>
+  <form method="post" action="/portal/admin/channels/toggle" class="inline"><input type="hidden" name="name" value="${esc(c.name)}"><button style="padding:4px 10px;font-size:12px">${c.enabled === 1 ? '停用' : '启用'}</button></form>
+  <form method="post" action="/portal/admin/channels/delete" class="inline" onsubmit="return confirm('删除该通道？')"><input type="hidden" name="name" value="${esc(c.name)}"><button style="padding:4px 10px;font-size:12px;background:#c0392b">删除</button></form>
+</td></tr>`,
+      )
+      .join('')
+
     const body = `
 <h1>成员管理</h1>
 ${banner}
 <div class="card">
   <h2>成员（${users.length}）</h2>
   <table><thead><tr><th>ID</th><th>用户名</th><th>角色</th><th>状态</th><th>实例端口</th><th>月预算</th><th>本月请求</th><th>本月估算</th><th>创建（UTC）</th></tr></thead><tbody>${rows}</tbody></table>
-  <div class="muted" style="margin-top:8px">预算 / 实例端口 / 换钥匙：服务器上用 <code>node src/cli.ts</code> 系列命令（后续版本进此页面）。</div>
+  <div class="muted" style="margin-top:8px">预算 / 实例端口 / 换钥匙 / 模型通道：服务器上也可用 <code>node src/cli.ts</code> 系列命令。</div>
+</div>
+<div class="card">
+  <h2>模型通道（${channels.length}）</h2>
+  <table><thead><tr><th>ID</th><th>名称</th><th>Base URL</th><th>模型</th><th>价目表</th><th>Key</th><th>状态</th><th>操作</th></tr></thead><tbody>${chRows || '<tr><td colspan="8" class="muted">暂无外部通道（默认走 DeepSeek 官方通道）</td></tr>'}</tbody></table>
+  <div class="muted" style="margin-top:8px">模型名精确命中 → 自动分流到该通道；未命中 → 默认 DeepSeek 官方。费用按通道自带价目表估算（¥/百万 tokens）。</div>
+</div>
+<div class="card">
+  <h2>加入模型通道</h2>
+  <form method="post" action="/portal/admin/channels">
+    <label>名称（英文小写，如 kimi / moonshot）</label><input name="name" required pattern="[a-z0-9][a-z0-9_-]{0,31}" placeholder="kimi">
+    <label>Base URL（OpenAI 兼容，含 /v1 之类路径）</label><input name="base_url" required placeholder="https://api.moonshot.cn/v1">
+    <label>API Key</label><input name="api_key" type="password" placeholder="sk-...">
+    <label>模型名（英文逗号分隔）</label><input name="models" required placeholder="kimi-k2-0905-preview,moonshot-v1-8k">
+    <label>本地价目表（可选 JSON；¥/百万 tokens，in=输入 out=输出）</label><input name="prices" placeholder='{"kimi-k2-0905-preview":{"in":4,"out":16}}'>
+    <label>备注（可选）</label><input name="note" placeholder="谁在用 / 期限">
+    <div style="margin-top:12px"><button>加入通道</button></div>
+  </form>
+  <div class="muted" style="margin-top:8px">没有价目表的通道按 0 计费（费用以请求发生时的价目表为准）。通道 Key 只存在服务器数据库里。</div>
 </div>
 <div class="card">
   <h2>新建成员</h2>
@@ -435,7 +467,7 @@ ${banner}
             month: aggregate(monthRows),
             day: aggregate(dayRows),
             budget: urow?.budget ?? null,
-            recent: recent.map((r) => ({ time: bjtime(r.ts), model: r.model ?? '-', cost: costOf(r) })),
+            recent: recent.map((r) => ({ time: bjtime(r.ts), model: r.model ?? '-', channel: r.channel ?? null, cost: eventCost(r) })),
           }),
         )
       }
@@ -593,7 +625,17 @@ ${banner}
       if (req.method === 'GET' && path === '/portal/admin') {
         if (!user) return redirect(res, '/login')
         if (user.role !== 'admin') return html(res, 403, page('无权访问', user, '<div class="card"><h1>403</h1><div class="muted">需要管理员权限。</div></div>'))
-        return html(res, 200, renderAdmin(user))
+        const msg = url.searchParams.get('msg') ?? ''
+        const cname = url.searchParams.get('name') ?? ''
+        const banner =
+          msg === 'ch-added'
+            ? `<div class="ok">通道已加入：${esc(cname)}</div>`
+            : msg === 'ch-deleted'
+              ? `<div class="ok">通道已删除：${esc(cname)}</div>`
+              : msg === 'ch-toggled'
+                ? `<div class="ok">通道状态已更新：${esc(cname)}</div>`
+                : ''
+        return html(res, 200, renderAdmin(user, banner))
       }
 
       if (req.method === 'POST' && path === '/portal/admin/users') {
@@ -640,6 +682,54 @@ ${banner}
 <div style="margin-top:14px"><a href="/portal/admin">← 返回成员管理</a></div></div>`,
           ),
         )
+      }
+
+      if (req.method === 'POST' && path === '/portal/admin/channels') {
+        if (!user) return redirect(res, '/login')
+        if (user.role !== 'admin') return html(res, 403, page('无权访问', user, '<div class="card"><h1>403</h1></div>'))
+        const form = new URLSearchParams(await readBody(req))
+        const name = (form.get('name') ?? '').trim()
+        const baseUrl = (form.get('base_url') ?? '').trim()
+        const apiKey = (form.get('api_key') ?? '').trim()
+        const models = (form.get('models') ?? '')
+          .split(',')
+          .map((s) => s.trim())
+          .filter(Boolean)
+        const pricesRaw = (form.get('prices') ?? '').trim()
+        let priceObj: Record<string, { in?: number; out?: number }> | undefined
+        if (pricesRaw) {
+          try {
+            priceObj = JSON.parse(pricesRaw) as Record<string, { in?: number; out?: number }>
+          } catch {
+            return html(res, 400, page('加入通道', user, '<div class="card"><h1>加入通道</h1><div class="err">价目表不是合法 JSON</div><a href="/portal/admin">返回</a></div>'))
+          }
+        }
+        const r = addChannel(db, {
+          name,
+          base_url: baseUrl,
+          api_key: apiKey || undefined,
+          models,
+          prices: priceObj,
+          note: (form.get('note') ?? '').trim() || undefined,
+        })
+        if ('error' in r) {
+          return html(res, 400, page('加入通道', user, `<div class="card"><h1>加入通道</h1><div class="err">${esc(r.error)}</div><a href="/portal/admin">返回</a></div>`))
+        }
+        return redirect(res, `/portal/admin?msg=ch-added&name=${encodeURIComponent(name)}`)
+      }
+
+      if (req.method === 'POST' && (path === '/portal/admin/channels/delete' || path === '/portal/admin/channels/toggle')) {
+        if (!user) return redirect(res, '/login')
+        if (user.role !== 'admin') return html(res, 403, page('无权访问', user, '<div class="card"><h1>403</h1></div>'))
+        const form = new URLSearchParams(await readBody(req))
+        const cname = (form.get('name') ?? '').trim()
+        if (path === '/portal/admin/channels/delete') {
+          removeChannel(db, cname)
+          return redirect(res, `/portal/admin?msg=ch-deleted&name=${encodeURIComponent(cname)}`)
+        }
+        const cur = listChannels(db).find((c) => c.name === cname)
+        if (cur) setChannelEnabled(db, cname, cur.enabled !== 1)
+        return redirect(res, `/portal/admin?msg=ch-toggled&name=${encodeURIComponent(cname)}`)
       }
 
       // —— 登录闸门 + 反代：其余一切路径 → 该成员的 dsh 实例 ——

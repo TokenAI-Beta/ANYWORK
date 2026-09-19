@@ -36,6 +36,12 @@ export function costOf(e: UsageRowLike): number {
   return (e.cache_hit_tokens * p.cache_hit + e.cache_miss_tokens * p.cache_miss + e.completion_tokens * p.output) / 1e6
 }
 
+/** 单条用量事件的费用：外部通道行读 cost_cny（无价目表记 0）；默认通道行按 DeepSeek 峰谷价估算 */
+export function eventCost(e: UsageRowLike & { channel?: string | null; cost_cny?: number | null }): number {
+  if (e.channel != null) return e.cost_cny ?? 0
+  return e.cost_cny != null ? e.cost_cny : costOf(e)
+}
+
 /** 本月（UTC）起点，格式与 SQLite datetime('now') 一致 */
 export function monthStartUtc(): string {
   const now = new Date()

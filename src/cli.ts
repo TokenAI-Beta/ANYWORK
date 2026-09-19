@@ -4,16 +4,20 @@
 //   user passwd <username> <password>   设置/重置门户登录密码
 //   user budget <username> <cny|off>    设/清月度预算（CNY）
 //   user agent <username> <port|off>    绑定/解绑该成员的工作台实例端口
+//   channel list                        列出外部模型通道
+//   channel add <name> <base_url> <api_key> <models(逗号分隔)> [prices(JSON)]
+//   channel rm <name>                   删除通道
+//   channel on|off <name>               启用/停用通道
 //   usage [username] [--month]          token 用量与估算费用
-import { readFileSync } from 'node:fs'
 import { hashPassword } from './auth.ts'
+import { addChannel, listChannels, removeChannel, setChannelEnabled } from './channel.ts'
 import { openDb } from './db.ts'
 import { hashToken, newVirtualKey } from './keys.ts'
-import { costOf, monthStartUtc, prices } from './pricing.ts'
+import { eventCost, monthStartUtc, prices } from './pricing.ts'
 
 const args = process.argv.slice(2)
 const flags = args.filter((a) => a.startsWith('--'))
-const [cmd, sub, a1, a2] = args.filter((a) => !a.startsWith('--'))
+const [cmd, sub, a1, a2, a3, a4, a5] = args.filter((a) => !a.startsWith('--'))
 const admin = flags.includes('--admin')
 const month = flags.includes('--month')
 const db = openDb()
@@ -32,7 +36,7 @@ function cmdUserAdd(username: string): void {
   console.log(`已创建用户 ${username}（id=${userId}，角色=${admin ? 'admin' : 'member'}）`)
   console.log('虚拟钥匙（只显示一次，请立即保存）：')
   console.log(token)
-  console.log('用法：Authorization: Bearer <钥匙>  →  http://127.0.0.1:8100/chat/completions')
+  console.log('用法：Authorization: Bearer <key>  →  http://127.0.0.1:8100/chat/completions')
 }
 
 function cmdUserList(): void {
@@ -108,6 +112,59 @@ function cmdUserAgent(username: string, value: string): void {
   }
 }
 
+function cmdChannelList(): void {
+  const chs = listChannels(db)
+  if (!chs.length) {
+    console.log('（暂无外部通道；默认通道 = DeepSeek 官方）')
+    return
+  }
+  for (const c of chs) {
+    console.log(
+      `${c.id}\t${c.name}\t${c.enabled === 1 ? '启用' : '停用'}\t${c.base_url}\t模型=${c.models.join(',')}\t价格=${Object.keys(c.prices).length} 条\tkey=${c.api_key ? c.api_key.slice(0, 6) + '…' : '未设'}\t${c.note ?? ''}`,
+    )
+  }
+}
+
+function cmdChannelAdd(name: string, baseUrl: string, apiKey: string, modelsCsv: string, pricesJson?: string): void {
+  let priceObj: Record<string, { in?: number; out?: number }> | undefined
+  if (pricesJson) {
+    try {
+      priceObj = JSON.parse(pricesJson) as Record<string, { in?: number; out?: number }>
+    } catch {
+      console.log(`价格 JSON 解析失败：${pricesJson}`)
+      process.exit(1)
+    }
+  }
+  const models = modelsCsv
+    .split(',')
+    .map((s) => s.trim())
+    .filter(Boolean)
+  const r = addChannel(db, { name, base_url: baseUrl, api_key: apiKey, models, prices: priceObj })
+  if ('error' in r) {
+    console.log(`加入失败：${r.error}`)
+    process.exit(1)
+  }
+  console.log(`通道 ${name} 已加入（id=${r.id}，模型：${models.join(', ')}）`)
+}
+
+function cmdChannelRemove(name: string): void {
+  if (removeChannel(db, name)) {
+    console.log(`通道 ${name} 已删除`)
+  } else {
+    console.log(`找不到通道 ${name}`)
+    process.exit(1)
+  }
+}
+
+function cmdChannelToggle(name: string, on: boolean): void {
+  if (setChannelEnabled(db, name, on)) {
+    console.log(`通道 ${name} 已${on ? '启用' : '停用'}`)
+  } else {
+    console.log(`找不到通道 ${name}`)
+    process.exit(1)
+  }
+}
+
 function cmdUsage(name?: string): void {
   const since = month ? monthStartUtc() : '1970-01-01 00:00:00'
   const rows = (name
@@ -123,14 +180,14 @@ function cmdUsage(name?: string): void {
   const byModel = new Map<string, { hit: number; miss: number; out: number; events: number; estimated: number; cost: number }>()
   let total = 0
   for (const e of rows) {
-    const key = (e.model as string) ?? '(unknown)'
+    const key = ((e.model as string) ?? '(unknown)') + (e.channel ? ` @${e.channel}` : '')
     const cur = byModel.get(key) ?? { hit: 0, miss: 0, out: 0, events: 0, estimated: 0, cost: 0 }
     cur.hit += e.cache_hit_tokens
     cur.miss += e.cache_miss_tokens
     cur.out += e.completion_tokens
     cur.events += 1
     cur.estimated += e.estimated ? 1 : 0
-    const c = costOf(e as any)
+    const c = eventCost(e as any)
     cur.cost += c
     total += c
     byModel.set(key, cur)
@@ -141,7 +198,7 @@ function cmdUsage(name?: string): void {
       `  ${m}: 请求 ${v.events} · 命中 ${v.hit} / 未命中 ${v.miss} / 输出 ${v.out} tokens · 估算 ¥${v.cost.toFixed(4)}${v.estimated ? `（${v.estimated} 条为估算）` : ''}`,
     )
   }
-  console.log(`  ── 合计估算：¥${total.toFixed(4)}（口径：按请求发生时刻的峰谷价；价格表快照 ${prices.captured_at}）`)
+  console.log(`  ── 合计估算：¥${total.toFixed(4)}（口径：DeepSeek 按峰谷价；外部通道按通道价目表；价格表快照 ${prices.captured_at}）`)
 
   if (name) {
     const u = db.prepare(`SELECT monthly_budget_cny AS budget FROM users WHERE username = ?`).get(name) as
@@ -154,7 +211,7 @@ function cmdUsage(name?: string): void {
         )
         .all(name, monthStartUtc()) as Record<string, any>[]
       let spent = 0
-      for (const e of monthRows) spent += costOf(e as any)
+      for (const e of monthRows) spent += eventCost(e as any)
       console.log(`  本月：已用 ¥${spent.toFixed(4)} / 预算 ¥${u.budget}${spent >= u.budget ? '  ⚠️ 已超限（请求将被拒）' : ''}`)
     }
   }
@@ -165,6 +222,11 @@ else if (cmd === 'user' && sub === 'list') cmdUserList()
 else if (cmd === 'user' && sub === 'passwd' && a1 && a2) cmdUserPasswd(a1, a2)
 else if (cmd === 'user' && sub === 'budget' && a1 && a2) cmdUserBudget(a1, a2)
 else if (cmd === 'user' && sub === 'agent' && a1 && a2) cmdUserAgent(a1, a2)
+else if (cmd === 'channel' && sub === 'list') cmdChannelList()
+else if (cmd === 'channel' && sub === 'add' && a1 && a2 && a3 && a4) cmdChannelAdd(a1, a2, a3, a4, a5)
+else if (cmd === 'channel' && sub === 'rm' && a1) cmdChannelRemove(a1)
+else if (cmd === 'channel' && sub === 'on' && a1) cmdChannelToggle(a1, true)
+else if (cmd === 'channel' && sub === 'off' && a1) cmdChannelToggle(a1, false)
 else if (cmd === 'usage') cmdUsage(sub)
 else {
   console.log('用法：')
@@ -173,6 +235,10 @@ else {
   console.log('  node src/cli.ts user passwd <username> <password>')
   console.log('  node src/cli.ts user budget <username> <cny|off>')
   console.log('  node src/cli.ts user agent <username> <port|off>')
+  console.log('  node src/cli.ts channel list')
+  console.log('  node src/cli.ts channel add <name> <base_url> <api_key> <models(逗号分隔)> [prices(JSON)]')
+  console.log('  node src/cli.ts channel rm <name>')
+  console.log('  node src/cli.ts channel on|off <name>')
   console.log('  node src/cli.ts usage [username] [--month]')
   process.exit(1)
 }

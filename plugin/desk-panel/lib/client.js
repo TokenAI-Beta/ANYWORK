@@ -119,7 +119,7 @@ window.__ModuleLoader__.load({
           "div",
           { key: "r" + i, style: { display: "flex", justifyContent: "space-between", gap: 12 } },
           h("span", { style: muted }, r.time),
-          h("span", null, r.model),
+          h("span", null, r.model + (r.channel ? " @" + r.channel : "")),
           h("span", null, fmt(r.cost))
         );
       });

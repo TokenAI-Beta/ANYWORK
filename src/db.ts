@@ -66,6 +66,18 @@ function migrate(db: DatabaseSync): void {
       user_agent TEXT
     );
 
+    CREATE TABLE IF NOT EXISTS channels (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      name TEXT UNIQUE NOT NULL,
+      base_url TEXT NOT NULL,
+      api_key TEXT,
+      models TEXT NOT NULL DEFAULT '[]',
+      prices TEXT NOT NULL DEFAULT '{}',
+      enabled INTEGER NOT NULL DEFAULT 1,
+      note TEXT,
+      created_at TEXT NOT NULL DEFAULT (datetime('now'))
+    );
+
     CREATE INDEX IF NOT EXISTS idx_usage_user_ts ON usage_events(user_id, ts);
     CREATE INDEX IF NOT EXISTS idx_keys_hash ON api_keys(token_hash);
     CREATE INDEX IF NOT EXISTS idx_sessions_hash ON login_sessions(token_hash);
@@ -75,5 +87,12 @@ function migrate(db: DatabaseSync): void {
   const cols = db.prepare('PRAGMA table_info(users)').all() as { name: string }[]
   if (!cols.some((c) => c.name === 'monthly_budget_cny')) {
     db.exec('ALTER TABLE users ADD COLUMN monthly_budget_cny REAL')
+  }
+  const ecols = db.prepare('PRAGMA table_info(usage_events)').all() as { name: string }[]
+  if (!ecols.some((c) => c.name === 'channel')) {
+    db.exec('ALTER TABLE usage_events ADD COLUMN channel TEXT')
+  }
+  if (!ecols.some((c) => c.name === 'cost_cny')) {
+    db.exec('ALTER TABLE usage_events ADD COLUMN cost_cny REAL')
   }
 }
