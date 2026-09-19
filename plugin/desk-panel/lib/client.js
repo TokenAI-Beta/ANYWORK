@@ -252,7 +252,7 @@ window.__ModuleLoader__.load({
             setSt({ phase: "ready", path: d.path != null ? d.path : p, entries: d.entries || [], message: "" });
           })
           .catch(function (e) {
-            setSt({ phase: "error", path: p, entries: [], message: String((e && e.message) || e) });
+            setSt({ phase: "error", path: p, entries: [], message: "" });
           });
       }
       React.useEffect(function () {
