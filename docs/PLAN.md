@@ -2,7 +2,7 @@
 
 **状态：** 实施中（P0 ✅ / P1 ✅ / P2 ✅ / P3 ✅ / P4 🟡 主体完成） · **日期：** 2026-09-18（2026-09-19 更新） · **底座：** 官方 DeepSeek Harness（`@deepseek-ai/dsh`，MIT） · **托管：** github.com/bugbyc0922/DSH-ANYWORK（公开） · **明确不做：** 不采用 TDHarness-coding 的任何代码，独立实现。
 
-> 更新（2026-09-19）：P0 全部通过、P1 完成、**P2 全部完成**（12–15 ✅：登录 / 门户 / 登录闸门+反代 / 信任自动化，均实机验证）；计划外打通 **dsh 客户端插件机制**（设置内嵌「工作台用量」页）；**企业知识库 v1** 上线（共享目录 + 检索接口 + 设置「知识库」页）；**公司盘 v1** 上线（共享文件区 + 浏览/下载/上传 + 设置「公司盘」页）；**多上游模型通道 v1** 上线（网关按模型分流 + 门户通道管理 + CLI）；**P3 完成**（16–19 ✅：systemd 自启 + 崩溃 5 秒重拉 + `wsl --shutdown` 真重启全恢复 + 隔离复查全绿；WSL 2.7 空闲停机已关闭）；**P4 主体完成**（20–22 ✅：setup/backup/restore/logs 脚本 + `DEPLOY.md` + [试用验收](ACCEPTANCE.md) 真实链路实走 + [KNOWN-ISSUES](KNOWN-ISSUES.md)；从零重装待第二台机器实测）—— 见 [`BASELINE.md`](BASELINE.md) 与 [`devlog/2026-09-19.md`](devlog/2026-09-19.md)。
+> 更新（2026-09-19）：P0 全部通过、P1 完成、**P2 全部完成**（12–15 ✅：登录 / 门户 / 登录闸门+反代 / 信任自动化，均实机验证）；计划外打通 **dsh 客户端插件机制**（设置内嵌「工作台用量」页）；**企业知识库 v1** 上线（共享目录 + 检索接口 + 设置「知识库」页）；**公司盘 v1** 上线（共享文件区 + 浏览/下载/上传 + 设置「公司盘」页）；**多上游模型通道 v1** 上线（网关按模型分流 + 门户通道管理 + CLI）；**P3 完成**（16–19 ✅：systemd 自启 + 崩溃 5 秒重拉 + `wsl --shutdown` 真重启全恢复 + 隔离复查全绿；WSL 2.7 空闲停机已关闭）；**P4 主体完成**（20–22 ✅：setup/backup/restore/logs 脚本 + `DEPLOY.md` + [试用验收](ACCEPTANCE.md) 真实链路实走 + [KNOWN-ISSUES](KNOWN-ISSUES.md)；从零重装待第二台机器实测）；**团队技能库 v1** 上线（`~/desk-data/skills` + 实例软链，dsh 原生技能发现、改完即生效）—— 见 [`BASELINE.md`](BASELINE.md) 与 [`devlog/2026-09-19.md`](devlog/2026-09-19.md)。
 
 ---
 
@@ -134,6 +134,7 @@ P0 复核结果：第 3 条已实测（`--port` 有效；非回环假 Host 对 `
     ➕ 计划外：**企业知识库 v1**——共享目录 `~/desk-data/kb/`（`kb-template/` 首启落位）+ `/portal/api/kb/search` 检索接口 + 设置「知识库」查询页；workspace AGENTS.md 提示 agent 可直接读。
     ➕ 计划外：**公司盘 v1**——共享文件区 `~/desk-data/drive/`（`drive-template/` 首启落位）+ `/portal/api/drive/{list,download,upload}`（路径围栏、50MB 上限）+ 设置「公司盘」页（浏览/下载/上传）。
     ➕ 计划外：**多上游模型通道 v1**——`channels` 表 + 网关按模型名分流（外部 OpenAI 兼容通道；未命中走默认 DeepSeek）+ 门户「成员管理」通道卡片（加入 / 停用 / 删除）+ CLI `channel *` + `/models` 合并下发 + 账本含通道与通道费用（`eventCost()`；通道价目表 ¥/百万 tokens）。测试桩 `tests/fake-oai.mjs`。
+    ➕ 计划外：**团队技能库 v1**——共享技能目录 `~/desk-data/skills`（`skills-template/` 首启落位；示例技能 `team-report-style`）+ 每实例 `DSH_HOME/skills` 软链；走 dsh 原生 `skill-filesystem` 发现（含文件监听、改完即生效；工作区级 `.dsh/skills` 可覆盖）。
 
 ### P3 每人独立工作区 ✅（2026-09-19 完成）
 
