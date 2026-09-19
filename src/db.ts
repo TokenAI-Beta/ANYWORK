@@ -56,8 +56,19 @@ function migrate(db: DatabaseSync): void {
       usage_json TEXT
     );
 
+    CREATE TABLE IF NOT EXISTS login_sessions (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      user_id INTEGER NOT NULL REFERENCES users(id),
+      token_hash TEXT NOT NULL UNIQUE,
+      created_at TEXT NOT NULL DEFAULT (datetime('now')),
+      expires_at TEXT NOT NULL,
+      ip TEXT,
+      user_agent TEXT
+    );
+
     CREATE INDEX IF NOT EXISTS idx_usage_user_ts ON usage_events(user_id, ts);
     CREATE INDEX IF NOT EXISTS idx_keys_hash ON api_keys(token_hash);
+    CREATE INDEX IF NOT EXISTS idx_sessions_hash ON login_sessions(token_hash);
   `)
 
   // 增量列：SQLite 没有 ADD COLUMN IF NOT EXISTS，先查再加

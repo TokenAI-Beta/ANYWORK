@@ -1,9 +1,10 @@
-// 服务入口：desk 网关（P1）；后续 P2 会在这里加上门户
+// 服务入口：网关（:8100 回环）+ 门户（:8080，P2）
 import { existsSync, readFileSync } from 'node:fs'
 import { homedir } from 'node:os'
 import { join } from 'node:path'
 import { defaultDataDir, openDb } from './db.ts'
 import { startGateway } from './gateway.ts'
+import { startPortal } from './portal.ts'
 
 function loadRealKey(): string {
   if (process.env.DESK_REAL_KEY) return process.env.DESK_REAL_KEY
@@ -14,13 +15,16 @@ function loadRealKey(): string {
       if (m) return m[1].trim()
     }
   }
-  throw new Error('未找到真 key：设置 DESK_REAL_KEY，或把 DEEPSEEK_API_KEY=… 写进 ~/.desk/keys.env')
+  throw new Error('未找到真 key：请设置 DESK_REAL_KEY 或写入 ~/.desk/keys.env（DEEPSEEK_API_KEY=...）')
 }
 
-const port = Number(process.env.DESK_GATEWAY_PORT ?? 8100)
+const gatewayPort = Number(process.env.DESK_GATEWAY_PORT ?? 8100)
+const portalPort = Number(process.env.DESK_PORTAL_PORT ?? 8080)
+const portalHost = process.env.DESK_PORTAL_HOST ?? '0.0.0.0'
 const upstream = process.env.DESK_UPSTREAM ?? 'https://api.deepseek.com'
+
 const db = openDb()
 const realKey = loadRealKey()
-
-startGateway({ db, upstream, realKey, port })
-console.log(`[desk] gateway ready · data=${defaultDataDir()}`)
+startGateway({ db, upstream, realKey, port: gatewayPort })
+startPortal({ db, port: portalPort, host: portalHost })
+console.log(`[desk] portal on http://${portalHost}:${portalPort} · gateway on http://127.0.0.1:${gatewayPort} · data=${defaultDataDir()}`)

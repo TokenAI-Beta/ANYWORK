@@ -1,9 +1,11 @@
 // desk CLI：node src/cli.ts <命令>
 //   user add <username> [--admin]       建用户并发虚拟钥匙（只显示一次）
 //   user list                           列出用户（含预算）
+//   user passwd <username> <password>   设置/重置门户登录密码
 //   user budget <username> <cny|off>    设/清月度预算（CNY）
 //   usage [username] [--month]          token 用量与估算费用
 import { readFileSync } from 'node:fs'
+import { hashPassword } from './auth.ts'
 import { openDb } from './db.ts'
 import { hashToken, newVirtualKey } from './keys.ts'
 import { costOf, monthStartUtc, prices } from './pricing.ts'
@@ -35,7 +37,7 @@ function cmdUserAdd(username: string): void {
 function cmdUserList(): void {
   const rows = db
     .prepare(
-      `SELECT u.id, u.username, u.role, u.status, u.monthly_budget_cny, u.created_at, COUNT(k.id) AS keys
+      `SELECT u.id, u.username, u.role, u.status, u.monthly_budget_cny, u.password_hash, u.created_at, COUNT(k.id) AS keys
        FROM users u LEFT JOIN api_keys k ON k.user_id = u.id AND k.revoked_at IS NULL
        GROUP BY u.id ORDER BY u.id`,
     )
@@ -46,9 +48,23 @@ function cmdUserList(): void {
   }
   for (const r of rows) {
     console.log(
-      `${r.id}\t${r.username}\t${r.role}\t${r.status}\t预算=${r.monthly_budget_cny ?? '不限'}\tkeys=${r.keys}\t${r.created_at}`,
+      `${r.id}\t${r.username}\t${r.role}\t${r.status}\t预算=${r.monthly_budget_cny ?? '不限'}\t密码=${r.password_hash ? '已设' : '未设'}\tkeys=${r.keys}\t${r.created_at}`,
     )
   }
+}
+
+function cmdUserPasswd(username: string, password: string): void {
+  const u = db.prepare(`SELECT id FROM users WHERE username = ?`).get(username) as { id: number } | undefined
+  if (!u) {
+    console.log(`找不到用户 ${username}`)
+    process.exit(1)
+  }
+  if (password.length < 6) {
+    console.log('密码至少 6 位')
+    process.exit(1)
+  }
+  db.prepare(`UPDATE users SET password_hash = ? WHERE id = ?`).run(hashPassword(password), u.id)
+  console.log(`${username}：门户登录密码已设置`)
 }
 
 function cmdUserBudget(username: string, value: string): void {
@@ -125,12 +141,14 @@ function cmdUsage(name?: string): void {
 
 if (cmd === 'user' && sub === 'add' && a1) cmdUserAdd(a1)
 else if (cmd === 'user' && sub === 'list') cmdUserList()
+else if (cmd === 'user' && sub === 'passwd' && a1 && a2) cmdUserPasswd(a1, a2)
 else if (cmd === 'user' && sub === 'budget' && a1 && a2) cmdUserBudget(a1, a2)
 else if (cmd === 'usage') cmdUsage(sub)
 else {
   console.log('用法：')
   console.log('  node src/cli.ts user add <username> [--admin]')
   console.log('  node src/cli.ts user list')
+  console.log('  node src/cli.ts user passwd <username> <password>')
   console.log('  node src/cli.ts user budget <username> <cny|off>')
   console.log('  node src/cli.ts usage [username] [--month]')
   process.exit(1)
