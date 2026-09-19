@@ -14,6 +14,8 @@ import {
 import { hashToken, newVirtualKey } from './keys.ts'
 import { costOf, monthStartUtc, prices } from './pricing.ts'
 import { kbSearch } from './kb.ts'
+import { listDrive, resolveInDrive, saveToDrive, MAX_UPLOAD } from './drive.ts'
+import { createReadStream, existsSync, statSync } from 'node:fs'
 
 export interface PortalOptions {
   db: DatabaseSync
@@ -445,6 +447,79 @@ ${banner}
         const q = (url.searchParams.get('q') ?? '').slice(0, 100)
         res.writeHead(200, { 'content-type': 'application/json; charset=utf-8' })
         return res.end(JSON.stringify(kbSearch(q)))
+      }
+      if (path === '/portal/api/drive/list' && req.method === 'GET') {
+        if (!user) {
+          res.writeHead(401, { 'content-type': 'application/json' })
+          return res.end(JSON.stringify({ error: 'login required' }))
+        }
+        const r = listDrive(url.searchParams.get('path') ?? '')
+        res.writeHead('error' in r ? 400 : 200, { 'content-type': 'application/json; charset=utf-8' })
+        return res.end(JSON.stringify(r))
+      }
+      if (path === '/portal/api/drive/download' && req.method === 'GET') {
+        if (!user) {
+          res.writeHead(401, { 'content-type': 'application/json' })
+          return res.end(JSON.stringify({ error: 'login required' }))
+        }
+        const r = resolveInDrive(url.searchParams.get('path') ?? '')
+        if ('error' in r || !existsSync(r.abs)) {
+          res.writeHead(404, { 'content-type': 'application/json; charset=utf-8' })
+          return res.end(JSON.stringify({ error: 'not found' }))
+        }
+        let st
+        try {
+          st = statSync(r.abs)
+        } catch {
+          res.writeHead(404)
+          return res.end()
+        }
+        if (!st.isFile()) {
+          res.writeHead(404)
+          return res.end()
+        }
+        const fname = r.abs.split('/').pop() ?? 'download'
+        res.writeHead(200, {
+          'content-type': 'application/octet-stream',
+          'content-length': st.size,
+          'content-disposition': "attachment; filename*=UTF-8''" + encodeURIComponent(fname),
+        })
+        return createReadStream(r.abs).pipe(res)
+      }
+      if (path === '/portal/api/drive/upload' && req.method === 'POST') {
+        if (!user) {
+          res.writeHead(401, { 'content-type': 'application/json' })
+          return res.end(JSON.stringify({ error: 'login required' }))
+        }
+        const rel = url.searchParams.get('path') ?? ''
+        const name = url.searchParams.get('name') ?? ''
+        const chunks: Buffer[] = []
+        let size = 0
+        let tooBig = false
+        req.on('data', (c: Buffer) => {
+          size += c.length
+          if (size > MAX_UPLOAD) {
+            tooBig = true
+            res.writeHead(413, { 'content-type': 'application/json; charset=utf-8' })
+            res.end(JSON.stringify({ error: 'file too large (max 50MB)' }))
+            req.destroy()
+            return
+          }
+          chunks.push(c)
+        })
+        req.on('end', () => {
+          if (tooBig) return
+          const saved = saveToDrive(rel, name, Buffer.concat(chunks))
+          res.writeHead('error' in saved ? 400 : 200, { 'content-type': 'application/json; charset=utf-8' })
+          res.end(JSON.stringify(saved))
+        })
+        req.on('error', () => {
+          if (!tooBig && !res.headersSent) {
+            res.writeHead(400)
+            res.end()
+          }
+        })
+        return
       }
       if (path === '/favicon.ico') {
         res.writeHead(204)

@@ -1,4 +1,4 @@
-// DSH-ANYWORK 设置页（浏览器侧 cordis 插件）：工作台用量 + 企业知识库
+// DSH-ANYWORK 设置页（浏览器侧 cordis 插件）：工作台用量 + 企业知识库 + 公司盘
 // 产出格式与 dsh 官方客户端插件一致：window.__ModuleLoader__.load({ id, factory })
 // 依赖仅 react（平台种子模块），全部走闭包 require。
 window.__ModuleLoader__.load({
@@ -20,9 +20,37 @@ window.__ModuleLoader__.load({
       flexDirection: "column",
       gap: 10,
     };
+    var rowBase = { padding: "6px 0", borderBottom: "1px solid var(--dsw-alias-border-l2, #f0f1f3)" };
+    var btnDark = {
+      padding: "8px 14px",
+      border: 0,
+      borderRadius: 8,
+      background: "var(--dsw-alias-label-primary, #1c1e21)",
+      color: "var(--dsw-alias-bg-layer-1, #fff)",
+      cursor: "pointer",
+      fontSize: 13,
+    };
+    var btnLight = {
+      padding: "8px 14px",
+      border: "1px solid var(--dsw-alias-border-l2, #ccd0d5)",
+      borderRadius: 8,
+      background: "transparent",
+      color: "inherit",
+      cursor: "pointer",
+      fontSize: 13,
+    };
+    var crumb = { color: "var(--dsw-alias-state-business-primary, #4f7cf7)", cursor: "pointer", textDecoration: "none" };
 
     function fmt(n) {
       return "¥" + Number(n || 0).toFixed(4);
+    }
+
+    function fmtSize(n) {
+      var v = Number(n || 0);
+      if (v < 1024) return v + " B";
+      if (v < 1024 * 1024) return (v / 1024).toFixed(1) + " KB";
+      if (v < 1024 * 1024 * 1024) return (v / 1024 / 1024).toFixed(1) + " MB";
+      return (v / 1024 / 1024 / 1024).toFixed(2) + " GB";
     }
 
     function DeskUsageSection() {
@@ -102,7 +130,7 @@ window.__ModuleLoader__.load({
           { key: "link" },
           h(
             "a",
-            { href: "/portal/me", target: "_blank", rel: "noreferrer", style: { color: "var(--dsw-alias-state-business-primary, #4f7cf7)" } },
+            { href: "/portal/me", target: "_blank", rel: "noreferrer", style: crumb },
             "打开完整门户页（用量明细 / 管理）→"
           )
         )
@@ -151,26 +179,24 @@ window.__ModuleLoader__.load({
           if (e.key === "Enter") run(e.target.value);
         },
       });
-      var button = h(
-        "button",
-        {
-          onClick: function () {
-            run(inputRef.current ? inputRef.current.value : "");
-          },
-          style: {
-            padding: "8px 14px",
-            border: 0,
-            borderRadius: 8,
-            background: "var(--dsw-alias-label-primary, #1c1e21)",
-            color: "var(--dsw-alias-bg-layer-1, #fff)",
-            cursor: "pointer",
-            fontSize: 13,
-          },
-        },
-        "查询"
-      );
 
-      var kids = [h("div", { key: "bar", style: { display: "flex", gap: 8 } }, input, button)];
+      var kids = [
+        h(
+          "div",
+          { key: "bar", style: { display: "flex", gap: 8 } },
+          input,
+          h(
+            "button",
+            {
+              onClick: function () {
+                run(inputRef.current ? inputRef.current.value : "");
+              },
+              style: btnDark,
+            },
+            "查询"
+          )
+        ),
+      ];
 
       if (st.phase === "error") {
         kids.push(
@@ -185,7 +211,7 @@ window.__ModuleLoader__.load({
             hitNodes.push(
               h(
                 "div",
-                { key: "k" + i, style: { padding: "6px 0", borderBottom: "1px solid var(--dsw-alias-border-l2, #f0f1f3)" } },
+                { key: "k" + i, style: rowBase },
                 h("div", { style: Object.assign({ fontSize: 12 }, muted) }, st.hits[i].file + " : " + st.hits[i].line),
                 h("div", null, st.hits[i].text)
               )
@@ -205,6 +231,182 @@ window.__ModuleLoader__.load({
         );
       }
       kids.push(h("div", { key: "tip", style: muted }, "把文档放进服务器 ~/desk-data/kb（目录内有 README）；会话里的 agent 也能直接读它。"));
+      return h("div", { style: wrap }, kids);
+    }
+
+    function DriveSection() {
+      var pair = React.useState({ phase: "loading", path: "", entries: [], message: "" });
+      var st = pair[0];
+      var setSt = pair[1];
+      var fileRef = React.useRef(null);
+
+      function load(path) {
+        var p = String(path == null ? "" : path);
+        setSt({ phase: "loading", path: p, entries: [], message: "" });
+        fetch("/portal/api/drive/list?path=" + encodeURIComponent(p))
+          .then(function (r) {
+            if (!r.ok) throw new Error("HTTP " + r.status);
+            return r.json();
+          })
+          .then(function (d) {
+            setSt({ phase: "ready", path: d.path != null ? d.path : p, entries: d.entries || [], message: "" });
+          })
+          .catch(function (e) {
+            setSt({ phase: "error", path: p, entries: [], message: String((e && e.message) || e) });
+          });
+      }
+      React.useEffect(function () {
+        load("");
+      }, []);
+
+      function upload(files) {
+        var f = files && files[0];
+        if (!f) return;
+        setSt({ phase: "loading", path: st.path, entries: st.entries, message: "上传中：" + f.name + " …" });
+        fetch("/portal/api/drive/upload?path=" + encodeURIComponent(st.path) + "&name=" + encodeURIComponent(f.name), {
+          method: "POST",
+          body: f,
+        })
+          .then(function (r) {
+            if (!r.ok) throw new Error("HTTP " + r.status);
+            return r.json();
+          })
+          .then(function () {
+            load(st.path);
+          })
+          .catch(function (e) {
+            setSt({ phase: "ready", path: st.path, entries: st.entries, message: "上传失败：" + String((e && e.message) || e) });
+          });
+      }
+
+      var segs = st.path.split("/").filter(function (s) {
+        return s;
+      });
+      var crumbs = [
+        h(
+          "a",
+          {
+            key: "c0",
+            href: "#",
+            onClick: function (e) {
+              e.preventDefault();
+              load("");
+            },
+            style: crumb,
+          },
+          "公司盘"
+        ),
+      ];
+      var acc = "";
+      for (var i = 0; i < segs.length; i++) {
+        acc = acc ? acc + "/" + segs[i] : segs[i];
+        crumbs.push(h("span", { key: "sep" + i, style: muted }, " / "));
+        crumbs.push(
+          h(
+            "a",
+            {
+              key: "c" + i,
+              href: "#",
+              onClick: (function (p) {
+                return function (e) {
+                  e.preventDefault();
+                  load(p);
+                };
+              })(acc),
+              style: crumb,
+            },
+            segs[i]
+          )
+        );
+      }
+
+      var bar = h(
+        "div",
+        { key: "bar", style: { display: "flex", gap: 8, alignItems: "center" } },
+        h(
+          "button",
+          {
+            onClick: function () {
+              load(st.path);
+            },
+            style: btnLight,
+          },
+          "刷新"
+        ),
+        h(
+          "button",
+          {
+            onClick: function () {
+              if (fileRef.current) fileRef.current.click();
+            },
+            style: btnDark,
+          },
+          "上传文件"
+        ),
+        h("input", {
+          ref: fileRef,
+          type: "file",
+          style: { display: "none" },
+          onChange: function (e) {
+            upload(e.target.files);
+            e.target.value = "";
+          },
+        })
+      );
+
+      var kids = [h("div", { key: "crumbs", style: { fontSize: 12 } }, crumbs), bar];
+      if (st.message) kids.push(h("div", { key: "msg", style: muted }, st.message));
+      if (st.phase === "error") {
+        kids.push(h("div", { key: "err", style: muted }, "读不到公司盘（" + st.message + "）。本面板需从门户打开（经登录会话访问服务器文件区）。"));
+      } else if (st.entries.length) {
+        var rowNodes = [];
+        for (var j = 0; j < st.entries.length; j++) {
+          var en = st.entries[j];
+          if (en.dir) {
+            rowNodes.push(
+              h(
+                "div",
+                {
+                  key: "d" + j,
+                  onClick: (function (p) {
+                    return function () {
+                      load(p);
+                    };
+                  })(st.path ? st.path + "/" + en.name : en.name),
+                  style: Object.assign({ cursor: "pointer" }, rowBase),
+                },
+                "📁 " + en.name + " /"
+              )
+            );
+          } else {
+            rowNodes.push(
+              h(
+                "div",
+                { key: "f" + j, style: rowBase },
+                h(
+                  "a",
+                  {
+                    href: "/portal/api/drive/download?path=" + encodeURIComponent(st.path ? st.path + "/" + en.name : en.name),
+                    style: crumb,
+                  },
+                  "📄 " + en.name
+                ),
+                h("span", { style: Object.assign({ marginLeft: 8, fontSize: 12 }, muted) }, fmtSize(en.size))
+              )
+            );
+          }
+        }
+        kids.push(h("div", { key: "rows" }, rowNodes));
+      } else if (st.phase === "ready") {
+        kids.push(h("div", { key: "empty", style: muted }, "（空文件夹：点「上传文件」，或把文件放进服务器 ~/desk-data/drive）"));
+      }
+      kids.push(
+        h(
+          "div",
+          { key: "tip", style: muted },
+          "服务器路径 ~/desk-data/drive（Windows：\\\\wsl.localhost\\Ubuntu\\home\\yangc\\desk-data\\drive）；单文件上限 50MB。"
+        )
+      );
       return h("div", { style: wrap }, kids);
     }
 
@@ -235,6 +437,19 @@ window.__ModuleLoader__.load({
             },
           },
           KbSection
+        );
+      });
+      ctx.slots.inject("settings.section", function () {
+        return ctx.slots.register(
+          {
+            name: "settings.section",
+            id: "desk-drive",
+            order: 70,
+            label: function () {
+              return "公司盘";
+            },
+          },
+          DriveSection
         );
       });
     }
