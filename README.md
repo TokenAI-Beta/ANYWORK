@@ -6,7 +6,7 @@
 
 Each member signs in with their own account and works in their own isolated workspace. The model API key stays on the server, and usage is metered per person — so a team can share one agent setup without sharing keys, files, or bills.
 
-> **Status: building in public, early stage.** P0 (feasibility) and P1 (model gateway + per-person metering) are done and verified end-to-end against the real API. Next: P2 (accounts, login, portal). Full roadmap and 22-task plan in [`docs/PLAN.md`](docs/PLAN.md); verified findings in [`docs/BASELINE.md`](docs/BASELINE.md); daily progress in [`docs/devlog/`](docs/devlog/).
+> **Status: building in public, early stage.** P0 (feasibility) and P1 (model gateway + per-person metering) are done and verified end-to-end against the real API. P2 is in progress — login and the usage portal are live; the instance login-gate/proxy is next. Full roadmap and 22-task plan in [`docs/PLAN.md`](docs/PLAN.md); verified findings in [`docs/BASELINE.md`](docs/BASELINE.md); daily progress in [`docs/devlog/`](docs/devlog/).
 
 ## What this is
 
@@ -34,7 +34,7 @@ Member browser → Portal (login gate + reverse proxy)
 |---|---|---|
 | P0 | Feasibility checks: multi-instance, launch flags, gateway interception, LAN access | 🟡 phone check pending |
 | P1 | Model gateway + per-person metering | ✅ verified end-to-end |
-| P2 | Accounts, login, portal | ⬜ |
+| P2 | Accounts, login, portal | 🟡 login & portal live; instance proxy next |
 | P3 | Per-member workspaces (instance management, autostart) | ⬜ |
 | P4 | Delivery: install, backup, acceptance | ⬜ |
 
@@ -50,16 +50,17 @@ mkdir -p ~/.desk
 echo 'DEEPSEEK_API_KEY=sk-…' > ~/.desk/keys.env
 chmod 600 ~/.desk/keys.env
 
-# 2. Model gateway on http://127.0.0.1:8100
+# 2. Portal + model gateway (one process; portal :8080, gateway :8100 on loopback)
 node src/server.ts
 
-# 3. CLI: users, budgets, usage
-node src/cli.ts user add alice          # prints her virtual key once
-node src/cli.ts user budget alice 50    # monthly budget in CNY (or: off)
+# 3. CLI: users, passwords, budgets, usage
+node src/cli.ts user add alice             # prints her virtual key once
+node src/cli.ts user passwd alice <password>   # portal login password
+node src/cli.ts user budget alice 50       # monthly budget in CNY (or: off)
 node src/cli.ts usage alice --month
 ```
 
-Point any dsh instance at the gateway with the member's virtual key:
+Open the portal at `http://<machine>:8080` — each member signs in and sees their own usage; admins manage members at `/portal/admin`. Point any dsh instance at the gateway with the member's virtual key:
 
 ```sh
 DEEPSEEK_BASE_URL=http://127.0.0.1:8100 DEEPSEEK_API_KEY=sk-desk-… dsh web --port 3301

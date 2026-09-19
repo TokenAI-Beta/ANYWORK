@@ -1,4 +1,4 @@
-# 基线事实（P0/P1 验证记录）
+# 基线事实（P0/P1/P2 验证记录）
 
 > 记录日期：2026-09-19 · 环境：Windows 11 + WSL2（Ubuntu 26.04，systemd）· dsh 0.1.0-rc.5（本地构建：`~/deepseek-harness`）
 
@@ -83,10 +83,17 @@ New-NetFirewallRule -DisplayName 'DSH-DESK-P0-4' -Direction Inbound -Action Allo
 2. **u3 实例挂真网关完成一轮发言**：模型回复入会话历史（`"1\n2\n3"`），`deepseek-v4-flash` 主请求 **7653 输入 tokens 入账 alice（¥0.0077）**；`usage alice` 可查。
 3. 错钥匙 → 401；预算设 ¥0.005（已花 ¥0.0083）→ 请求被 **429** 拒绝，关闭预算后恢复 200。
 
+## P2 门户 ✅（2026-09-19，12·13 过线）
+
+- 门户 :8080（与网关同一进程：`node src/server.ts`）：登录 / 登出（内建 scrypt + httpOnly 会话 Cookie、失败 5 次限速 60s）、`/portal/me`（我的用量）、`/portal/admin`（成员管理 + 页面建号发钥匙）。
+- 演示账号：alice / boss（admin）/ bob —— 正式启用前更换密码。
+- 局域网入口已切换：Windows portproxy `0.0.0.0:8080 → WSL:8080`（门户）；已从 Windows 本机与局域网 IP 双路径验证（302 → 登录页）。
+- 实测：未登录跳登录 ✅、错密码 err=1 ✅、对密码进 `/portal/me` ✅、member 访问管理页 403 ✅、建号后可直接登录 ✅、登出后会话失效 ✅。
+
 ## 环境速记
 
 - node：`~/opt/node-v24.19.0-linux-x64/bin/node`；dsh 入口：`~/deepseek-harness/apps/cli/lib/bin.js`。
 - 测试实例：`~/desk-test/u1`、`u2`、`u3`（u3 现挂真网关 :8100；P1 验证完可清理）。
 - 网关数据：`~/desk-data/desk.db`；真 key：`~/.desk/keys.env`（600）。
-- 局域网测试页：`~/desk-test/www`（python http.server :8090 + 端口转发 8080）；Windows 局域网 IP `192.168.0.171`（WLAN）。
+- 局域网入口：Windows portproxy `0.0.0.0:8080 → WSL:8080`（门户；条目切换脚本 `C:\Users\Yangc\AppData\Local\Temp\desk-p2-portproxy.ps1`，需 UAC）；旧测试页 `~/desk-test/www`（:8090）已退役。Windows 局域网 IP `192.168.0.171`（WLAN）。
 - DeepSeek 计费（2026-08-16 起）：高峰＝北京时间周一至周五 9:00–12:00、14:00–18:00；其余（含整周末）为空闲时段，价格恰为高峰一半。

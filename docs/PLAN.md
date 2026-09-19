@@ -1,8 +1,8 @@
 # DSH-ANYWORK 团队工作台 — 实施计划
 
-**状态：** 实施中（P0 ✅ / P1 ✅；下一步 P2） · **日期：** 2026-09-18（2026-09-19 更新） · **底座：** 官方 DeepSeek Harness（`@deepseek-ai/dsh`，MIT） · **托管：** github.com/bugbyc0922/DSH-ANYWORK（公开） · **明确不做：** 不采用 TDHarness-coding 的任何代码，独立实现。
+**状态：** 实施中（P0 ✅ / P1 ✅ / P2 进行中：12·13 ✅） · **日期：** 2026-09-18（2026-09-19 更新） · **底座：** 官方 DeepSeek Harness（`@deepseek-ai/dsh`，MIT） · **托管：** github.com/bugbyc0922/DSH-ANYWORK（公开） · **明确不做：** 不采用 TDHarness-coding 的任何代码，独立实现。
 
-> 更新（2026-09-19）：P0 全部通过、P1 完成并实机验证 —— 见 [`BASELINE.md`](BASELINE.md) 与 [`devlog/2026-09-19.md`](devlog/2026-09-19.md)。
+> 更新（2026-09-19）：P0 全部通过、P1 完成并实机验证（见 [`BASELINE.md`](BASELINE.md) 与 [`devlog/2026-09-19.md`](devlog/2026-09-19.md)）；P2 登录 + 门户页已上线（12·13 ✅），14/15（闸门反代、信任自动化）进行中。
 
 ---
 
@@ -69,35 +69,36 @@ P0 复核结果：第 3 条已实测（`--port` 有效；非回环假 Host 对 `
 ```text
 ~/dsh-anywork/
 ├─ src/
-│  ├─ server.ts        # 入口（当前：网关 :8100；P2 加门户 :8080）
+│  ├─ server.ts        # 入口：门户 :8080 + 网关 :8100（一个进程）
+│  ├─ portal.ts        # 门户：登录/登出、我的用量、成员管理（内联 HTML，无构建）
 │  ├─ gateway.ts       # /chat/completions、/models 转发 + 计量 + 预算
+│  ├─ auth.ts          # 密码散列（scrypt）+ 会话 Cookie
 │  ├─ db.ts            # SQLite schema + 迁移（node:sqlite，零依赖）
 │  ├─ pricing.ts       # 价格表读取 + 费用计算（峰谷）
 │  ├─ keys.ts          # 虚拟钥匙生成 / 哈希（只存 sha256）
-│  └─ cli.ts           # desk user / budget / usage
+│  └─ cli.ts           # desk user / passwd / budget / usage
 ├─ config/
 │  └─ prices.json      # 模型价格表（JSON；缓存命中/未命中分开）
-├─ portal-static/      # 门户静态页（P2，无构建步骤）
 ├─ scripts/            # setup.sh / start.sh / backup.sh（P4）
 └─ tests/              # 测试（P2+ 补）
 ```
 
 ## 五、数据模型（SQLite 草案）
 
-- `users`(id, username, display_name, role, password_hash, status, agent_port, workspace, created_at, last_login_at, **monthly_budget_cny**)
+- `users`(id, username, display_name, role, password_hash, status, agent_port, workspace, created_at, last_login_at, monthly_budget_cny)
 - `login_sessions`(id, user_id, token_hash, created_at, expires_at, ip, user_agent)
 - `api_keys`(id, user_id, token_hash, label, created_at, revoked_at)  — 虚拟钥匙，只存 hash
 - `usage_events`(id, user_id, ts, model, prompt_tokens, completion_tokens, cache_hit_tokens, cache_miss_tokens, usage_json, estimated, status)
 - `budgets`(user_id, period, limit_cny, warn_ratio)
 - `audit_events`(id, ts, actor_user_id, action, detail_json)
 
-P1 已落地：`users`（含 `monthly_budget_cny`）、`api_keys`、`usage_events`；其余表随对应阶段建。
+已落地：`users`（含 `monthly_budget_cny`、`password_hash`）、`api_keys`、`usage_events`、`login_sessions`；其余表随对应阶段建。
 
 ## 六、对外接口（草案）
 
 - 网关：`POST /chat/completions`（Bearer 虚拟钥匙）、`GET /models`、`GET /healthz`
-- 门户：`GET|POST /login`、`POST /logout`、`GET /portal/me`、`GET|POST /portal/admin/users`、`GET /portal/api/usage`
-- CLI：`desk user add|disable|reset <u>`、`desk agent start|stop|status <u>`、`desk usage <u> [--today|--month]`、`desk backup`
+- 门户：`GET|POST /login`、`POST /logout`、`GET /portal/me`、`GET|POST /portal/admin/users`、`GET /portal/api/usage`（后两项逐步齐备）
+- CLI：`desk user add|passwd|disable|reset <u>`、`desk agent start|stop|status <u>`、`desk usage <u> [--today|--month]`、`desk backup`
 
 ## 七、阶段与任务（共 22 项，一次做一项，每项有绿线）
 
@@ -119,10 +120,10 @@ P1 已落地：`users`（含 `monthly_budget_cny`）、`api_keys`、`usage_event
 10. ✅ **预算拦截**：月预算 + 超限 429（`DESK_BUDGET_WARN_ONLY=1` 可切告警模式）。绿线：预算设低，下一个请求被拒。
 11. ✅ **dsh 实测接入**：web 实例指向网关跑一轮。绿线：会话正常 + 计量落库 + UI 统计正常。（u3：7653 输入 tokens 入账。）
 
-### P2 账号、登录、门户（下一步）
+### P2 账号、登录、门户（进行中：12·13 ✅）
 
-12. **登录**：argon2 + httpOnly cookie；登录/登出页。绿线：错密码拒绝、对密码进入。
-13. **门户页**：`/portal/me`（我的用量）、`/portal/admin`（成员管理）。绿线：两页可用，数字来自 P1 账本。
+12. ✅ **登录**：httpOnly cookie + 登录/登出页。绿线：错密码拒绝、对密码进入。（实现口径：密码散列用内建 **scrypt** 代替 argon2，维持零依赖；登录失败 5 次限速 60 秒。）
+13. ✅ **门户页**：`/portal/me`（我的用量）、`/portal/admin`（成员管理 + 页面建号发钥匙）。绿线：两页可用，数字来自 P1 账本。
 14. **登录闸门 + 反代**：未登录跳登录；登录后根路径透传本人实例；WS 透传；跨成员拒绝。绿线：两台设备两个账号互测，谁都进不了对方工作台。
 15. **信任自动化**：实例启动自动带 `--trusted-host <门户 authority>`。绿线：去掉手工参数重起，页面照常。
 
@@ -142,7 +143,7 @@ P1 已落地：`users`（含 `monthly_budget_cny`）、`api_keys`、`usage_event
 ## 八、安全与边界（如实说）
 
 - 真 key 只存在网关（`~/.desk/keys.env`，chmod 600；不入库、不进 git、不进日志）。建议为工作台**单独开一枚 key**（先用现有 key 过渡）。
-- 用户只拿虚拟钥匙，可单独吊销，不影响别人。
+- 用户只拿虚拟钥匙，可单独吊销，不影响别人。门户密码只存 scrypt 散列；会话 Cookie httpOnly + SameSite=Lax。
 - 隔离强度：同一 OS 账号下的"目录级 + 进程级"隔离，够 1–3 人内部试用；升级路径 = 独立系统用户 / 容器 / 独立机器。
 - 门户先只开局域网；对公网暴露前需加 HTTPS、限速、审计（本期不做）。
 
