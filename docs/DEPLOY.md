@@ -63,6 +63,16 @@ python3? 不需要——零依赖
 **备份**：`desk-backup.timer` 每天 03:40 自动跑；手工 `bash scripts/backup.sh` → `~/desk-backups/desk-<时间>.tar.gz`（含账本快照 VACUUM INTO + 数据目录 + 密钥；保留 14 份）。
 **恢复**：`sudo bash scripts/restore.sh <备份.tar.gz>`（会先停服务并自动先备份现状）。
 
+### 可选：会话导出 / 跨会话检索
+
+- **导出**（现成可用）：会话右上角 `Session log` 按钮，或输入 `/export` → 浏览器下载 ZIP（含会话、子会话、附件）。
+- **跨会话检索**（agent 搜索历史会话，opt-in）：
+  ```sh
+  bash scripts/enable-session-search.sh /home/yangc/desk-test/<实例>
+  sudo systemctl restart desk-agent-<名字>
+  ```
+  幂等可重复跑；详细说明见脚本头部注释。
+
 ## 升级
 
 - **本仓库**：`git pull` → `sudo bash scripts/install-services.sh`（单元有变时）→ `bash scripts/desk.sh restart`。

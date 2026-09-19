@@ -17,3 +17,4 @@
 12. **从零重装验收未做**（PLAN P4-20 绿线的完整版）——脚本与文档已就绪（`scripts/setup.sh` 幂等自检通过），待第二台机器或空闲时实际走一遍。
 13. **WSL 空闲自动停机**已通过 `C:\Users\Yangc\.wslconfig` 关闭——若某次系统/WSL 大版本升级后服务又"莫名全死"，先查该文件是否被重置。
 14. **团队 Agent 预设为存量拷贝**（基于 dsh `standard`，2026-09-19 版）——dsh 升级后建议按 `presets-template/README.md` 的步骤重抄（内置模式有变化时团队预设不会自动跟随）。
+15. **会话检索为 opt-in 开启（非默认）**——`tool-session-query` 以 `link:` 依赖挂进实例 profile（指向 dsh 检出内包）；**dsh 检出路径变化时需重跑** `scripts/enable-session-search.sh`。索引落盘在各实例 `search.db`（首次搜索时构建）。
