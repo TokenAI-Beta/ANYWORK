@@ -1,0 +1,4 @@
+# DSH-ANYWORK 工作台面板：向 Web 组合插入一个设置页 row（客户端插件，不改 dsh 源码）
+- insert:
+    - id: desk-panel
+      name: 'dsh-desk-panel'
