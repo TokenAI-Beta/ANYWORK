@@ -1,20 +1,18 @@
 // desk CLI：node src/cli.ts <命令>
-//   user add <username> [--admin]   建用户并发虚拟钥匙（只显示一次）
-//   user list                       列出用户
-//   usage [username] [--month]      token 用量与估算费用（本月 / 全部）
+//   user add <username> [--admin]       建用户并发虚拟钥匙（只显示一次）
+//   user list                           列出用户（含预算）
+//   user budget <username> <cny|off>    设/清月度预算（CNY）
+//   usage [username] [--month]          token 用量与估算费用
 import { readFileSync } from 'node:fs'
-import { dirname, join } from 'node:path'
-import { fileURLToPath } from 'node:url'
 import { openDb } from './db.ts'
 import { hashToken, newVirtualKey } from './keys.ts'
+import { costOf, monthStartUtc, prices } from './pricing.ts'
 
 const args = process.argv.slice(2)
 const flags = args.filter((a) => a.startsWith('--'))
-const [cmd, sub, arg] = args.filter((a) => !a.startsWith('--'))
+const [cmd, sub, a1, a2] = args.filter((a) => !a.startsWith('--'))
 const admin = flags.includes('--admin')
 const month = flags.includes('--month')
-const here = dirname(fileURLToPath(import.meta.url))
-const prices = JSON.parse(readFileSync(join(here, '..', 'config', 'prices.json'), 'utf8'))
 const db = openDb()
 
 function cmdUserAdd(username: string): void {
@@ -37,7 +35,7 @@ function cmdUserAdd(username: string): void {
 function cmdUserList(): void {
   const rows = db
     .prepare(
-      `SELECT u.id, u.username, u.role, u.status, u.created_at, COUNT(k.id) AS keys
+      `SELECT u.id, u.username, u.role, u.status, u.monthly_budget_cny, u.created_at, COUNT(k.id) AS keys
        FROM users u LEFT JOIN api_keys k ON k.user_id = u.id AND k.revoked_at IS NULL
        GROUP BY u.id ORDER BY u.id`,
     )
@@ -46,34 +44,35 @@ function cmdUserList(): void {
     console.log('（暂无用户）')
     return
   }
-  for (const r of rows) console.log(`${r.id}\t${r.username}\t${r.role}\t${r.status}\tkeys=${r.keys}\t${r.created_at}`)
+  for (const r of rows) {
+    console.log(
+      `${r.id}\t${r.username}\t${r.role}\t${r.status}\t预算=${r.monthly_budget_cny ?? '不限'}\tkeys=${r.keys}\t${r.created_at}`,
+    )
+  }
 }
 
-function resolveModel(m: string): string {
-  return prices.aliases[m] ?? m
-}
-
-function tierOf(ts: string): 'peak' | 'off_peak' {
-  const d = new Date(ts.replace(' ', 'T') + 'Z')
-  const day = d.getUTCDay()
-  const h = d.getUTCHours()
-  const peak = day >= 1 && day <= 5 && ((h >= 1 && h < 4) || (h >= 6 && h < 10))
-  return peak ? 'peak' : 'off_peak'
-}
-
-function costOf(e: Record<string, number> & { model?: string; ts: string }): number {
-  const mp = prices.models[resolveModel(e.model ?? '')]
-  if (!mp) return 0
-  const p = mp[tierOf(e.ts)]
-  return (e.cache_hit_tokens * p.cache_hit + e.cache_miss_tokens * p.cache_miss + e.completion_tokens * p.output) / 1e6
+function cmdUserBudget(username: string, value: string): void {
+  const u = db.prepare(`SELECT id FROM users WHERE username = ?`).get(username) as { id: number } | undefined
+  if (!u) {
+    console.log(`找不到用户 ${username}`)
+    process.exit(1)
+  }
+  if (value === 'off' || value === 'none' || value === '-') {
+    db.prepare(`UPDATE users SET monthly_budget_cny = NULL WHERE id = ?`).run(u.id)
+    console.log(`${username}：预算已关闭（不限）`)
+  } else {
+    const n = Number(value)
+    if (!Number.isFinite(n) || n <= 0) {
+      console.log(`无效预算：${value}（用数字或 off）`)
+      process.exit(1)
+    }
+    db.prepare(`UPDATE users SET monthly_budget_cny = ? WHERE id = ?`).run(n, u.id)
+    console.log(`${username}：月度预算 = ¥${n}`)
+  }
 }
 
 function cmdUsage(name?: string): void {
-  let since = '1970-01-01 00:00:00'
-  if (month) {
-    const now = new Date()
-    since = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), 1)).toISOString().slice(0, 19).replace('T', ' ')
-  }
+  const since = month ? monthStartUtc() : '1970-01-01 00:00:00'
   const rows = (name
     ? db
         .prepare(
@@ -106,15 +105,33 @@ function cmdUsage(name?: string): void {
     )
   }
   console.log(`  ── 合计估算：¥${total.toFixed(4)}（口径：按请求发生时刻的峰谷价；价格表快照 ${prices.captured_at}）`)
+
+  if (name) {
+    const u = db.prepare(`SELECT monthly_budget_cny AS budget FROM users WHERE username = ?`).get(name) as
+      | { budget: number | null }
+      | undefined
+    if (u?.budget != null) {
+      const monthRows = db
+        .prepare(
+          `SELECT e.* FROM usage_events e JOIN users u2 ON u2.id = e.user_id WHERE u2.username = ? AND e.ts >= ?`,
+        )
+        .all(name, monthStartUtc()) as Record<string, any>[]
+      let spent = 0
+      for (const e of monthRows) spent += costOf(e as any)
+      console.log(`  本月：已用 ¥${spent.toFixed(4)} / 预算 ¥${u.budget}${spent >= u.budget ? '  ⚠️ 已超限（请求将被拒）' : ''}`)
+    }
+  }
 }
 
-if (cmd === 'user' && sub === 'add' && arg) cmdUserAdd(arg)
+if (cmd === 'user' && sub === 'add' && a1) cmdUserAdd(a1)
 else if (cmd === 'user' && sub === 'list') cmdUserList()
-else if (cmd === 'usage') cmdUsage(arg)
+else if (cmd === 'user' && sub === 'budget' && a1 && a2) cmdUserBudget(a1, a2)
+else if (cmd === 'usage') cmdUsage(sub)
 else {
   console.log('用法：')
   console.log('  node src/cli.ts user add <username> [--admin]')
   console.log('  node src/cli.ts user list')
+  console.log('  node src/cli.ts user budget <username> <cny|off>')
   console.log('  node src/cli.ts usage [username] [--month]')
   process.exit(1)
 }

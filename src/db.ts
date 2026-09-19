@@ -59,4 +59,10 @@ function migrate(db: DatabaseSync): void {
     CREATE INDEX IF NOT EXISTS idx_usage_user_ts ON usage_events(user_id, ts);
     CREATE INDEX IF NOT EXISTS idx_keys_hash ON api_keys(token_hash);
   `)
+
+  // 增量列：SQLite 没有 ADD COLUMN IF NOT EXISTS，先查再加
+  const cols = db.prepare('PRAGMA table_info(users)').all() as { name: string }[]
+  if (!cols.some((c) => c.name === 'monthly_budget_cny')) {
+    db.exec('ALTER TABLE users ADD COLUMN monthly_budget_cny REAL')
+  }
 }

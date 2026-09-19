@@ -1,9 +1,11 @@
 // 模型网关（P1）：OpenAI 兼容代理
 // - 校验虚拟钥匙（Bearer sk-desk-…）→ 换真 key 转发上游
+// - 月度预算检查（超限 429；DESK_BUDGET_WARN_ONLY=1 时仅告警）
 // - 流式 / 非流式都提取 usage → 写 usage_events（缺失时用粗估并标 estimated=1）
 import { createServer, type IncomingMessage, type ServerResponse } from 'node:http'
 import type { DatabaseSync } from 'node:sqlite'
 import { hashToken } from './keys.ts'
+import { costOf, monthStartUtc } from './pricing.ts'
 
 export interface GatewayOptions {
   db: DatabaseSync
@@ -38,6 +40,18 @@ function authenticate(db: DatabaseSync, req: IncomingMessage): AuthUser | undefi
     )
     .get(hashToken(m[1].trim())) as AuthUser | undefined
   return row ?? undefined
+}
+
+function monthSpend(db: DatabaseSync, userId: number): number {
+  const rows = db
+    .prepare(
+      `SELECT model, ts, cache_hit_tokens, cache_miss_tokens, completion_tokens
+       FROM usage_events WHERE user_id = ? AND ts >= ?`,
+    )
+    .all(userId, monthStartUtc()) as Array<Parameters<typeof costOf>[0]>
+  let sum = 0
+  for (const r of rows) sum += costOf(r)
+  return sum
 }
 
 function record(
@@ -110,6 +124,23 @@ export function startGateway(opts: GatewayOptions) {
         const user = authenticate(opts.db, req)
         if (!user) {
           return json(res, 401, { error: { message: 'invalid or missing api key', type: 'auth_error' } })
+        }
+
+        // 月度预算检查
+        const budgetRow = opts.db
+          .prepare(`SELECT monthly_budget_cny AS budget FROM users WHERE id = ?`)
+          .get(user.id) as { budget: number | null } | undefined
+        if (budgetRow?.budget != null) {
+          const spent = monthSpend(opts.db, user.id)
+          if (spent >= budgetRow.budget) {
+            const message = `monthly budget exceeded (spent ¥${spent.toFixed(4)} >= budget ¥${budgetRow.budget})`
+            if (process.env.DESK_BUDGET_WARN_ONLY === '1') {
+              console.log(`[gw] WARN budget exceeded user=${user.username}: ${message}`)
+            } else {
+              console.log(`[gw] user=${user.username} blocked: ${message}`)
+              return json(res, 429, { error: { message, type: 'budget_exceeded' } })
+            }
+          }
         }
 
         let body = ''
