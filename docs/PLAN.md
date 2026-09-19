@@ -1,6 +1,8 @@
 # DSH-ANYWORK 团队工作台 — 实施计划
 
-**状态：** 实施中（P0 未开始） · **日期：** 2026-09-18 · **底座：** 官方 DeepSeek Harness（`@deepseek-ai/dsh`，MIT） · **托管：** github.com/bugbyc0922/DSH-ANYWORK（公开） · **明确不做：** 不采用 TDHarness-coding 的任何代码，独立实现。
+**状态：** 实施中（P0 ✅ / P1 ✅；下一步 P2） · **日期：** 2026-09-18（2026-09-19 更新） · **底座：** 官方 DeepSeek Harness（`@deepseek-ai/dsh`，MIT） · **托管：** github.com/bugbyc0922/DSH-ANYWORK（公开） · **明确不做：** 不采用 TDHarness-coding 的任何代码，独立实现。
+
+> 更新（2026-09-19）：P0 全部通过、P1 完成并实机验证 —— 见 [`BASELINE.md`](BASELINE.md) 与 [`devlog/2026-09-19.md`](devlog/2026-09-19.md)。
 
 ---
 
@@ -26,7 +28,7 @@
 6. **`--host` 说法不一**：参考文档称 CLI 有意不支持 `0.0.0.0` 并直接报用法错误 —— 不影响本方案：实例只绑回环，由门户代理对外。
 7. **现有环境**：dsh 在 WSL `~/deepseek-harness`（0.1.0-rc.5，已 build）；node 24 + pnpm 就绪；KRouter 已挂 headless。
 
-P0 待复核清单：上面第 3 条的实际 flag 行为、WSL 局域网可达方案、流式 usage 是否随末块返回。
+P0 复核结果：第 3 条已实测（`--port` 有效；非回环假 Host 对 `/api` 返回 **403**，放行侧待补测）；WSL 局域网方案已定案（portproxy + 防火墙，见 BASELINE）；**流式 usage 随末块返回已确认**（dsh 自带 `stream_options.include_usage:true`）。
 
 ## 三、总体架构
 
@@ -67,29 +69,29 @@ P0 待复核清单：上面第 3 条的实际 flag 行为、WSL 局域网可达�
 ```text
 ~/dsh-anywork/
 ├─ src/
-│  ├─ server.ts        # 入口：门户 8080 + 网关 8100
-│  ├─ portal/          # 登录、门户页、管理页
-│  ├─ proxy/           # 反向代理（HTTP + WS 透传 + 登录闸门）
-│  ├─ gateway/         # /chat/completions、/models 转发 + 计量 + 预算
-│  ├─ agents/          # dsh 实例管理（起停、端口、DSH_HOME、env）
-│  ├─ db/              # SQLite schema + 迁移
-│  └─ cli.ts           # desk user / agent / usage / backup
-├─ portal-static/      # 门户静态页（无构建步骤）
+│  ├─ server.ts        # 入口（当前：网关 :8100；P2 加门户 :8080）
+│  ├─ gateway.ts       # /chat/completions、/models 转发 + 计量 + 预算
+│  ├─ db.ts            # SQLite schema + 迁移（node:sqlite，零依赖）
+│  ├─ pricing.ts       # 价格表读取 + 费用计算（峰谷）
+│  ├─ keys.ts          # 虚拟钥匙生成 / 哈希（只存 sha256）
+│  └─ cli.ts           # desk user / budget / usage
 ├─ config/
-│  ├─ desk.yml         # 端口、路径、预算默认值
-│  └─ prices.yml       # 模型价格表（缓存命中/未命中分开）
-├─ scripts/            # setup.sh / start.sh / backup.sh
-└─ tests/
+│  └─ prices.json      # 模型价格表（JSON；缓存命中/未命中分开）
+├─ portal-static/      # 门户静态页（P2，无构建步骤）
+├─ scripts/            # setup.sh / start.sh / backup.sh（P4）
+└─ tests/              # 测试（P2+ 补）
 ```
 
 ## 五、数据模型（SQLite 草案）
 
-- `users`(id, username, display_name, role, password_hash, status, agent_port, workspace, created_at, last_login_at)
+- `users`(id, username, display_name, role, password_hash, status, agent_port, workspace, created_at, last_login_at, **monthly_budget_cny**)
 - `login_sessions`(id, user_id, token_hash, created_at, expires_at, ip, user_agent)
 - `api_keys`(id, user_id, token_hash, label, created_at, revoked_at)  — 虚拟钥匙，只存 hash
 - `usage_events`(id, user_id, ts, model, prompt_tokens, completion_tokens, cache_hit_tokens, cache_miss_tokens, usage_json, estimated, status)
 - `budgets`(user_id, period, limit_cny, warn_ratio)
 - `audit_events`(id, ts, actor_user_id, action, detail_json)
+
+P1 已落地：`users`（含 `monthly_budget_cny`）、`api_keys`、`usage_events`；其余表随对应阶段建。
 
 ## 六、对外接口（草案）
 
@@ -99,25 +101,25 @@ P0 待复核清单：上面第 3 条的实际 flag 行为、WSL 局域网可达�
 
 ## 七、阶段与任务（共 22 项，一次做一项，每项有绿线）
 
-### P0 可行性验证（先跑这 4 项，避免返工）
+### P0 可行性验证 ✅（2026-09-19 全部过线）
 
-1. **dsh 多实例**：两个 DSH_HOME + 两个端口各起 web 实例。绿线：两实例并存，会话互不可见。
-2. **启动参数实测**：`--port`、`--trusted-host` 实机行为（含非回环 Host 对 /api 的拒绝/放行）。绿线：curl 假 Host/Origin 结果符合预期，命令原文记进 BASELINE。
-3. **网关截获**：DEEPSEEK_BASE_URL 指向临时假服务器，观察 dsh 真实请求（路径/头/流式格式），并回一段假流式。绿线：假服务器完整记录一轮，dsh UI 正常出字。
-4. **局域网开放**：Windows→WSL 方案定案（netsh portproxy 或 .wslconfig mirrored）。绿线：手机/另一台电脑能打开测试页。
-   → 产出 `docs/BASELINE.md`（事实 + 命令原文）。
+1. ✅ **dsh 多实例**：两个 DSH_HOME + 两个端口各起 web 实例。绿线：两实例并存，会话互不可见。
+2. ◐ **启动参数实测**：`--port`、`--trusted-host` 实机行为（含非回环 Host 对 /api 的拒绝/放行）。绿线：curl 假 Host/Origin 结果符合预期，命令原文记进 BASELINE。（`--port` ✅；拒绝侧 403 ✅；放行侧待补测）
+3. ✅ **网关截获**：DEEPSEEK_BASE_URL 指向临时假服务器，观察 dsh 真实请求（路径/头/流式格式），并回一段假流式。绿线：假服务器完整记录一轮，dsh UI 正常出字。
+4. ◐ **局域网开放**：Windows→WSL 方案定案（netsh portproxy 或 .wslconfig mirrored）。绿线：手机/另一台电脑能打开测试页。（Windows 侧 200 ✅；手机实测待确认）
+   → 产出 `docs/BASELINE.md`（事实 + 命令原文）。✅
 
-### P1 模型网关 + 按人计量
+### P1 模型网关 + 按人计量 ✅（2026-09-19 完成并实机验证）
 
-5. **脚手架**：repo + TypeScript + Fastify + better-sqlite3 + `/healthz`。绿线：`pnpm start` 健康检查 200。
-6. **用户与虚拟钥匙**：users / api_keys 表 + `desk user add`。绿线：钥匙只显示一次，库里只有 hash。
-7. **网关（非流式）**：鉴权 → 转发 → usage 落库。绿线：curl 走网关真实调用一次，usage_events 数字正确。
-8. **网关（流式）**：SSE 透传 + 末块 usage 提取（必要时注入 `stream_options.include_usage`）；缺失时估算并标 `estimated=1`。绿线：流式落库；数字与平台账单同量级。
-9. **计费**：`/models` 透传 + `prices.yml` + `desk usage`。绿线：一条命令打出"今日 tokens + 估算费用"。
-10. **预算拦截**：月预算 + 超限 429（先支持 warn 模式）。绿线：预算设 ¥0.01，下一个请求被拒。
-11. **dsh 实测接入**：现有 web 实例临时指向网关跑一轮。绿线：会话正常 + 计量落库 + UI 统计正常。
+5. ✅ **脚手架**：repo + `/healthz`。绿线：健康检查 200。（实现口径：**零依赖** —— Node 24 内建 `node:http` + `node:sqlite` + 直跑 TypeScript，未引入 Fastify / better-sqlite3。）
+6. ✅ **用户与虚拟钥匙**：users / api_keys 表 + `desk user add`。绿线：钥匙只显示一次，库里只有 hash。
+7. ✅ **网关（非流式）**：鉴权 → 转发 → usage 落库。绿线：curl 走网关真实调用一次，usage_events 数字正确。
+8. ✅ **网关（流式）**：SSE 透传 + 末块 usage 提取；缺失时估算并标 `estimated=1`。绿线：流式落库；数字与平台账单同量级。
+9. ✅ **计费**：`/models` 透传 + 价格表 + `desk usage`。绿线：一条命令打出"用量 tokens + 估算费用"。（价格表为 `config/prices.json`。）
+10. ✅ **预算拦截**：月预算 + 超限 429（`DESK_BUDGET_WARN_ONLY=1` 可切告警模式）。绿线：预算设低，下一个请求被拒。
+11. ✅ **dsh 实测接入**：web 实例指向网关跑一轮。绿线：会话正常 + 计量落库 + UI 统计正常。（u3：7653 输入 tokens 入账。）
 
-### P2 账号、登录、门户
+### P2 账号、登录、门户（下一步）
 
 12. **登录**：argon2 + httpOnly cookie；登录/登出页。绿线：错密码拒绝、对密码进入。
 13. **门户页**：`/portal/me`（我的用量）、`/portal/admin`（成员管理）。绿线：两页可用，数字来自 P1 账本。
@@ -147,7 +149,7 @@ P0 待复核清单：上面第 3 条的实际 flag 行为、WSL 局域网可达�
 ## 九、风险与开放问题
 
 - dsh 处于 rc 阶段，flag 与内部接口会变 → 钉版本（记录基线 0.1.0-rc.5），升级走回归清单。
-- WSL 局域网可达性两方案择一（P0 定案）。
+- WSL 局域网可达性：portproxy 方案已定案（WSL IP 变化在部署脚本自动刷新）。
 - 流式 usage 缺失时按估算记账，口径写明"以网关为准"。
 - 每实例一个 Node 进程，1–3 人可控；>5 人要评估资源。
 - 仓库名已定 `DSH-ANYWORK`；本地开发目录 `~/dsh-anywork`。
@@ -155,7 +157,7 @@ P0 待复核清单：上面第 3 条的实际 flag 行为、WSL 局域网可达�
 ## 十、GitHub 与每日维护
 
 - **托管**：GitHub 公开仓库 `DSH-ANYWORK`（MIT），当开源项目运营（README 中英、CI、Issue 模板逐步齐备）。
-- **就位进度**：✅ gh 登录（bugbyc0922）· ✅ 账号旧内容清空（8 个旧仓库已删）· ✅ 建仓 + 首版推送 · ⬜ CI · ⬜ 每日巡逻任务。
+- **就位进度**：✅ gh 登录（bugbyc0922）· ✅ 账号旧内容清空（8 个旧仓库已删）· ✅ 建仓 + 首版推送 · ⬜ CI · ✅ 每日巡逻任务（2026-09-19 起，每天约 21:30，首跑已成功）。
 - **每日维护（双轨）**：
   1. 真人节奏：按 TODO 一天推进，完成即提交（conventional commits）。
   2. 巡逻兜底（定时任务，每天约 21:30）：拉最新 → 跑测试 → 写 `docs/devlog/YYYY-MM-DD.md`（当天提交/进展/待办）→ 有改动就提交推送；机器未开机则顺延。

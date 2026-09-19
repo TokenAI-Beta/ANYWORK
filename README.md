@@ -6,7 +6,7 @@
 
 Each member signs in with their own account and works in their own isolated workspace. The model API key stays on the server, and usage is metered per person — so a team can share one agent setup without sharing keys, files, or bills.
 
-> **Status: building in public, early stage.** The first milestone is the foundation: login, per-member workspaces, and a central model gateway with per-person metering. Full roadmap and 22-task plan in [`docs/PLAN.md`](docs/PLAN.md); daily progress lands in [`docs/devlog/`](docs/devlog/).
+> **Status: building in public, early stage.** P0 (feasibility) and P1 (model gateway + per-person metering) are done and verified end-to-end against the real API. Next: P2 (accounts, login, portal). Full roadmap and 22-task plan in [`docs/PLAN.md`](docs/PLAN.md); verified findings in [`docs/BASELINE.md`](docs/BASELINE.md); daily progress in [`docs/devlog/`](docs/devlog/).
 
 ## What this is
 
@@ -32,8 +32,8 @@ Member browser → Portal (login gate + reverse proxy)
 
 | Phase | Scope | Status |
 |---|---|---|
-| P0 | Feasibility checks: multi-instance, launch flags, gateway interception, LAN access | ⬜ |
-| P1 | Model gateway + per-person metering | ⬜ |
+| P0 | Feasibility checks: multi-instance, launch flags, gateway interception, LAN access | 🟡 phone check pending |
+| P1 | Model gateway + per-person metering | ✅ verified end-to-end |
 | P2 | Accounts, login, portal | ⬜ |
 | P3 | Per-member workspaces (instance management, autostart) | ⬜ |
 | P4 | Delivery: install, backup, acceptance | ⬜ |
@@ -42,7 +42,28 @@ Each task has a concrete acceptance check; the full list is in [`docs/PLAN.md`](
 
 ## Development
 
-Nothing to run yet — implementation starts at P0. Follow [`docs/devlog/`](docs/devlog/) for day-by-day progress.
+Requirements: **Node 24+** — and nothing else. The service is dependency-free (`node:http`, `node:sqlite`, built-in `fetch`), and TypeScript sources run directly via Node's type stripping.
+
+```sh
+# 1. Real upstream key (stays on the server)
+mkdir -p ~/.desk
+echo 'DEEPSEEK_API_KEY=sk-…' > ~/.desk/keys.env
+chmod 600 ~/.desk/keys.env
+
+# 2. Model gateway on http://127.0.0.1:8100
+node src/server.ts
+
+# 3. CLI: users, budgets, usage
+node src/cli.ts user add alice          # prints her virtual key once
+node src/cli.ts user budget alice 50    # monthly budget in CNY (or: off)
+node src/cli.ts usage alice --month
+```
+
+Point any dsh instance at the gateway with the member's virtual key:
+
+```sh
+DEEPSEEK_BASE_URL=http://127.0.0.1:8100 DEEPSEEK_API_KEY=sk-desk-… dsh web --port 3301
+```
 
 ## License
 

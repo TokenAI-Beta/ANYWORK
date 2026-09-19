@@ -1,4 +1,4 @@
-# 基线事实（P0 验证记录）
+# 基线事实（P0/P1 验证记录）
 
 > 记录日期：2026-09-19 · 环境：Windows 11 + WSL2（Ubuntu 26.04，systemd）· dsh 0.1.0-rc.5（本地构建：`~/deepseek-harness`）
 
@@ -8,9 +8,10 @@
 
 方法：
 - `profiles/web` 只有 4 个小文件（`cordis.yml` / `cordis.patch.yml` / `package.json` / `pnpm-workspace.yaml`），新 home 直接拷贝即可；插件从 dsh 安装目录解析，无需重装。
-- 启动（常驻关键：`setsid` + `</dev/null`）：
+- 启动（两个关键：`setsid` + `</dev/null`；脚本里先 `export PATH="$HOME/opt/node-v24.19.0-linux-x64/bin:$HOME/bin:$PATH"`）：
 
 ```sh
+export PATH="$HOME/opt/node-v24.19.0-linux-x64/bin:$HOME/bin:$PATH"
 DSH_HOME=/home/yangc/desk-test/u1 \
   setsid node /home/yangc/deepseek-harness/apps/cli/lib/bin.js web --port 3301 \
   </dev/null >> ~/desk-test/u1/web.log 2>&1 &
@@ -21,7 +22,7 @@ DSH_HOME=/home/yangc/desk-test/u1 \
 - 在 u1 创建会话 `session-5eb3f6db-…`（cwd=`u1/workspace`）后：u1 `session.list` 可见，u2 `session.list` 为空；两侧 `storages/` 独立。
 - Windows 侧可直达（WSL localhost 转发）：`http://127.0.0.1:3301` → 200。
 
-**坑（重要）**：裸 `nohup … &` 启动的实例，在启动命令的 wsl.exe 会话退出后**会被杀掉**；必须 `setsid … </dev/null`（或 systemd）才能常驻 → P3 自启守护按 systemd 做。
+**坑（重要）**：裸 `nohup … &` 启动的实例，在启动命令的 wsl.exe 会话退出后**会被杀掉**；必须 `setsid … </dev/null`（或 systemd）才能常驻 → P3 自启守护按 systemd 做。另：**忘了 `export PATH` 时 `setsid: failed to execute node`（静默不出进程）**。
 
 ## P0-2 启动参数与信任围栏（部分 ✅）
 
@@ -44,7 +45,7 @@ curl -s -X POST http://127.0.0.1:3301/api/session.list \
 假网关实测收到的请求：
 - `GET /models`（无认证头；dsh 会调用 → 网关必须实现）。
 - `POST /chat/completions`（一次发言触发 2 条）：
-  1. 主请求：`model=deepseek-v4-flash`、`stream=true`、`stream_options={"include_usage":true}`，字段集 `model, messages, stream, stream_options, thinking, reasoning_effort, tools(25), max_tokens`，认证头 `Authorization: Bearer <key>`；
+  1. 主请求：`model=deepseek-v4-flash`、`stream=true`、`stream_options={"include_usage":true}`，字段集 `model, messages, stream, stream_options, thinking, reasoning_effort, tools(25), max_tokens`。
   2. 会话标题生成请求（更小、无 tools）。
 - **关键发现：dsh 自带 `stream_options.include_usage:true`，usage 随流末块返回** → 网关记账直接读末块 usage（缺失才兜底估算）。
 - 假流式回包被完整解析：assistant 内容入历史；usage（123/45，含缓存命中 23）正确进入会话统计（`uncachedInput=100, cacheRead=23, output=45`）。
@@ -67,9 +68,25 @@ New-NetFirewallRule -DisplayName 'DSH-DESK-P0-4' -Direction Inbound -Action Allo
 - 待确认：手机（同一 Wi-Fi）访问 `http://192.168.0.171:8080/`。
 - 备注：正式版 P2 门户将直接监听局域网地址并反代回环实例；WSL IP 变化在部署脚本里自动刷新（或改用 mirrored 模式）。
 
+## P1 模型网关 ✅（2026-09-19）
+
+**结论**：零依赖网关（Node 24 内建 `node:http` + `node:sqlite`，无任何 npm 依赖）上线：虚拟钥匙鉴权 → 换真 key 转发 → usage 落库。真 key 单独保管在 `~/.desk/keys.env`（chmod 600），从不下发给成员。
+
+- 入口：`node src/server.ts`（回环 `:8100`）：`/healthz`、`/models`（免鉴权透传）、`/chat/completions`（Bearer 虚拟钥匙 `sk-desk-…`）。
+- 记账：流式读 SSE **末块 usage**（dsh 自带 `include_usage`；缺失才粗估并标 `estimated=1`）；`usage_events` 表按人/按模型记账，虚拟钥匙只存 sha256。
+- 价格：`config/prices.json`（CN 区 CNY，按请求发生时刻判峰谷；空闲＝高峰半价）。
+- 预算：`node src/cli.ts user budget <name> <cny|off>`；超限 **429**（`DESK_BUDGET_WARN_ONLY=1` 可改为仅告警）。
+- CLI：`user add` / `user list` / `user budget` / `usage [name] [--month]`。
+
+实测证据（2026-09-19）：
+1. 直连 curl 非流式 / 流式各一次 → usage 正确入账（34/64、33/64）。
+2. **u3 实例挂真网关完成一轮发言**：模型回复入会话历史（`"1\n2\n3"`），`deepseek-v4-flash` 主请求 **7653 输入 tokens 入账 alice（¥0.0077）**；`usage alice` 可查。
+3. 错钥匙 → 401；预算设 ¥0.005（已花 ¥0.0083）→ 请求被 **429** 拒绝，关闭预算后恢复 200。
+
 ## 环境速记
 
 - node：`~/opt/node-v24.19.0-linux-x64/bin/node`；dsh 入口：`~/deepseek-harness/apps/cli/lib/bin.js`。
-- 测试实例：`~/desk-test/u1`、`u2`、`u3`（P0 期间常驻，可随时清理）。
+- 测试实例：`~/desk-test/u1`、`u2`、`u3`（u3 现挂真网关 :8100；P1 验证完可清理）。
+- 网关数据：`~/desk-data/desk.db`；真 key：`~/.desk/keys.env`（600）。
 - 局域网测试页：`~/desk-test/www`（python http.server :8090 + 端口转发 8080）；Windows 局域网 IP `192.168.0.171`（WLAN）。
 - DeepSeek 计费（2026-08-16 起）：高峰＝北京时间周一至周五 9:00–12:00、14:00–18:00；其余（含整周末）为空闲时段，价格恰为高峰一半。
