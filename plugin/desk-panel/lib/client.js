@@ -252,7 +252,7 @@ window.__ModuleLoader__.load({
             setSt({ phase: "ready", path: d.path != null ? d.path : p, entries: d.entries || [], message: "" });
           })
           .catch(function (e) {
-            setSt({ phase: "error", path: p, entries: [], message: "" });
+            setSt({ phase: "error", path: p, entries: [], message: String((e && e.message) || e) });
           });
       }
       React.useEffect(function () {
@@ -355,7 +355,7 @@ window.__ModuleLoader__.load({
       );
 
       var kids = [h("div", { key: "crumbs", style: { fontSize: 12 } }, crumbs), bar];
-      if (st.message) kids.push(h("div", { key: "msg", style: muted }, st.message));
+      if (st.message && st.phase !== "error") kids.push(h("div", { key: "msg", style: muted }, st.message));
       if (st.phase === "error") {
         kids.push(h("div", { key: "err", style: muted }, "读不到公司盘（" + st.message + "）。本面板需从门户打开（经登录会话访问服务器文件区）。"));
       } else if (st.entries.length) {
