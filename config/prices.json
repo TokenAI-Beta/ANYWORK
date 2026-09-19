@@ -1,0 +1,23 @@
+{
+  "currency": "CNY",
+  "unit": "per_1M_tokens",
+  "source": "https://api-docs.deepseek.com/zh-cn/quick_start/pricing",
+  "captured_at": "2026-09-19",
+  "note": "空闲时段价格为高峰时段的一半。高峰=北京时间周一至周五 09:00-12:00、14:00-18:00（即 UTC 01:00-04:00、06:00-10:00，周一至周五）；其余全部为空闲时段。",
+  "peak_hours_utc": {
+    "days": [1, 2, 3, 4, 5],
+    "ranges": [[1, 4], [6, 10]]
+  },
+  "models": {
+    "deepseek-flash": {
+      "off_peak": { "cache_hit": 0.02, "cache_miss": 1, "output": 4 },
+      "peak": { "cache_hit": 0.04, "cache_miss": 2, "output": 8 }
+    }
+  },
+  "aliases": {
+    "deepseek-v4-flash": "deepseek-flash",
+    "deepseek-v4-flash-vision-exp": "deepseek-flash",
+    "deepseek-v4-pro": "deepseek-flash"
+  },
+  "aliases_note": "旧模型名当前均按 V4.1-Flash 计费（deepseek-v4-pro 自 2026-09-14 起路由到 Flash）；V4.1 Pro 上线后需更新此表。"
+}
