@@ -13,6 +13,7 @@ import {
 } from './auth.ts'
 import { hashToken, newVirtualKey } from './keys.ts'
 import { costOf, monthStartUtc, prices } from './pricing.ts'
+import { kbSearch } from './kb.ts'
 
 export interface PortalOptions {
   db: DatabaseSync
@@ -435,6 +436,15 @@ ${banner}
             recent: recent.map((r) => ({ time: bjtime(r.ts), model: r.model ?? '-', cost: costOf(r) })),
           }),
         )
+      }
+      if (req.method === 'GET' && path === '/portal/api/kb/search') {
+        if (!user) {
+          res.writeHead(401, { 'content-type': 'application/json' })
+          return res.end(JSON.stringify({ error: 'login required' }))
+        }
+        const q = (url.searchParams.get('q') ?? '').slice(0, 100)
+        res.writeHead(200, { 'content-type': 'application/json; charset=utf-8' })
+        return res.end(JSON.stringify(kbSearch(q)))
       }
       if (path === '/favicon.ico') {
         res.writeHead(204)
