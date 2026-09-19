@@ -2,7 +2,7 @@
 
 **状态：** 实施中（P0 ✅ / P1 ✅ / P2 ✅；下一步 P3） · **日期：** 2026-09-18（2026-09-19 更新） · **底座：** 官方 DeepSeek Harness（`@deepseek-ai/dsh`，MIT） · **托管：** github.com/bugbyc0922/DSH-ANYWORK（公开） · **明确不做：** 不采用 TDHarness-coding 的任何代码，独立实现。
 
-> 更新（2026-09-19）：P0 全部通过、P1 完成、**P2 全部完成**（12–15 ✅：登录 / 门户 / 登录闸门+反代 / 信任自动化，均实机验证）—— 见 [`BASELINE.md`](BASELINE.md) 与 [`devlog/2026-09-19.md`](devlog/2026-09-19.md)。
+> 更新（2026-09-19）：P0 全部通过、P1 完成、**P2 全部完成**（12–15 ✅：登录 / 门户 / 登录闸门+反代 / 信任自动化，均实机验证）；计划外打通 **dsh 客户端插件机制**（设置内嵌「工作台用量」页）—— 见 [`BASELINE.md`](BASELINE.md) 与 [`devlog/2026-09-19.md`](devlog/2026-09-19.md)。
 
 ---
 
@@ -16,7 +16,7 @@
 | 第一版范围 | 登录 + 每人独立工作区 + key 集中管理 + 按人计量（地基优先） |
 | 代码托管 | GitHub 公开仓库 `DSH-ANYWORK`（当开源项目运营；MIT） |
 | 维护节奏 | 平时按 TODO 真推进；每天自动巡逻兜底（跑测试、写开发日志、有改动就提交） |
-| 本期待列 | 任务卡 + 提交验收四格、花名册/同事视图、通知、远程接入、客户端模式 |
+| 本期待列 | 任务卡 + 提交验收四格、花名册/同事视图、通知、远程接入、客户端模式、**公司知识库 / 公司盘**、**多上游通道管理（订阅 / key）** |
 
 ## 二、已核实的技术情报（写码前 P0 只做复核）
 
@@ -27,6 +27,7 @@
 5. **前端事件面**：WebSocket（`/api/events.mux`、`/api/events.host`）+ `POST /api` RPC —— 反代必须透传 WS。
 6. **`--host` 说法不一**：参考文档称 CLI 有意不支持 `0.0.0.0` 并直接报用法错误 —— 不影响本方案：实例只绑回环，由门户代理对外。
 7. **现有环境**：dsh 在 WSL `~/deepseek-harness`（0.1.0-rc.5，已 build）；node 24 + pnpm 就绪；KRouter 已挂 headless。
+8. **客户端插件机制（2026-09-19 打通）**：dsh 前端本身由插件组合（`ui-slots` 槽位 + `ui-settings-*` 系列）；外部包声明 `dsh.bundle.patch`（`cordis.patch.yml`，插入行用 `- insert:` 块）+ `dsh.client`（`{platform:'web', inject:[]}` + `./client` 导出），经 `dsh plugin --profile web add file:` 挂载后自动进入 bundles 层；浏览器侧 bundle 为闭包工厂格式，`require` 仅限平台模块（react / ui-slots / ui-primitives / web-react / schema-form / attachment / cordis）。→ 设置内嵌页面零改源码可实现。
 
 P0 复核结果：第 3 条已实测（`--port` 有效；非回环假 Host 对 `/api` 返回 **403**；放行侧已补测 `--trusted-host` 生效）；WSL 局域网方案已定案（portproxy + 防火墙，见 BASELINE）；**流式 usage 随末块返回已确认**（dsh 自带 `stream_options.include_usage:true`）。
 
@@ -77,6 +78,8 @@ P0 复核结果：第 3 条已实测（`--port` 有效；非回环假 Host 对 `
 │  ├─ pricing.ts       # 价格表读取 + 费用计算（峰谷）
 │  ├─ keys.ts          # 虚拟钥匙生成 / 哈希（只存 sha256）
 │  └─ cli.ts           # desk user / passwd / budget / agent / usage
+├─ plugin/
+│  └─ desk-panel/      # dsh 客户端插件：「工作台用量」设置页（settings.section 槽；零构建、零依赖）
 ├─ config/
 │  └─ prices.json      # 模型价格表（JSON；缓存命中/未命中分开）
 ├─ scripts/
@@ -98,8 +101,8 @@ P0 复核结果：第 3 条已实测（`--port` 有效；非回环假 Host 对 `
 ## 六、对外接口（草案）
 
 - 网关：`POST /chat/completions`（Bearer 虚拟钥匙）、`GET /models`、`GET /healthz`
-- 门户：`GET|POST /login`、`POST /logout`、`GET /portal/me`、`GET|POST /portal/admin/users`；其余路径 → 本人实例（HTTP + WS）
-- CLI（已实现）：`user add|list|passwd|budget|agent`、`usage [u] [--month]`；`desk agent start|stop|status`、`desk backup`（后续阶段）
+- 门户：`GET|POST /login`、`POST /logout`、`GET /portal/me`、`GET|POST /portal/admin/users`、`GET /portal/api/usage`（JSON，供设置页插件/小组件）；其余路径 → 本人实例（HTTP + WS）
+- CLI（已实现）：`user add|list|passwd|budget|agent`、`usage [u] [--month]`；`desk agent start|stop|status`（P3）、`desk backup`（P4）
 
 ## 七、阶段与任务（共 22 项，一次做一项，每项有绿线）
 
@@ -127,6 +130,7 @@ P0 复核结果：第 3 条已实测（`--port` 有效；非回环假 Host 对 `
 13. ✅ **门户页**：`/portal/me`（我的用量）、`/portal/admin`（成员管理 + 页面建号发钥匙）。绿线：两页可用，数字来自 P1 账本。
 14. ✅ **登录闸门 + 反代**：未登录跳登录；登录后根路径透传本人实例；WS 透传；跨成员拒绝。绿线：两台设备两个账号互测，谁都进不了对方工作台。（实现：Host/Origin 原样透传 + 实例 `--trusted-host` 信任门户 authority；三账号三实例隔离实测通过，WS 101。）
 15. ✅ **信任自动化**：实例启动自动带 `--trusted-host <门户 authority>`。绿线：去掉手工参数重起，页面照常。（`scripts/start-agent.sh`；已用该脚本重起三实例验证。）
+    ➕ 计划外：**设置页插件**（`plugin/desk-panel/`）——借 dsh 官方客户端插件机制把「工作台用量」做进工作台「设置」（`settings.section` 槽位；零构建零依赖、未改 dsh 源码；三实例已挂载验证）。
 
 ### P3 每人独立工作区（下一步）
 
@@ -139,19 +143,20 @@ P0 复核结果：第 3 条已实测（`--port` 有效；非回环假 Host 对 `
 
 20. **运维**：setup / backup / restore / logs 脚本 + 一页部署说明。绿线：按文档从零重装一遍成功。
 21. **试用验收**：1–2 个试用账号完整走"登录 → 干活 → 查账"。绿线：清单全过。
-22. **收尾**：已知问题清单 + 下一期候选（任务卡/提交验收、花名册、通知、远程接入）。
+22. **收尾**：已知问题清单 + 下一期候选（任务卡/提交验收、花名册、通知、远程接入、**公司知识库 / 公司盘**、**多上游通道管理**）。
 
 ## 八、安全与边界（如实说）
 
 - 真 key 只存在网关（`~/.desk/keys.env`，chmod 600；不入库、不进 git、不进日志）。建议为工作台**单独开一枚 key**（先用现有 key 过渡）。
 - 用户只拿虚拟钥匙（服务器留档 `~/.desk/agents/<u>.key`，600），可单独吊销，不影响别人。门户密码只存 scrypt 散列；会话 Cookie httpOnly + SameSite=Lax。
 - 反代信任模型：实例只信任回环 + `--trusted-host` 声明的门户 authority；未登录一律跳登录，跨成员按会话映射天然隔离。
+- 设置页插件在浏览器侧运行、只读门户接口（`/portal/api/usage` 需登录会话）；不触达模型请求。
 - 隔离强度：同一 OS 账号下的"目录级 + 进程级"隔离，够 1–3 人内部试用；升级路径 = 独立系统用户 / 容器 / 独立机器。
 - 门户先只开局域网；对公网暴露前需加 HTTPS、限速、审计（本期不做）。
 
 ## 九、风险与开放问题
 
-- dsh 处于 rc 阶段，flag 与内部接口会变 → 钉版本（记录基线 0.1.0-rc.5），升级走回归清单。
+- dsh 处于 rc 阶段，flag 与内部接口会变 → 钉版本（记录基线 0.1.0-rc.5），升级走回归清单（含客户端插件机制回归）。
 - WSL 局域网可达性：portproxy 方案已定案（WSL IP 变化在部署脚本自动刷新）。
 - 流式 usage 缺失时按估算记账，口径写明"以网关为准"。
 - 每实例一个 Node 进程，1–3 人可控；>5 人要评估资源。

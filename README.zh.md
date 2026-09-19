@@ -6,7 +6,7 @@
 
 成员各自登录、各自独立工作区；模型的钥匙集中保管、按人计量。大家一起用 agent 干活，产出、账目、方法都留在自己的机器上。
 
-> **状态：建设中（公开开发）。** P0（可行性验证）、P1（模型网关 + 按人计量）、P2（账号 / 登录 / 门户 / 每人实例反代）均已完成并在局域网实机验证。下一步 P3（实例管理与自启守护）。路线图与任务清单见 [`docs/PLAN.md`](docs/PLAN.md)，验证记录见 [`docs/BASELINE.md`](docs/BASELINE.md)，每日进展见 [`docs/devlog/`](docs/devlog/)。
+> **状态：建设中（公开开发）。** P0（可行性验证）、P1（模型网关 + 按人计量）、P2（账号 / 登录 / 门户 / 每人实例反代）均已完成并在局域网实机验证；并已打通 dsh 官方客户端插件机制（设置内嵌「工作台用量」页）。下一步 P3（实例管理与自启守护）。路线图与任务清单见 [`docs/PLAN.md`](docs/PLAN.md)，验证记录见 [`docs/BASELINE.md`](docs/BASELINE.md)，每日进展见 [`docs/devlog/`](docs/devlog/)。
 
 ## 这是什么
 
@@ -68,6 +68,17 @@ node src/cli.ts usage alice --month
 ```sh
 DESK_PORTAL_AUTHORITY=<门户 host:port> scripts/start-agent.sh alice 3301 ~/desk-test/u1
 ```
+
+### 工作台设置页（dsh 客户端插件）
+
+`plugin/desk-panel/` 是一个小型 **dsh 客户端插件**：借 dsh 官方插件机制（`settings.section` 槽位 + `dsh plugin`）在 dsh「设置」中加入**「工作台用量」**页——**不改 dsh 源码、零构建、零 npm 依赖**。按实例挂载：
+
+```sh
+DSH_HOME=<实例 home> node <dsh 检出目录>/apps/cli/lib/bin.js plugin --profile web add \
+  file:<本仓库>/plugin/desk-panel
+```
+
+数据来自门户的 `/portal/api/usage`——从门户打开工作台即可看到。
 
 ## 许可
 

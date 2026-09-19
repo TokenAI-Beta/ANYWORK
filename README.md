@@ -69,6 +69,17 @@ Start a member's dsh instance with the helper (reads `~/.desk/agents/<user>.key`
 DESK_PORTAL_AUTHORITY=<portal host:port> scripts/start-agent.sh alice 3301 ~/desk-test/u1
 ```
 
+### Workbench settings page (dsh client plugin)
+
+`plugin/desk-panel/` is a small **dsh client plugin** that adds a **工作台用量** (my usage) page to the dsh Settings dialog, built on dsh's official client-plugin API (`settings.section` slot + `dsh plugin`) — **no dsh source changes, no build step, no npm dependencies**. Mount it per instance:
+
+```sh
+DSH_HOME=<instance home> node <dsh checkout>/apps/cli/lib/bin.js plugin --profile web add \
+  file:<this repo>/plugin/desk-panel
+```
+
+Data comes from the portal's `/portal/api/usage` — open the workbench through the portal to see it.
+
 ## License
 
 [MIT](LICENSE). This is a third-party project and is not affiliated with DeepSeek.
