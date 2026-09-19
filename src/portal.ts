@@ -1,6 +1,7 @@
-// 门户（P2）：登录 / 登出 / 我的用量 / 成员管理
+// 门户（P2）：登录 / 登出 / 我的用量 / 成员管理 / 登录闸门 + 反代（14）
 // 零依赖：node:http + 内联 HTML/CSS；会话 Cookie（httpOnly, SameSite=Lax）
-import { createServer, type IncomingMessage, type ServerResponse } from 'node:http'
+import { createServer, request as httpRequest, type IncomingMessage, type ServerResponse } from 'node:http'
+import { connect as netConnect } from 'node:net'
 import type { DatabaseSync } from 'node:sqlite'
 import {
   createSession,
@@ -43,7 +44,7 @@ function bjtime(tsUtc: string): string {
   return new Date(d.getTime() + 8 * 3600e3).toISOString().slice(0, 16).replace('T', ' ')
 }
 
-/** 北京时间"今天零点"→ UTC 字符串（喂给 SQL 比较） */
+/** 北京时间“今天零点”→ UTC 字符串（喂给 SQL 比较） */
 function beijingDayStartUtc(): string {
   const now = new Date()
   const bj = new Date(now.getTime() + 8 * 3600e3)
@@ -83,11 +84,12 @@ form.inline { display: inline; }
 footer { text-align: center; color: #8a8d91; font-size: 12px; padding: 24px 0 32px; }
 .login-wrap { max-width: 380px; margin: 8vh auto; }
 .key { font-family: ui-monospace, Consolas, monospace; background: #f0f1f3; border-radius: 8px; padding: 12px; word-break: break-all; font-size: 14px; }
+code { background: #f0f1f3; border-radius: 5px; padding: 1px 5px; font-family: ui-monospace, Consolas, monospace; font-size: 13px; }
 `
 
 function page(title: string, user: SessionUser | null, body: string): string {
   const nav = user
-    ? `<nav><a href="/portal/me">我的用量</a>${user.role === 'admin' ? '<a href="/portal/admin">成员管理</a>' : ''}<form method="post" action="/logout" class="inline"><button>退出</button></form></nav><span class="who">${esc(user.username)}</span>`
+    ? `<nav><a href="/">工作台</a><a href="/portal/me">我的用量</a>${user.role === 'admin' ? '<a href="/portal/admin">成员管理</a>' : ''}<form method="post" action="/logout" class="inline"><button>退出</button></form></nav><span class="who">${esc(user.username)}</span>`
     : ''
   return `<!doctype html>
 <html lang="zh-CN">
@@ -148,8 +150,38 @@ function html(res: ServerResponse, code: number, body: string): void {
   res.end(body)
 }
 
+/** 反代：HTTP 请求 → 该成员实例（Host/Origin 原样透传，实例用 --trusted-host 信任门户 authority） */
+function proxyHttp(req: IncomingMessage, res: ServerResponse, port: number): void {
+  const headers: Record<string, unknown> = { ...req.headers }
+  for (const h of ['connection', 'keep-alive', 'proxy-authenticate', 'proxy-authorization', 'te', 'trailers', 'transfer-encoding', 'upgrade']) {
+    delete headers[h]
+  }
+  const upstream = httpRequest(
+    { host: '127.0.0.1', port, method: req.method, path: req.url, headers },
+    (up) => {
+      res.writeHead(up.statusCode ?? 502, up.headers)
+      up.pipe(res)
+    },
+  )
+  upstream.on('error', () => {
+    if (!res.headersSent) {
+      html(res, 502, page('502', null, '<div class="card"><h1>502</h1><div class="muted">工作台实例未响应（可能未启动）。稍后再试或联系管理员。</div></div>'))
+    } else {
+      res.destroy()
+    }
+  })
+  req.pipe(upstream)
+}
+
 export function startPortal(opts: PortalOptions) {
   const db = opts.db
+
+  const agentPortOf = (userId: number): number | null => {
+    const row = db.prepare(`SELECT agent_port AS port FROM users WHERE id = ?`).get(userId) as
+      | { port: number | null }
+      | undefined
+    return row?.port ?? null
+  }
 
   const renderMe = (user: SessionUser): string => {
     const urow = db
@@ -190,11 +222,20 @@ export function startPortal(opts: PortalOptions) {
       )
       .join('')
 
+    const agentPort = agentPortOf(user.id)
+    const workstationCard = agentPort
+      ? `<div>实例运行中（127.0.0.1:${agentPort}） · <a href="/">进入我的工作台 →</a></div>`
+      : '<div class="muted">尚未分配工作台实例（P3 提供自动管理；当前请联系管理员）。</div>'
+
     const body = `
 <h1>我的用量</h1>
 <div class="card">
   <div>账户：<strong>${esc(user.username)}</strong>（${esc(user.role)}） · 创建于 ${esc(urow.created_at)}（UTC）</div>
   <div class="muted">虚拟钥匙：${keyCount.n} 把（${keyPrefix ? esc(keyPrefix.prefix) + '…' : '无'}） · 密钥仅存哈希，如需重发请在服务器上用 CLI 轮换</div>
+</div>
+<div class="card">
+  <h2>我的工作台</h2>
+  ${workstationCard}
 </div>
 <div class="grid">
   <div class="card">
@@ -219,7 +260,7 @@ export function startPortal(opts: PortalOptions) {
 
   const renderAdmin = (user: SessionUser, banner = ''): string => {
     const users = db
-      .prepare(`SELECT id, username, role, status, monthly_budget_cny AS budget, created_at FROM users ORDER BY id`)
+      .prepare(`SELECT id, username, role, status, monthly_budget_cny AS budget, agent_port, created_at FROM users ORDER BY id`)
       .all() as Record<string, unknown>[]
     const mStart = monthStartUtc()
     const rows = users
@@ -228,7 +269,7 @@ export function startPortal(opts: PortalOptions) {
           .prepare(`SELECT * FROM usage_events WHERE user_id = ? AND ts >= ?`)
           .all(u.id as number, mStart) as unknown as UsageRow[]
         const a = aggregate(mrows)
-        return `<tr><td>${u.id}</td><td>${esc(u.username)}</td><td>${esc(u.role)}</td><td>${esc(u.status)}</td><td>${u.budget ?? '不限'}</td><td>${a.events}</td><td>¥${a.cost.toFixed(4)}</td><td class="muted">${esc(u.created_at)}</td></tr>`
+        return `<tr><td>${u.id}</td><td>${esc(u.username)}</td><td>${esc(u.role)}</td><td>${esc(u.status)}</td><td>${u.agent_port ?? '-'}</td><td>${u.budget ?? '不限'}</td><td>${a.events}</td><td>¥${a.cost.toFixed(4)}</td><td class="muted">${esc(u.created_at)}</td></tr>`
       })
       .join('')
 
@@ -237,8 +278,8 @@ export function startPortal(opts: PortalOptions) {
 ${banner}
 <div class="card">
   <h2>成员（${users.length}）</h2>
-  <table><thead><tr><th>ID</th><th>用户名</th><th>角色</th><th>状态</th><th>月预算</th><th>本月请求</th><th>本月估算</th><th>创建（UTC）</th></tr></thead><tbody>${rows}</tbody></table>
-  <div class="muted" style="margin-top:8px">预算调整 / 停用 / 换钥匙：服务器上用 <code>node src/cli.ts</code> 系列命令（后续版本进此页面）。</div>
+  <table><thead><tr><th>ID</th><th>用户名</th><th>角色</th><th>状态</th><th>实例端口</th><th>月预算</th><th>本月请求</th><th>本月估算</th><th>创建（UTC）</th></tr></thead><tbody>${rows}</tbody></table>
+  <div class="muted" style="margin-top:8px">预算 / 实例端口 / 换钥匙：服务器上用 <code>node src/cli.ts</code> 系列命令（后续版本进此页面）。</div>
 </div>
 <div class="card">
   <h2>新建成员</h2>
@@ -323,7 +364,7 @@ ${banner}
       }
 
       // —— 门户页 ——
-      if (path === '/' || path === '/portal' || path === '/portal/') {
+      if (path === '/portal' || path === '/portal/') {
         return redirect(res, user ? '/portal/me' : '/login')
       }
 
@@ -384,13 +425,88 @@ ${banner}
         )
       }
 
-      return html(res, 404, page('404', user, '<div class="card"><h1>404</h1><div class="muted">页面不存在。</div></div>'))
+      // —— 登录闸门 + 反代：其余一切路径 → 该成员的 dsh 实例 ——
+      if (!user) return redirect(res, '/login')
+      const port = agentPortOf(user.id)
+      if (!port) {
+        return html(
+          res,
+          200,
+          page(
+            '工作台未分配',
+            user,
+            '<div class="card"><h1>你的工作台还没有分配实例</h1><div class="muted">当前由管理员在服务器上分配（P3 起提供自动管理）。<br>可以先去 <a href="/portal/me">我的用量</a> 看看账本。</div></div>',
+          ),
+        )
+      }
+      proxyHttp(req, res, port)
     } catch (err) {
       console.log(`[portal] unhandled: ${String(err)}`)
       try {
         html(res, 500, page('500', null, '<div class="card"><h1>500</h1><div class="muted">服务器内部错误。</div></div>'))
       } catch {
         // 响应已开始
+      }
+    }
+  })
+
+  // —— WebSocket 升级透传（dsh 的 /api/events.* 等）——
+  server.on('upgrade', (req, socket, head) => {
+    try {
+      const url = new URL(req.url ?? '/', 'http://desk')
+      if (!url.pathname.startsWith('/api/')) {
+        socket.write('HTTP/1.1 400 Bad Request\r\nConnection: close\r\n\r\n')
+        socket.destroy()
+        return
+      }
+      const user = userFromSession(db, req.headers['cookie'])
+      if (!user) {
+        socket.write('HTTP/1.1 401 Unauthorized\r\nConnection: close\r\n\r\n')
+        socket.destroy()
+        return
+      }
+      const port = agentPortOf(user.id)
+      if (!port) {
+        socket.write('HTTP/1.1 503 Service Unavailable\r\nConnection: close\r\n\r\n')
+        socket.destroy()
+        return
+      }
+      const target = netConnect(port, '127.0.0.1')
+      target.on('connect', () => {
+        const lines = [`GET ${req.url} HTTP/1.1`]
+        for (const [k, v] of Object.entries(req.headers)) {
+          if (v === undefined) continue
+          if (Array.isArray(v)) {
+            for (const vv of v) lines.push(`${k}: ${vv}`)
+          } else {
+            lines.push(`${k}: ${v}`)
+          }
+        }
+        target.write(lines.join('\r\n') + '\r\n\r\n')
+        if (head && head.length > 0) target.write(head)
+        target.pipe(socket)
+        socket.pipe(target)
+      })
+      target.on('error', () => {
+        try {
+          socket.destroy()
+        } catch {
+          // 已断开
+        }
+      })
+      socket.on('error', () => {
+        try {
+          target.destroy()
+        } catch {
+          // 已断开
+        }
+      })
+    } catch (err) {
+      console.log(`[portal] upgrade error: ${String(err)}`)
+      try {
+        socket.destroy()
+      } catch {
+        // 已断开
       }
     }
   })

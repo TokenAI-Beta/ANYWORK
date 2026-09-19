@@ -1,8 +1,9 @@
 // desk CLI：node src/cli.ts <命令>
 //   user add <username> [--admin]       建用户并发虚拟钥匙（只显示一次）
-//   user list                           列出用户（含预算）
+//   user list                           列出用户（含预算 / 实例端口）
 //   user passwd <username> <password>   设置/重置门户登录密码
 //   user budget <username> <cny|off>    设/清月度预算（CNY）
+//   user agent <username> <port|off>    绑定/解绑该成员的工作台实例端口
 //   usage [username] [--month]          token 用量与估算费用
 import { readFileSync } from 'node:fs'
 import { hashPassword } from './auth.ts'
@@ -37,7 +38,7 @@ function cmdUserAdd(username: string): void {
 function cmdUserList(): void {
   const rows = db
     .prepare(
-      `SELECT u.id, u.username, u.role, u.status, u.monthly_budget_cny, u.password_hash, u.created_at, COUNT(k.id) AS keys
+      `SELECT u.id, u.username, u.role, u.status, u.monthly_budget_cny, u.agent_port, u.password_hash, u.created_at, COUNT(k.id) AS keys
        FROM users u LEFT JOIN api_keys k ON k.user_id = u.id AND k.revoked_at IS NULL
        GROUP BY u.id ORDER BY u.id`,
     )
@@ -48,7 +49,7 @@ function cmdUserList(): void {
   }
   for (const r of rows) {
     console.log(
-      `${r.id}\t${r.username}\t${r.role}\t${r.status}\t预算=${r.monthly_budget_cny ?? '不限'}\t密码=${r.password_hash ? '已设' : '未设'}\tkeys=${r.keys}\t${r.created_at}`,
+      `${r.id}\t${r.username}\t${r.role}\t${r.status}\t预算=${r.monthly_budget_cny ?? '不限'}\t实例=${r.agent_port ?? '-'}\t密码=${r.password_hash ? '已设' : '未设'}\tkeys=${r.keys}\t${r.created_at}`,
     )
   }
 }
@@ -84,6 +85,26 @@ function cmdUserBudget(username: string, value: string): void {
     }
     db.prepare(`UPDATE users SET monthly_budget_cny = ? WHERE id = ?`).run(n, u.id)
     console.log(`${username}：月度预算 = ¥${n}`)
+  }
+}
+
+function cmdUserAgent(username: string, value: string): void {
+  const u = db.prepare(`SELECT id FROM users WHERE username = ?`).get(username) as { id: number } | undefined
+  if (!u) {
+    console.log(`找不到用户 ${username}`)
+    process.exit(1)
+  }
+  if (value === 'off' || value === 'none' || value === '-') {
+    db.prepare(`UPDATE users SET agent_port = NULL WHERE id = ?`).run(u.id)
+    console.log(`${username}：实例端口已解绑`)
+  } else {
+    const n = Number(value)
+    if (!Number.isInteger(n) || n < 1024 || n > 65535) {
+      console.log(`无效端口：${value}（1024-65535 的整数，或 off）`)
+      process.exit(1)
+    }
+    db.prepare(`UPDATE users SET agent_port = ? WHERE id = ?`).run(n, u.id)
+    console.log(`${username}：工作台实例端口 = ${n}`)
   }
 }
 
@@ -143,6 +164,7 @@ if (cmd === 'user' && sub === 'add' && a1) cmdUserAdd(a1)
 else if (cmd === 'user' && sub === 'list') cmdUserList()
 else if (cmd === 'user' && sub === 'passwd' && a1 && a2) cmdUserPasswd(a1, a2)
 else if (cmd === 'user' && sub === 'budget' && a1 && a2) cmdUserBudget(a1, a2)
+else if (cmd === 'user' && sub === 'agent' && a1 && a2) cmdUserAgent(a1, a2)
 else if (cmd === 'usage') cmdUsage(sub)
 else {
   console.log('用法：')
@@ -150,6 +172,7 @@ else {
   console.log('  node src/cli.ts user list')
   console.log('  node src/cli.ts user passwd <username> <password>')
   console.log('  node src/cli.ts user budget <username> <cny|off>')
+  console.log('  node src/cli.ts user agent <username> <port|off>')
   console.log('  node src/cli.ts usage [username] [--month]')
   process.exit(1)
 }
