@@ -6,7 +6,7 @@
 
 成员各自登录、各自独立工作区；模型的钥匙集中保管、按人计量。大家一起用 agent 干活，产出、账目、方法都留在自己的机器上。
 
-> **状态：建设中（公开开发）。** P0（可行性验证）、P1（模型网关 + 按人计量）、P2（账号 / 登录 / 门户 / 每人实例反代）均已完成并在局域网实机验证；并已打通 dsh 官方客户端插件机制（设置内嵌「工作台用量」页）。下一步 P3（实例管理与自启守护）。路线图与任务清单见 [`docs/PLAN.md`](docs/PLAN.md)，验证记录见 [`docs/BASELINE.md`](docs/BASELINE.md)，每日进展见 [`docs/devlog/`](docs/devlog/)。
+> **状态：建设中（公开开发）。** P0（可行性验证）、P1（模型网关 + 按人计量）、P2（账号 / 登录 / 门户 / 每人实例反代）、P3（实例管理 / 自启守护 / 隔离复查）均已完成并在局域网实机验证——崩溃 5 秒自拉、真重启全恢复。并已打通 dsh 官方客户端插件机制（设置内嵌「工作台用量」页）。下一步 P4（交付化：安装 / 备份 / 试用验收）。路线图与任务清单见 [`docs/PLAN.md`](docs/PLAN.md)，验证记录见 [`docs/BASELINE.md`](docs/BASELINE.md)，每日进展见 [`docs/devlog/`](docs/devlog/)。
 
 ## 这是什么
 
@@ -35,7 +35,7 @@
 | P0 | 可行性验证：多实例 / 启动参数 / 网关截获 / 局域网 | 🟡 手机侧待确认 |
 | P1 | 模型网关 + 按人计量 | ✅ 已实机验证 |
 | P2 | 账号、登录、门户 | ✅ 登录 / 门户 / 实例反代已上线 |
-| P3 | 每人独立工作区（实例管理、自启守护） | ⬜ |
+| P3 | 每人独立工作区（实例管理、自启守护） | ✅ systemd 单元 + 自启；隔离复查全绿 |
 | P4 | 交付化（安装 / 备份 / 试用验收） | ⬜ |
 
 任务共 22 项、每项带验收标准，见 [`docs/PLAN.md`](docs/PLAN.md)。
@@ -68,6 +68,18 @@ node src/cli.ts usage alice --month
 ```sh
 DESK_PORTAL_AUTHORITY=<门户 host:port> scripts/start-agent.sh alice 3301 ~/desk-test/u1
 ```
+
+### 自启与管理（systemd）
+
+本机全栈以 **systemd 单元**常驻（门户 + 每人一个实例单元；`Restart=always`），崩溃与重启自动恢复：
+
+```sh
+sudo bash scripts/install-services.sh   # 安装并启用全部单元
+sudo bash scripts/desk.sh status        # status | start | stop | restart [all|server|u1|u2|u3]
+journalctl -u desk-server -n 50         # 日志（各实例单元同理）
+```
+
+Windows 侧：登录启动项拉起 WSL；`.wslconfig` 关闭 WSL 空闲自动停机（`vmIdleTimeout=-1`）；一次性授权的计划任务（`desk-net-refresh.ps1`）让局域网端口转发跟着 WSL IP 走。
 
 ### 工作台设置页（dsh 客户端插件）
 

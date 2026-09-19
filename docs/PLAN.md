@@ -1,8 +1,8 @@
 # DSH-ANYWORK 团队工作台 — 实施计划
 
-**状态：** 实施中（P0 ✅ / P1 ✅ / P2 ✅；下一步 P3） · **日期：** 2026-09-18（2026-09-19 更新） · **底座：** 官方 DeepSeek Harness（`@deepseek-ai/dsh`，MIT） · **托管：** github.com/bugbyc0922/DSH-ANYWORK（公开） · **明确不做：** 不采用 TDHarness-coding 的任何代码，独立实现。
+**状态：** 实施中（P0 ✅ / P1 ✅ / P2 ✅ / P3 ✅；下一步 P4） · **日期：** 2026-09-18（2026-09-19 更新） · **底座：** 官方 DeepSeek Harness（`@deepseek-ai/dsh`，MIT） · **托管：** github.com/bugbyc0922/DSH-ANYWORK（公开） · **明确不做：** 不采用 TDHarness-coding 的任何代码，独立实现。
 
-> 更新（2026-09-19）：P0 全部通过、P1 完成、**P2 全部完成**（12–15 ✅：登录 / 门户 / 登录闸门+反代 / 信任自动化，均实机验证）；计划外打通 **dsh 客户端插件机制**（设置内嵌「工作台用量」页）；**企业知识库 v1** 上线（共享目录 + 检索接口 + 设置「知识库」页）；**公司盘 v1** 上线（共享文件区 + 浏览/下载/上传 + 设置「公司盘」页）；**多上游模型通道 v1** 上线（网关按模型分流 + 门户通道管理 + CLI）—— 见 [`BASELINE.md`](BASELINE.md) 与 [`devlog/2026-09-19.md`](devlog/2026-09-19.md)。
+> 更新（2026-09-19）：P0 全部通过、P1 完成、**P2 全部完成**（12–15 ✅：登录 / 门户 / 登录闸门+反代 / 信任自动化，均实机验证）；计划外打通 **dsh 客户端插件机制**（设置内嵌「工作台用量」页）；**企业知识库 v1** 上线（共享目录 + 检索接口 + 设置「知识库」页）；**公司盘 v1** 上线（共享文件区 + 浏览/下载/上传 + 设置「公司盘」页）；**多上游模型通道 v1** 上线（网关按模型分流 + 门户通道管理 + CLI）；**P3 完成**（16–19 ✅：systemd 自启 + 崩溃 5 秒重拉 + `wsl --shutdown` 真重启全恢复 + 隔离复查全绿；WSL 2.7 空闲停机已关闭）—— 见 [`BASELINE.md`](BASELINE.md) 与 [`devlog/2026-09-19.md`](devlog/2026-09-19.md)。
 
 ---
 
@@ -135,12 +135,12 @@ P0 复核结果：第 3 条已实测（`--port` 有效；非回环假 Host 对 `
     ➕ 计划外：**公司盘 v1**——共享文件区 `~/desk-data/drive/`（`drive-template/` 首启落位）+ `/portal/api/drive/{list,download,upload}`（路径围栏、50MB 上限）+ 设置「公司盘」页（浏览/下载/上传）。
     ➕ 计划外：**多上游模型通道 v1**——`channels` 表 + 网关按模型名分流（外部 OpenAI 兼容通道；未命中走默认 DeepSeek）+ 门户「成员管理」通道卡片（加入 / 停用 / 删除）+ CLI `channel *` + `/models` 合并下发 + 账本含通道与通道费用（`eventCost()`；通道价目表 ¥/百万 tokens）。测试桩 `tests/fake-oai.mjs`。
 
-### P3 每人独立工作区（下一步）
+### P3 每人独立工作区 ✅（2026-09-19 完成）
 
-16. **实例管理**：`desk agent start/stop/status`（模板 DSH_HOME 复制、端口分配、cwd、env 注入、日志）。绿线：一条命令起停；日志进 logs/。
-17. **工作区规范**：`users/<u>/workspace` + AGENTS.md 模板 + 权限收紧。绿线：A 的 agent 写文件只落 A 目录。
-18. **自启与守护**：systemd --user（WSL 不便则脚本+cron 守护；崩溃重拉）。绿线：重启机器后自动恢复，门户可用。
-19. **隔离复查脚本**：key 不外泄、目录互不可读、用量各记各的。绿线：复查脚本全绿。
+16. ✅ **实例管理**：实现为 **systemd 单元 + `scripts/desk.sh`**（`status|start|stop|restart [all|server|u1|u2|u3]`；实例目录 u1/u2/u3 固定，端口由 `user agent` 绑定）。绿线通过：`desk.sh status` 一条命令看全栈。日志走 journal（`journalctl -u desk-agent-boss`）。
+17. ✅ **工作区规范**：`~/desk-test/uN/workspace` + AGENTS.md 模板（含知识库 / 公司盘提示）；实例目录 chmod 700。绿线通过：`check-isolation.sh` 目录权限项全绿。同 OS 账号下为"目录级 + 约定"隔离（强隔离升级路径见第八节）。
+18. ✅ **自启与守护**：**systemd 系统级单元**（`deploy/systemd/` 4 个，`Restart=always`；`scripts/install-services.sh` 安装）——Windows 登录启动项拉 WSL、`.wslconfig` 关闭 WSL 空闲停机、portproxy 刷新脚本 + 登录任务（待 UAC 授权）。绿线通过：`wsl --shutdown` 真重启后四单元全自启、全端口 200；`kill -9` 实例 5 秒自拉。
+19. ✅ **隔离复查脚本**：`scripts/check-isolation.sh` 全绿（密钥 600、实例目录 700、非信任 Host → 403、未登录门户接口 401、账本只存哈希）。
 
 ### P4 交付化（可给别人用）
 

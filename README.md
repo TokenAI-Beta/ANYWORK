@@ -6,7 +6,7 @@
 
 Each member signs in with their own account and works in their own isolated workspace. The model API key stays on the server, and usage is metered per person — so a team can share one agent setup without sharing keys, files, or bills.
 
-> **Status: building in public, early stage.** P0 (feasibility), P1 (model gateway + per-person metering) and P2 (accounts, login, portal, per-member instance proxy) are done and verified on the LAN. P3 (instance management & autostart) is next. Roadmap and 22-task plan in [`docs/PLAN.md`](docs/PLAN.md); verified findings in [`docs/BASELINE.md`](docs/BASELINE.md); daily progress in [`docs/devlog/`](docs/devlog/).
+> **Status: building in public, early stage.** P0 (feasibility), P1 (model gateway + per-person metering), P2 (accounts, login, portal, per-member instance proxy) and P3 (instance management, systemd autostart, isolation checks) are done and verified on the LAN — crash auto-restart and a full reboot cycle are green. P4 (delivery: install, backup, acceptance) is next. Roadmap and 22-task plan in [`docs/PLAN.md`](docs/PLAN.md); verified findings in [`docs/BASELINE.md`](docs/BASELINE.md); daily progress in [`docs/devlog/`](docs/devlog/).
 
 ## What this is
 
@@ -35,7 +35,7 @@ Member browser → Portal (login gate + reverse proxy)
 | P0 | Feasibility checks: multi-instance, launch flags, gateway interception, LAN access | 🟡 phone check pending |
 | P1 | Model gateway + per-person metering | ✅ verified end-to-end |
 | P2 | Accounts, login, portal | ✅ login, portal & instance proxy live |
-| P3 | Per-member workspaces (instance management, autostart) | ⬜ |
+| P3 | Per-member workspaces (instance management, autostart) | ✅ systemd units + autostart; isolation check green |
 | P4 | Delivery: install, backup, acceptance | ⬜ |
 
 Each task has a concrete acceptance check; the full list is in [`docs/PLAN.md`](docs/PLAN.md).
@@ -68,6 +68,18 @@ Start a member's dsh instance with the helper (reads `~/.desk/agents/<user>.key`
 ```sh
 DESK_PORTAL_AUTHORITY=<portal host:port> scripts/start-agent.sh alice 3301 ~/desk-test/u1
 ```
+
+### Autostart & management (systemd)
+
+The whole stack runs as **systemd units** (portal + one unit per member instance; `Restart=always`), so it survives crashes and reboots:
+
+```sh
+sudo bash scripts/install-services.sh   # install + enable all units
+sudo bash scripts/desk.sh status        # status | start | stop | restart [all|server|u1|u2|u3]
+journalctl -u desk-server -n 50         # logs (same for each agent unit)
+```
+
+Windows side: a Startup shortcut boots WSL at logon, WSL idle auto-shutdown is disabled via `.wslconfig` (`vmIdleTimeout=-1`), and a one-time elevated task (`desk-net-refresh.ps1`) keeps the LAN port-proxy pointed at the current WSL IP.
 
 ### Workbench settings page (dsh client plugin)
 

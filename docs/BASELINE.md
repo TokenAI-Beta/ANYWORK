@@ -99,10 +99,21 @@ New-NetFirewallRule -DisplayName 'DSH-DESK-P0-4' -Direction Inbound -Action Allo
   3. WS：无 cookie 401 / 有 cookie **101 Switching Protocols**。
   4. 局域网全链路（Windows → `192.168.0.171:8080`，Origin=LAN 权威）：登录 302、反代 200、RPC 见本人会话、WS 101。
 
+## P3 实例管理 / 自启守护 / 隔离 ✅（2026-09-19）
+
+- **systemd 化**：`deploy/systemd/` 四单元（`desk-server`、`desk-agent-{boss,bob,alice}`；`User=yangc`、`Restart=always`、`WantedBy=multi-user.target`），`scripts/install-services.sh`（root）一键安装启用；管理入口 `scripts/desk.sh status|start|stop|restart [all|server|u1|u2|u3]`；前台运行器 `scripts/agent-run.sh`（`start-agent.sh` 保留为手工入口）。日志：`journalctl -u desk-server`（各实例同理）。
+- **Windows 侧保活**：Startup 启动项 `dsh-anywork-wsl-boot.vbs`（登录即拉起 WSL）；`C:\Users\Yangc\AppData\Local\desk-anywork\desk-net-refresh.ps1`（portproxy → 当前 WSL IP + 防火墙，幂等）+ `desk-task-setup.ps1`（建登录计划任务 `DSH-ANYWORK net refresh`，**待 UAC 一次性授权**）。
+- **坑（重要）**：WSL 2.7 新增**空闲自动停机**（两级计时器：实例 ~15s、VM ~60s，闲置即终止运行中的服务——systemd 服务也会被杀）→ `C:\Users\Yangc\.wslconfig` 禁用：`[wsl2] vmIdleTimeout=-1` + `[general] instanceIdleTimeout=-1`。
+- 实测（2026-09-19 全部通过）：
+  1. `kill -9` bob 实例 → systemd 5 秒内自拉（activating → active，端口 200）。
+  2. `wsl --shutdown`（真重启）→ 重新唤醒后四单元全自启、端口 8080/3301/3302/3303 全 200、`desk.sh status` 全绿。
+  3. 空闲停机修复后：静默 130 秒实例仍 Running，`localhost:8080` 与 `192.168.0.171:8080` 均 302。
+  4. `scripts/check-isolation.sh` 全绿：`~/.desk/keys.env` 与 agent key 600；`desk-test/uN` 700；非信任 Host → 403；未登录门户接口 401；`api_keys` 仅存哈希。
+
 ## 环境速记
 
 - node：`~/opt/node-v24.19.0-linux-x64/bin/node`；dsh 入口：`~/deepseek-harness/apps/cli/lib/bin.js`。
-- 实例：`~/desk-test/u1` / `u2` / `u3`（boss / bob / alice；由 `scripts/start-agent.sh` 启动，均带 `--trusted-host` 与网关接线）。虚拟钥匙留档 `~/.desk/agents/<user>.key`（600）。
+- 实例：`~/desk-test/u1` / `u2` / `u3`（boss / bob / alice；**由 systemd 单元启动**——`deploy/systemd/`，开机自启、崩溃重拉；手工入口 `scripts/start-agent.sh`），均带 `--trusted-host` 与网关接线。虚拟钥匙留档 `~/.desk/agents/<user>.key`（600）。
 - 网关数据：`~/desk-data/desk.db`；真 key：`~/.desk/keys.env`（600）。
 - 局域网入口：Windows portproxy `0.0.0.0:8080 → WSL:8080`（门户；条目切换脚本 `C:\Users\Yangc\AppData\Local\Temp\desk-p2-portproxy.ps1`，需 UAC）；旧测试页 `~/desk-test/www`（:8090）已退役。Windows 局域网 IP `192.168.0.171`（WLAN）。
 - DeepSeek 计费（2026-08-16 起）：高峰＝北京时间周一至周五 9:00–12:00、14:00–18:00；其余（含整周末）为空闲时段，价格恰为高峰一半。
