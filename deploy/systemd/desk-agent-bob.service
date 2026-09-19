@@ -1,0 +1,18 @@
+[Unit]
+Description=DSH-ANYWORK agent instance bob (port 3302)
+After=desk-server.service
+Wants=desk-server.service
+
+[Service]
+Type=simple
+User=yangc
+WorkingDirectory=/home/yangc/dsh-anywork
+Environment=PATH=/home/yangc/opt/node-v24.19.0-linux-x64/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
+Environment=DESK_PORTAL_AUTHORITY=192.168.0.171:8080
+Environment=DESK_GATEWAY_URL=http://127.0.0.1:8100
+ExecStart=/bin/bash /home/yangc/dsh-anywork/scripts/agent-run.sh bob 3302 /home/yangc/desk-test/u2
+Restart=always
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target

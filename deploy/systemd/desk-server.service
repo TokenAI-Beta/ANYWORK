@@ -1,0 +1,15 @@
+[Unit]
+Description=DSH-ANYWORK portal+gateway (node src/server.ts)
+After=network.target
+
+[Service]
+Type=simple
+User=yangc
+WorkingDirectory=/home/yangc/dsh-anywork
+Environment=PATH=/home/yangc/opt/node-v24.19.0-linux-x64/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
+ExecStart=/home/yangc/opt/node-v24.19.0-linux-x64/bin/node src/server.ts
+Restart=always
+RestartSec=3
+
+[Install]
+WantedBy=multi-user.target
