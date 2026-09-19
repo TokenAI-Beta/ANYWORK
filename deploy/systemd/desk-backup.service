@@ -1,0 +1,6 @@
+[Unit]
+Description=DSH-ANYWORK backup (db snapshot + data + keys)
+[Service]
+Type=oneshot
+User=yangc
+ExecStart=/bin/bash /home/yangc/dsh-anywork/scripts/backup.sh
