@@ -153,14 +153,37 @@ function html(res: ServerResponse, code: number, body: string): void {
 /** 反代：HTTP 请求 → 该成员实例（Host/Origin 原样透传，实例用 --trusted-host 信任门户 authority） */
 function proxyHttp(req: IncomingMessage, res: ServerResponse, port: number): void {
   const headers: Record<string, unknown> = { ...req.headers }
-  for (const h of ['connection', 'keep-alive', 'proxy-authenticate', 'proxy-authorization', 'te', 'trailers', 'transfer-encoding', 'upgrade']) {
+  for (const h of ['connection', 'keep-alive', 'proxy-authenticate', 'proxy-authorization', 'te', 'trailers', 'transfer-encoding', 'upgrade', 'accept-encoding']) {
     delete headers[h]
   }
   const upstream = httpRequest(
     { host: '127.0.0.1', port, method: req.method, path: req.url, headers },
     (up) => {
-      res.writeHead(up.statusCode ?? 502, up.headers)
-      up.pipe(res)
+      const ctype = String(up.headers['content-type'] ?? '')
+      if (ctype.startsWith('text/html')) {
+        // HTML（工作台 shell）缓冲后注入"用量"小组件再下发
+        const chunks: Buffer[] = []
+        up.on('data', (c) => chunks.push(Buffer.from(c)))
+        up.on('end', () => {
+          const body = injectUsageWidget(Buffer.concat(chunks).toString('utf8'))
+          const outHeaders = { ...up.headers }
+          delete outHeaders['content-encoding']
+          delete outHeaders['content-length']
+          delete outHeaders['transfer-encoding']
+          res.writeHead(up.statusCode ?? 502, outHeaders)
+          res.end(Buffer.from(body, 'utf8'))
+        })
+        up.on('error', () => {
+          try {
+            res.destroy()
+          } catch {
+            // 已断开
+          }
+        })
+      } else {
+        res.writeHead(up.statusCode ?? 502, up.headers)
+        up.pipe(res)
+      }
     },
   )
   upstream.on('error', () => {
@@ -172,6 +195,81 @@ function proxyHttp(req: IncomingMessage, res: ServerResponse, port: number): voi
   })
   req.pipe(upstream)
 }
+
+const USAGE_WIDGET_TAG = '<script src="/portal/static/desk-usage.js" defer></script>'
+
+/** 往 dsh 工作台的 HTML 里注入"用量"悬浮小组件（不改 dsh 源码） */
+function injectUsageWidget(body: string): string {
+  if (body.includes(USAGE_WIDGET_TAG)) return body
+  const idx = body.lastIndexOf('</body>')
+  if (idx === -1) return body + USAGE_WIDGET_TAG
+  return body.slice(0, idx) + USAGE_WIDGET_TAG + body.slice(idx)
+}
+
+/** 工作台内的"用量"小组件脚本（纯 JS；避免反引号与模板占位符，方便内嵌） */
+const DESK_USAGE_JS = `
+(function () {
+  if (document.getElementById('desk-usage-fab')) return
+  var css = document.createElement('style')
+  css.textContent =
+    '#desk-usage-fab{position:fixed;right:18px;bottom:18px;z-index:2147483000;border:0;border-radius:999px;padding:10px 16px;background:#1c1e21;color:#fff;font-size:14px;cursor:pointer;box-shadow:0 4px 14px rgba(0,0,0,.25);font-family:system-ui,"Microsoft YaHei",sans-serif}'
+    + '#desk-usage-panel{position:fixed;right:18px;bottom:64px;z-index:2147483000;width:320px;max-height:70vh;overflow:auto;background:#fff;color:#1c1e21;border:1px solid #e4e6eb;border-radius:12px;box-shadow:0 10px 30px rgba(0,0,0,.18);padding:14px 16px;font-family:system-ui,"Microsoft YaHei",sans-serif;font-size:13px;display:none}'
+    + '#desk-usage-panel h3{margin:0 0 8px;font-size:15px}'
+    + '#desk-usage-panel .big{font-size:22px;font-weight:700}'
+    + '#desk-usage-panel .muted{color:#65676b;font-size:12px}'
+    + '#desk-usage-panel table{width:100%;border-collapse:collapse;font-size:12px;margin-top:6px}'
+    + '#desk-usage-panel td{padding:3px 4px;border-bottom:1px solid #f0f1f3}'
+    + '#desk-usage-panel .row{display:flex;justify-content:space-between;margin:6px 0}'
+    + '#desk-usage-panel .bar{background:#eef0f3;border-radius:6px;height:8px;overflow:hidden;margin-top:4px}'
+    + '#desk-usage-panel .bar i{display:block;height:100%;background:#4f7cf7}'
+    + '#desk-usage-panel .pnl-foot{margin-top:10px;display:flex;justify-content:space-between;align-items:center}'
+    + '#desk-usage-panel a{color:#1c1e21}'
+  document.head.appendChild(css)
+  var fab = document.createElement('button')
+  fab.id = 'desk-usage-fab'
+  fab.textContent = '📊 用量'
+  document.body.appendChild(fab)
+  var panel = document.createElement('div')
+  panel.id = 'desk-usage-panel'
+  document.body.appendChild(panel)
+  var loadedAt = 0
+  function esc(s) { return String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;') }
+  function fmt(n) { return '¥' + Number(n).toFixed(4) }
+  function render(d) {
+    var h = '<h3>我的用量</h3>'
+    h += '<div class="big">' + fmt(d.month.cost) + '</div>'
+    h += '<div class="muted">本月 · 请求 ' + d.month.events + ' 次 · 未命中 ' + d.month.miss + ' / 输出 ' + d.month.out + ' tokens</div>'
+    if (d.budget != null) {
+      var pct = Math.min(100, (d.month.cost / d.budget) * 100)
+      h += '<div class="muted" style="margin-top:8px">预算 ¥' + d.budget + (d.month.cost >= d.budget ? '（已超限）' : '') + '</div>'
+      h += '<div class="bar"><i style="width:' + pct.toFixed(1) + '%"></i></div>'
+    }
+    h += '<div class="row"><span class="muted">今日</span><span>' + fmt(d.day.cost) + ' · ' + d.day.events + ' 次</span></div>'
+    h += '<table>'
+    for (var i = 0; i < d.recent.length; i++) {
+      h += '<tr><td class="muted">' + esc(d.recent[i].time) + '</td><td>' + esc(d.recent[i].model) + '</td><td style="text-align:right">' + fmt(d.recent[i].cost) + '</td></tr>'
+    }
+    if (!d.recent.length) h += '<tr><td class="muted">暂无记录</td></tr>'
+    h += '</table>'
+    h += '<div class="pnl-foot"><a href="/portal/me" target="_blank">详细 / 管理</a>'
+    h += '<form method="post" action="/logout" style="margin:0"><button style="border:0;background:none;color:#c0392b;cursor:pointer;font-size:12px;padding:0">退出登录</button></form></div>'
+    panel.innerHTML = h
+  }
+  function load() {
+    fetch('/portal/api/usage')
+      .then(function (r) { if (!r.ok) throw new Error('HTTP ' + r.status); return r.json() })
+      .then(function (d) { loadedAt = Date.now(); render(d) })
+      .catch(function (e) {
+        panel.innerHTML = '<h3>我的用量</h3><div class="muted">加载失败（' + esc(e.message) + '）· <a href="/portal/me" target="_blank">打开完整页</a></div>'
+      })
+  }
+  fab.addEventListener('click', function () {
+    var show = panel.style.display !== 'block'
+    panel.style.display = show ? 'block' : 'none'
+    if (show && Date.now() - loadedAt > 15000) load()
+  })
+})()
+`
 
 export function startPortal(opts: PortalOptions) {
   const db = opts.db
@@ -303,6 +401,40 @@ ${banner}
       if (path === '/healthz') {
         res.writeHead(200, { 'content-type': 'application/json' })
         return res.end(JSON.stringify({ ok: true, service: 'dsh-anywork-portal' }))
+      }
+
+      // —— 工作台内小组件：脚本 + 用量 JSON ——
+      if (req.method === 'GET' && path === '/portal/static/desk-usage.js') {
+        res.writeHead(200, { 'content-type': 'application/javascript; charset=utf-8' })
+        return res.end(DESK_USAGE_JS)
+      }
+      if (req.method === 'GET' && path === '/portal/api/usage') {
+        if (!user) {
+          res.writeHead(401, { 'content-type': 'application/json' })
+          return res.end(JSON.stringify({ error: 'login required' }))
+        }
+        const monthRows = db
+          .prepare(`SELECT * FROM usage_events WHERE user_id = ? AND ts >= ?`)
+          .all(user.id, monthStartUtc()) as unknown as UsageRow[]
+        const dayRows = db
+          .prepare(`SELECT * FROM usage_events WHERE user_id = ? AND ts >= ?`)
+          .all(user.id, beijingDayStartUtc()) as unknown as UsageRow[]
+        const recent = db
+          .prepare(`SELECT * FROM usage_events WHERE user_id = ? ORDER BY id DESC LIMIT 5`)
+          .all(user.id) as unknown as UsageRow[]
+        const urow = db
+          .prepare(`SELECT monthly_budget_cny AS budget FROM users WHERE id = ?`)
+          .get(user.id) as { budget: number | null } | undefined
+        res.writeHead(200, { 'content-type': 'application/json; charset=utf-8' })
+        return res.end(
+          JSON.stringify({
+            username: user.username,
+            month: aggregate(monthRows),
+            day: aggregate(dayRows),
+            budget: urow?.budget ?? null,
+            recent: recent.map((r) => ({ time: bjtime(r.ts), model: r.model ?? '-', cost: costOf(r) })),
+          }),
+        )
       }
       if (path === '/favicon.ico') {
         res.writeHead(204)
