@@ -102,7 +102,7 @@ function page(title: string, user: SessionUser | null, body: string): string {
     : ''
   return `<!doctype html>
 <html lang="zh-CN">
-<head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>${esc(title)} · DSH-ANYWORK</title><style>${STYLE}</style></head>
+<head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><link rel="manifest" href="/portal.webmanifest"><link rel="icon" type="image/svg+xml" href="/portal-icon.svg"><meta name="theme-color" content="#1c1e21"><title>${esc(title)} · DSH-ANYWORK</title><style>${STYLE}</style></head>
 <body>
 <header><span class="brand">DSH-ANYWORK</span><span class="muted">团队工作台</span>${nav}</header>
 <main>${body}</main>
@@ -205,7 +205,17 @@ function proxyHttp(req: IncomingMessage, res: ServerResponse, port: number): voi
   req.pipe(upstream)
 }
 
-const USAGE_WIDGET_TAG = '<script src="/portal/static/desk-usage.js" defer></script>'
+const USAGE_WIDGET_TAG =
+  '<link rel="manifest" href="/portal.webmanifest"><link rel="icon" type="image/svg+xml" href="/portal-icon.svg"><meta name="theme-color" content="#1c1e21"><script src="/portal/static/desk-usage.js" defer></script>'
+
+/** PWA / 桌面端图标（SVG；浏览器「安装应用」与标签页图标共用） */
+const PORTAL_ICON_SVG = [
+  '<svg xmlns="http://www.w3.org/2000/svg" width="512" height="512" viewBox="0 0 512 512">',
+  '<rect width="512" height="512" rx="112" fill="#1c1e21"/>',
+  '<rect x="56" y="56" width="400" height="400" rx="80" fill="none" stroke="#4f7cf7" stroke-width="14"/>',
+  '<text x="256" y="318" font-family="Arial, sans-serif" font-size="172" font-weight="700" fill="#ffffff" text-anchor="middle" letter-spacing="6">DSH</text>',
+  '</svg>',
+].join('')
 
 /** 往 dsh 工作台的 HTML 里注入"用量"悬浮小组件（不改 dsh 源码） */
 function injectUsageWidget(body: string): string {
@@ -1078,6 +1088,26 @@ export function startPortal(opts: PortalOptions) {
       if (path === '/favicon.ico') {
         res.writeHead(204)
         return res.end()
+      }
+      if (req.method === 'GET' && path === '/portal.webmanifest') {
+        res.writeHead(200, { 'content-type': 'application/manifest+json; charset=utf-8', 'cache-control': 'no-cache' })
+        return res.end(
+          JSON.stringify({
+            name: 'DSH 团队工作台',
+            short_name: 'DSH 工作台',
+            description: 'DSH-ANYWORK · 自托管团队工作台',
+            start_url: '/',
+            scope: '/',
+            display: 'standalone',
+            background_color: '#101418',
+            theme_color: '#1c1e21',
+            icons: [{ src: '/portal-icon.svg', sizes: 'any', type: 'image/svg+xml', purpose: 'any' }],
+          }),
+        )
+      }
+      if (req.method === 'GET' && path === '/portal-icon.svg') {
+        res.writeHead(200, { 'content-type': 'image/svg+xml; charset=utf-8', 'cache-control': 'max-age=86400' })
+        return res.end(PORTAL_ICON_SVG)
       }
 
       // —— 登录 ——

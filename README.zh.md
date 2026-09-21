@@ -63,6 +63,8 @@ node src/cli.ts usage alice --month
 
 浏览器打开 `http://<机器>:8080`——成员登录后查看自己的用量，并直接进入自己的 dsh 实例；管理员在工作台 设置 →「成员管理」里管理成员与模型通道。
 
+> 桌面端：想要独立窗口（像软件一样），双击 `deploy/windows/dsh-workbench-app.bat`，或在浏览器里用「安装应用 / 创建快捷方式（在窗口中打开）」。壳加载的就是同一网页，功能自动与网页端同步。
+
 启动成员实例用辅助脚本（自动读 `~/.desk/agents/<user>.key`，自动附带门户 authority 的 `--trusted-host`）：
 
 ```sh

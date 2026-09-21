@@ -2,7 +2,7 @@
 
 **状态：** 实施中（P0 ✅ / P1 ✅ / P2 ✅ / P3 ✅ / P4 🟡 主体完成） · **日期：** 2026-09-18（2026-09-19 更新） · **底座：** 官方 DeepSeek Harness（`@deepseek-ai/dsh`，MIT） · **托管：** github.com/bugbyc0922/DSH-ANYWORK（公开） · **明确不做：** 不采用 TDHarness-coding 的任何代码，独立实现。
 
-> 更新（2026-09-19）：P0 全部通过、P1 完成、**P2 全部完成**（12–15 ✅：登录 / 门户 / 登录闸门+反代 / 信任自动化，均实机验证）；计划外打通 **dsh 客户端插件机制**（设置内嵌「工作台用量」页）；**企业知识库 v1** 上线（共享目录 + 检索接口 + 设置「知识库」页）；**公司盘 v1** 上线（共享文件区 + 浏览/下载/上传 + 设置「公司盘」页）；**多上游模型通道 v1** 上线（网关按模型分流 + 门户通道管理 + CLI）；**P3 完成**（16–19 ✅：systemd 自启 + 崩溃 5 秒重拉 + `wsl --shutdown` 真重启全恢复 + 隔离复查全绿；WSL 2.7 空闲停机已关闭）；**P4 主体完成**（20–22 ✅：setup/backup/restore/logs 脚本 + `DEPLOY.md` + [试用验收](ACCEPTANCE.md) 真实链路实走 + [KNOWN-ISSUES](KNOWN-ISSUES.md)；从零重装待第二台机器实测）；**团队技能库 v1** 上线（`~/desk-data/skills` + 实例软链，dsh 原生技能发现、改完即生效）；**团队 Agent 预设 v1** 上线（`team-assistant` 角色模板，实例软链 `~/.agent-presets`）；**会话导出 + 跨会话检索**已开启（`/export` ZIP + agent 的 `session_search`，脚本 `scripts/enable-session-search.sh`）；**团队 Soul（与 团队主助理 同源）**上线（`soul-template/` + `scripts/apply-soul.sh`，注入位 `DSH_HOME/AGENTS.md`）；**通知桥 v1** 上线（设置页「通知」+ agent 侧 `desk-notify`，实测真实到达 微信 / webhook）；**定时提醒**上线（`desk-remind` + 服务器 30s 巡查，实测微信准点到达）；**成员管理增强**（预算 80%/100% 告警接通知桥 + 在线/最后登录 + 7 天趋势，实测微信到达）；**团队公告板 + 意见反馈**、**运维面板**、**任务板**、**后台任务/子代理（验证+规范）**、**团队安全闸门**、**知识库沉淀**、**Codex 接入（并行工作流）与 worktree 并行技能**上线—— 见 [`BASELINE.md`](BASELINE.md) 与 [`devlog/2026-09-19.md`](devlog/2026-09-19.md)。
+> 更新（2026-09-19）：P0 全部通过、P1 完成、**P2 全部完成**（12–15 ✅：登录 / 门户 / 登录闸门+反代 / 信任自动化，均实机验证）；计划外打通 **dsh 客户端插件机制**（设置内嵌「工作台用量」页）；**企业知识库 v1** 上线（共享目录 + 检索接口 + 设置「知识库」页）；**公司盘 v1** 上线（共享文件区 + 浏览/下载/上传 + 设置「公司盘」页）；**多上游模型通道 v1** 上线（网关按模型分流 + 门户通道管理 + CLI）；**P3 完成**（16–19 ✅：systemd 自启 + 崩溃 5 秒重拉 + `wsl --shutdown` 真重启全恢复 + 隔离复查全绿；WSL 2.7 空闲停机已关闭）；**P4 主体完成**（20–22 ✅：setup/backup/restore/logs 脚本 + `DEPLOY.md` + [试用验收](ACCEPTANCE.md) 真实链路实走 + [KNOWN-ISSUES](KNOWN-ISSUES.md)；从零重装待第二台机器实测）；**团队技能库 v1** 上线（`~/desk-data/skills` + 实例软链，dsh 原生技能发现、改完即生效）；**团队 Agent 预设 v1** 上线（`team-assistant` 角色模板，实例软链 `~/.agent-presets`）；**会话导出 + 跨会话检索**已开启（`/export` ZIP + agent 的 `session_search`，脚本 `scripts/enable-session-search.sh`）；**团队 Soul（与 团队主助理 同源）**上线（`soul-template/` + `scripts/apply-soul.sh`，注入位 `DSH_HOME/AGENTS.md`）；**通知桥 v1** 上线（设置页「通知」+ agent 侧 `desk-notify`，实测真实到达 微信 / webhook）；**定时提醒**上线（`desk-remind` + 服务器 30s 巡查，实测微信准点到达）；**成员管理增强**（预算 80%/100% 告警接通知桥 + 在线/最后登录 + 7 天趋势，实测微信到达）；**团队公告板 + 意见反馈**、**运维面板**、**任务板**、**后台任务/子代理（验证+规范）**、**团队安全闸门**、**知识库沉淀**、**Codex 接入（并行工作流）与 worktree 并行技能**、**桌面端（应用模式）**上线—— 见 [`BASELINE.md`](BASELINE.md) 与 [`devlog/2026-09-19.md`](devlog/2026-09-19.md)。
 
 ---
 
@@ -150,6 +150,7 @@ P0 复核结果：第 3 条已实测（`--port` 有效；非回环假 Host 对 `
     ➕ 计划外：**知识库沉淀**——笔记写入共享 kb：UI 表单（设置→知识库）/ `desk-kb` 命令（agent）/ 令牌接口；列表·查看·管理员删除；越权围栏与三路径权限矩阵实测通过。
     ➕ 计划外：**Codex 接入（多线程并行工作流）**——WSL 装 codex + 登录态迁移；host 行 `subagent-codex` + `team-assistant` 预设启用 `subagent_codex` 且 workflow 引擎 provider 切到 codex；三实例默认预设设 team-assistant；单发委派/两路并行实测全绿。
     ➕ 计划外：**Codex worktree 并行工作流（团队技能）**——`codex-parallel-worktrees` 进共享技能库；worktree + 后台 codex 并行套路 + 沙箱 commit 坑与两条路线，实测落定。
+    ➕ 计划外：**桌面端（应用模式/PWA）**——门户挂 manifest+图标；`deploy/windows/` 桌面资产（图标生成/快捷方式/成员 bat）；壳加载同一网页、与网页端自动同步。
 
 ### P3 每人独立工作区 ✅（2026-09-19 完成）
 
