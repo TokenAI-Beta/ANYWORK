@@ -1,4 +1,4 @@
-// DSH-ANYWORK 设置页（浏览器侧 cordis 插件）：工作台用量 + 企业知识库 + 公司盘 + 成员管理 + 通知 + 公告板（侧栏入口）+ 运维
+// DSH-ANYWORK 设置页（浏览器侧 cordis 插件）：工作台用量 + 企业知识库 + 公司盘 + 成员管理 + 通知 + 公告板（侧栏入口）+ 运维 + 任务板
 // 产出格式与 dsh 官方客户端插件一致：window.__ModuleLoader__.load({ id, factory })
 // 依赖仅 react（平台种子模块），全部走闭包 require。
 window.__ModuleLoader__.load({
@@ -77,6 +77,15 @@ window.__ModuleLoader__.load({
       wordBreak: "break-all",
       fontSize: 13,
     };
+    function fmtAt(s) {
+      if (!s) return "";
+      var d = new Date(String(s).replace(" ", "T") + "Z");
+      if (isNaN(d.getTime())) return String(s).slice(5, 16);
+      function p2(x) {
+        return (x < 10 ? "0" : "") + x;
+      }
+      return p2(d.getMonth() + 1) + "-" + p2(d.getDate()) + " " + p2(d.getHours()) + ":" + p2(d.getMinutes());
+    }
     var footBtn = {
       display: "flex",
       alignItems: "center",
@@ -125,6 +134,25 @@ window.__ModuleLoader__.load({
       minHeight: 60,
       resize: "vertical",
       fontFamily: "inherit",
+    };
+    var btnPill = {
+      padding: "6px 10px",
+      border: "1px solid var(--dsw-alias-border-l2, #ccd0d5)",
+      borderRadius: 999,
+      background: "transparent",
+      color: "inherit",
+      cursor: "pointer",
+      fontSize: 12,
+    };
+    var btnPillOn = {
+      padding: "6px 10px",
+      border: "1px solid var(--dsw-alias-border-l2, #ccd0d5)",
+      borderRadius: 999,
+      background: "var(--dsw-alias-bg-base, #f0f1f3)",
+      color: "inherit",
+      cursor: "pointer",
+      fontSize: 12,
+      fontWeight: 600,
     };
 
     function fmt(n) {
@@ -1399,7 +1427,7 @@ window.__ModuleLoader__.load({
                     )
                   : null
               ),
-              h("div", { style: Object.assign({ fontSize: 11 }, muted) }, String(a.created_at || "").slice(5, 16) + (a.created_by ? " · " + a.created_by : "")),
+              h("div", { style: Object.assign({ fontSize: 11 }, muted) }, fmtAt(a.created_at) + (a.created_by ? " · " + a.created_by : "")),
               h("div", { style: { whiteSpace: "pre-wrap" } }, a.body)
             )
           );
@@ -1441,7 +1469,7 @@ window.__ModuleLoader__.load({
               h(
                 "div",
                 { style: { display: "flex", justifyContent: "space-between", alignItems: "center", gap: 8 } },
-                h("span", { style: Object.assign({ fontSize: 12 }, muted) }, (fb.username || "-") + " · " + String(fb.created_at || "").slice(5, 16)),
+                h("span", { style: Object.assign({ fontSize: 12 }, muted) }, (fb.username || "-") + " · " + fmtAt(fb.created_at)),
                 data.role === "admin"
                   ? h(
                       "button",
@@ -1475,6 +1503,216 @@ window.__ModuleLoader__.load({
         );
       }
       return h("div", null, trigger, h("div", { key: "panel", style: panelStyle }, kids));
+    }
+
+    function TaskBoard() {
+      var pair = React.useState({ phase: "loading", role: "member", me: "", members: [], tasks: [] });
+      var st = pair[0];
+      var setSt = pair[1];
+      var fPair = React.useState("all");
+      var filter = fPair[0];
+      var setFilter = fPair[1];
+      var msgPair = React.useState({ kind: "", text: "" });
+      var msg = msgPair[0];
+      var setMsg = msgPair[1];
+      var tRef = React.useRef(null);
+      var nRef = React.useRef(null);
+      var aRef = React.useRef(null);
+
+      function load() {
+        fetch("/portal/api/tasks", { headers: { accept: "application/json" } })
+          .then(function (r) {
+            if (!r.ok) throw new Error("HTTP " + r.status);
+            return r.json();
+          })
+          .then(function (d) {
+            setSt({ phase: "ready", role: d.role, me: d.me, members: d.members || [], tasks: d.tasks || [] });
+          })
+          .catch(function () {
+            setSt({ phase: "error", role: "member", me: "", members: [], tasks: [] });
+          });
+      }
+      React.useEffect(function () {
+        load();
+      }, []);
+
+      function post(path, body, okText, clear) {
+        setMsg({ kind: "info", text: "处理中…" });
+        fetch(path, { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify(body) })
+          .then(function (r) {
+            return r.json().then(function (d) {
+              return { status: r.status, d: d };
+            });
+          })
+          .then(function (res) {
+            if (res.status !== 200) {
+              setMsg({ kind: "err", text: (res.d && res.d.error) || "HTTP " + res.status });
+              return;
+            }
+            setMsg({ kind: "ok", text: okText });
+            if (clear) {
+              if (tRef.current) tRef.current.value = "";
+              if (nRef.current) nRef.current.value = "";
+              if (aRef.current) aRef.current.value = "";
+            }
+            load();
+          })
+          .catch(function (e) {
+            setMsg({ kind: "err", text: String((e && e.message) || e) });
+          });
+      }
+
+      if (st.phase === "loading") return h("div", { style: wrap }, "读取任务板…");
+      if (st.phase === "error") return h("div", { style: wrap }, h("div", null, "读不到任务板（需从门户地址打开且已登录）。"));
+
+      var SM = { todo: ["待办", "#8a8f98"], doing: ["进行中", "#2f6fed"], done: ["已完成", "#1f9d55"] };
+      var NEXT = { todo: "doing", doing: "done", done: "todo" };
+      var NEXT_LABEL = { todo: "开始", doing: "完成", done: "重开" };
+
+      var cTodo = 0;
+      var cDoing = 0;
+      var cDone = 0;
+      var cMine = 0;
+      for (var ci = 0; ci < st.tasks.length; ci++) {
+        var tt = st.tasks[ci];
+        if (tt.status === "todo") cTodo++;
+        else if (tt.status === "doing") cDoing++;
+        else cDone++;
+        if (tt.assignee === st.me || tt.created_by === st.me) cMine++;
+      }
+      var list = st.tasks.filter(function (t) {
+        if (filter === "mine") return t.assignee === st.me || t.created_by === st.me;
+        if (filter === "all") return true;
+        return t.status === filter;
+      });
+
+      var kids = [];
+
+      var opts = [h("option", { key: "__none", value: "" }, "未指派")];
+      for (var mi = 0; mi < st.members.length; mi++) opts.push(h("option", { key: st.members[mi], value: st.members[mi] }, st.members[mi]));
+      kids.push(
+        h(
+          "div",
+          { key: "nf", style: { display: "flex", flexDirection: "column", gap: 6 } },
+          h("input", { ref: tRef, placeholder: "任务标题", style: field }),
+          h("input", { ref: nRef, placeholder: "备注（可选）", style: field }),
+          h(
+            "div",
+            { style: { display: "flex", gap: 8, alignItems: "center" } },
+            h("select", { ref: aRef, style: Object.assign({}, field, { width: 160 }) }, opts),
+            h(
+              "button",
+              {
+                style: btnDark,
+                onClick: function () {
+                  post(
+                    "/portal/api/tasks/create",
+                    { title: tRef.current ? tRef.current.value : "", note: nRef.current ? nRef.current.value : "", assignee: aRef.current ? aRef.current.value : "" },
+                    "任务已创建",
+                    true
+                  );
+                },
+              },
+              "新建任务"
+            )
+          )
+        )
+      );
+
+      var fdefs = [
+        ["all", "全部 " + st.tasks.length],
+        ["todo", "待办 " + cTodo],
+        ["doing", "进行中 " + cDoing],
+        ["done", "已完成 " + cDone],
+        ["mine", "我的 " + cMine],
+      ];
+      var fbtns = [];
+      for (var fi = 0; fi < fdefs.length; fi++) {
+        (function (key, label) {
+          fbtns.push(h("button", { key: key, onClick: function () { setFilter(key); }, style: filter === key ? btnPillOn : btnPill }, label));
+        })(fdefs[fi][0], fdefs[fi][1]);
+      }
+      kids.push(h("div", { key: "fl", style: { display: "flex", gap: 6, flexWrap: "wrap" } }, fbtns));
+
+      var rows = [];
+      for (var ri = 0; ri < list.length; ri++) {
+        (function (t) {
+          var sm = SM[t.status] || SM.todo;
+          var canDel = st.role === "admin" || t.created_by === st.me;
+          var actions = [];
+          actions.push(
+            h(
+              "button",
+              {
+                key: "nx",
+                style: btnSmall,
+                onClick: function () {
+                  post("/portal/api/tasks/update", { id: t.id, status: NEXT[t.status] || "todo" }, "已更新", false);
+                },
+              },
+              NEXT_LABEL[t.status] || "推进"
+            )
+          );
+          if (!t.assignee) {
+            actions.push(
+              h(
+                "button",
+                {
+                  key: "cl",
+                  style: btnSmall,
+                  onClick: function () {
+                    post("/portal/api/tasks/update", { id: t.id, assignee: st.me }, "已接领", false);
+                  },
+                },
+                "接领"
+              )
+            );
+          }
+          if (canDel) {
+            actions.push(
+              h(
+                "button",
+                {
+                  key: "dl",
+                  style: btnSmall,
+                  onClick: function () {
+                    if (window.confirm("删除任务：" + t.title + "？")) post("/portal/api/tasks/delete", { id: t.id }, "已删除", false);
+                  },
+                },
+                "删除"
+              )
+            );
+          }
+          rows.push(
+            h(
+              "div",
+              { key: "t" + t.id, style: rowBase },
+              h(
+                "div",
+                { style: { display: "flex", alignItems: "center", gap: 8 } },
+                h("span", { style: { color: sm[1], fontWeight: 600, fontSize: 12, whiteSpace: "nowrap" } }, "● " + sm[0]),
+                h("span", { style: { fontWeight: 600, flex: 1, textDecoration: t.status === "done" ? "line-through" : "none", opacity: t.status === "done" ? 0.6 : 1 } }, t.title)
+              ),
+              t.note ? h("div", { style: { whiteSpace: "pre-wrap" } }, t.note) : null,
+              h("div", { style: Object.assign({ fontSize: 11 }, muted) }, "指派：" + (t.assignee || "未指派") + " · " + (t.created_by || "-") + " · " + fmtAt(t.updated_at)),
+              h("div", { style: { display: "flex", gap: 6 } }, actions)
+            )
+          );
+        })(list[ri]);
+      }
+      kids.push(
+        h(
+          "div",
+          { key: "rows", style: { display: "flex", flexDirection: "column" } },
+          rows.length ? rows : h("div", { style: muted }, filter === "all" ? "暂无任务，先在上面建一条。" : "此筛选下暂无任务")
+        )
+      );
+      if (msg.kind) {
+        kids.push(
+          h("div", { key: "msg", style: msg.kind === "err" ? { color: "#c0392b", fontSize: 12 } : Object.assign({ fontSize: 12 }, muted) }, msg.text)
+        );
+      }
+      return h("div", { style: Object.assign({}, wrap, { maxWidth: 640 }) }, kids);
     }
 
     var inject = ["slots"];
@@ -1569,6 +1807,19 @@ window.__ModuleLoader__.load({
             },
           },
           OpsSection
+        );
+      });
+      ctx.slots.inject("settings.section", function () {
+        return ctx.slots.register(
+          {
+            name: "settings.section",
+            id: "desk-tasks",
+            order: 55,
+            label: function () {
+              return "任务板";
+            },
+          },
+          TaskBoard
         );
       });
     }

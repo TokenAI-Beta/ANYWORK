@@ -2,7 +2,7 @@
 
 **状态：** 实施中（P0 ✅ / P1 ✅ / P2 ✅ / P3 ✅ / P4 🟡 主体完成） · **日期：** 2026-09-18（2026-09-19 更新） · **底座：** 官方 DeepSeek Harness（`@deepseek-ai/dsh`，MIT） · **托管：** github.com/bugbyc0922/DSH-ANYWORK（公开） · **明确不做：** 不采用 TDHarness-coding 的任何代码，独立实现。
 
-> 更新（2026-09-19）：P0 全部通过、P1 完成、**P2 全部完成**（12–15 ✅：登录 / 门户 / 登录闸门+反代 / 信任自动化，均实机验证）；计划外打通 **dsh 客户端插件机制**（设置内嵌「工作台用量」页）；**企业知识库 v1** 上线（共享目录 + 检索接口 + 设置「知识库」页）；**公司盘 v1** 上线（共享文件区 + 浏览/下载/上传 + 设置「公司盘」页）；**多上游模型通道 v1** 上线（网关按模型分流 + 门户通道管理 + CLI）；**P3 完成**（16–19 ✅：systemd 自启 + 崩溃 5 秒重拉 + `wsl --shutdown` 真重启全恢复 + 隔离复查全绿；WSL 2.7 空闲停机已关闭）；**P4 主体完成**（20–22 ✅：setup/backup/restore/logs 脚本 + `DEPLOY.md` + [试用验收](ACCEPTANCE.md) 真实链路实走 + [KNOWN-ISSUES](KNOWN-ISSUES.md)；从零重装待第二台机器实测）；**团队技能库 v1** 上线（`~/desk-data/skills` + 实例软链，dsh 原生技能发现、改完即生效）；**团队 Agent 预设 v1** 上线（`team-assistant` 角色模板，实例软链 `~/.agent-presets`）；**会话导出 + 跨会话检索**已开启（`/export` ZIP + agent 的 `session_search`，脚本 `scripts/enable-session-search.sh`）；**团队 Soul（与 团队主助理 同源）**上线（`soul-template/` + `scripts/apply-soul.sh`，注入位 `DSH_HOME/AGENTS.md`）；**通知桥 v1** 上线（设置页「通知」+ agent 侧 `desk-notify`，实测真实到达 微信 / webhook）；**定时提醒**上线（`desk-remind` + 服务器 30s 巡查，实测微信准点到达）；**成员管理增强**（预算 80%/100% 告警接通知桥 + 在线/最后登录 + 7 天趋势，实测微信到达）；**团队公告板 + 意见反馈**与**运维面板**上线—— 见 [`BASELINE.md`](BASELINE.md) 与 [`devlog/2026-09-19.md`](devlog/2026-09-19.md)。
+> 更新（2026-09-19）：P0 全部通过、P1 完成、**P2 全部完成**（12–15 ✅：登录 / 门户 / 登录闸门+反代 / 信任自动化，均实机验证）；计划外打通 **dsh 客户端插件机制**（设置内嵌「工作台用量」页）；**企业知识库 v1** 上线（共享目录 + 检索接口 + 设置「知识库」页）；**公司盘 v1** 上线（共享文件区 + 浏览/下载/上传 + 设置「公司盘」页）；**多上游模型通道 v1** 上线（网关按模型分流 + 门户通道管理 + CLI）；**P3 完成**（16–19 ✅：systemd 自启 + 崩溃 5 秒重拉 + `wsl --shutdown` 真重启全恢复 + 隔离复查全绿；WSL 2.7 空闲停机已关闭）；**P4 主体完成**（20–22 ✅：setup/backup/restore/logs 脚本 + `DEPLOY.md` + [试用验收](ACCEPTANCE.md) 真实链路实走 + [KNOWN-ISSUES](KNOWN-ISSUES.md)；从零重装待第二台机器实测）；**团队技能库 v1** 上线（`~/desk-data/skills` + 实例软链，dsh 原生技能发现、改完即生效）；**团队 Agent 预设 v1** 上线（`team-assistant` 角色模板，实例软链 `~/.agent-presets`）；**会话导出 + 跨会话检索**已开启（`/export` ZIP + agent 的 `session_search`，脚本 `scripts/enable-session-search.sh`）；**团队 Soul（与 团队主助理 同源）**上线（`soul-template/` + `scripts/apply-soul.sh`，注入位 `DSH_HOME/AGENTS.md`）；**通知桥 v1** 上线（设置页「通知」+ agent 侧 `desk-notify`，实测真实到达 微信 / webhook）；**定时提醒**上线（`desk-remind` + 服务器 30s 巡查，实测微信准点到达）；**成员管理增强**（预算 80%/100% 告警接通知桥 + 在线/最后登录 + 7 天趋势，实测微信到达）；**团队公告板 + 意见反馈**、**运维面板**与**任务板**上线—— 见 [`BASELINE.md`](BASELINE.md) 与 [`devlog/2026-09-19.md`](devlog/2026-09-19.md)。
 
 ---
 
@@ -144,6 +144,7 @@ P0 复核结果：第 3 条已实测（`--port` 有效；非回环假 Host 对 `
     ➕ 计划外：**成员管理增强**——① 预算告警：`maybeBudgetAlert()` 挂网关 `record()`（80% / 100% 每档每月一次，经通知桥推管理员）；② 在线 / 最后登录（overview + 成员行）；③ 近 7 天用量趋势小柱图（北京日聚合）+ 每人"近 7 天 ¥"。实测 t-budget 100% 告警微信到达。
     ➕ 计划外：**团队公告板 + 意见反馈**——侧栏左下角 📢（`sidebar.footer.action` 槽位）未读徽标 + 管理员发布/删除 + 成员反馈/管理员查看；实测浏览器全流程与权限矩阵全绿。
     ➕ 计划外：**运维面板**——设置页「运维」（管理员专属）：服务/探活/备份/磁盘/主机一页看全；`src/ops.ts` 只读采集 + `GET /portal/api/admin/ops`。
+    ➕ 计划外：**任务板**——设置页「任务板」：建/接领/状态流转/删除 + 筛选（含「我的」与计数）；`tasks` 表 + `/portal/api/tasks/*`（管理员/创建人/指派人权限圈）。
 
 ### P3 每人独立工作区 ✅（2026-09-19 完成）
 

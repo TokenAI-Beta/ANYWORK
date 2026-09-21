@@ -653,6 +653,143 @@ export function startPortal(opts: PortalOptions) {
         res.writeHead(200, { 'content-type': 'application/json; charset=utf-8' })
         return res.end(JSON.stringify({ ok: true }))
       }
+      // —— 任务板（登录会话；管理员 / 创建人 / 当前指派人可改，任何人可接领无主任务）——
+      if (path === '/portal/api/tasks' && req.method === 'GET') {
+        if (!user) {
+          res.writeHead(401, { 'content-type': 'application/json' })
+          return res.end(JSON.stringify({ error: 'login required' }))
+        }
+        const tasks = db
+          .prepare(
+            `SELECT id, title, note, status, assignee, created_by, created_at, updated_at FROM tasks
+             ORDER BY CASE status WHEN 'doing' THEN 0 WHEN 'todo' THEN 1 ELSE 2 END, id DESC LIMIT 200`,
+          )
+          .all()
+        const members = (db.prepare(`SELECT username FROM users ORDER BY id`).all() as unknown as { username: string }[]).map((m) => m.username)
+        res.writeHead(200, { 'content-type': 'application/json; charset=utf-8' })
+        return res.end(JSON.stringify({ role: user.role, me: user.username, members, tasks }))
+      }
+      if (path === '/portal/api/tasks/create' && req.method === 'POST') {
+        if (!user) {
+          res.writeHead(401, { 'content-type': 'application/json' })
+          return res.end(JSON.stringify({ error: 'login required' }))
+        }
+        let cbody: Record<string, unknown> = {}
+        try {
+          const v = JSON.parse(await readBody(req)) as unknown
+          if (v && typeof v === 'object') cbody = v as Record<string, unknown>
+        } catch {
+          cbody = {}
+        }
+        const title = String(cbody.title ?? '').trim().slice(0, 120)
+        const note = String(cbody.note ?? '').trim().slice(0, 1000)
+        const assignee = String(cbody.assignee ?? '').trim().slice(0, 64)
+        if (!title) {
+          res.writeHead(400, { 'content-type': 'application/json; charset=utf-8' })
+          return res.end(JSON.stringify({ error: '任务标题不能为空' }))
+        }
+        if (assignee) {
+          const known = db.prepare(`SELECT username FROM users WHERE username = ?`).get(assignee)
+          if (!known) {
+            res.writeHead(400, { 'content-type': 'application/json; charset=utf-8' })
+            return res.end(JSON.stringify({ error: '指派对象不存在' }))
+          }
+        }
+        const info = db.prepare(`INSERT INTO tasks (title, note, status, assignee, created_by) VALUES (?, ?, 'todo', ?, ?)`).run(title, note || null, assignee || null, user.username)
+        res.writeHead(200, { 'content-type': 'application/json; charset=utf-8' })
+        return res.end(JSON.stringify({ ok: true, id: Number(info.lastInsertRowid) }))
+      }
+      if (path === '/portal/api/tasks/update' && req.method === 'POST') {
+        if (!user) {
+          res.writeHead(401, { 'content-type': 'application/json' })
+          return res.end(JSON.stringify({ error: 'login required' }))
+        }
+        let ubody: Record<string, unknown> = {}
+        try {
+          const v = JSON.parse(await readBody(req)) as unknown
+          if (v && typeof v === 'object') ubody = v as Record<string, unknown>
+        } catch {
+          ubody = {}
+        }
+        const tid = Number(ubody.id ?? 0)
+        const task = db.prepare(`SELECT id, title, note, status, assignee, created_by FROM tasks WHERE id = ?`).get(tid) as
+          | { id: number; title: string; note: string | null; status: string; assignee: string | null; created_by: string | null }
+          | undefined
+        if (!task) {
+          res.writeHead(404, { 'content-type': 'application/json; charset=utf-8' })
+          return res.end(JSON.stringify({ error: '任务不存在' }))
+        }
+        const newStatus = typeof ubody.status === 'string' ? String(ubody.status) : ''
+        const hasAssignee = Object.prototype.hasOwnProperty.call(ubody, 'assignee')
+        const newAssignee = hasAssignee ? String(ubody.assignee ?? '').trim().slice(0, 64) : ''
+        const claiming = hasAssignee && !task.assignee && newAssignee === user.username
+        const isOwner = user.role === 'admin' || task.created_by === user.username || (!!task.assignee && task.assignee === user.username)
+        if (!isOwner && !claiming) {
+          res.writeHead(403, { 'content-type': 'application/json; charset=utf-8' })
+          return res.end(JSON.stringify({ error: 'not allowed' }))
+        }
+        const sets: string[] = []
+        const vals: (string | null)[] = []
+        if (newStatus && ['todo', 'doing', 'done'].includes(newStatus)) {
+          sets.push('status = ?')
+          vals.push(newStatus)
+        }
+        if (hasAssignee) {
+          if (newAssignee) {
+            const known = db.prepare(`SELECT username FROM users WHERE username = ?`).get(newAssignee)
+            if (!known) {
+              res.writeHead(400, { 'content-type': 'application/json; charset=utf-8' })
+              return res.end(JSON.stringify({ error: '指派对象不存在' }))
+            }
+            sets.push('assignee = ?')
+            vals.push(newAssignee)
+          } else {
+            sets.push('assignee = NULL')
+          }
+        }
+        if (typeof ubody.title === 'string' && String(ubody.title).trim()) {
+          sets.push('title = ?')
+          vals.push(String(ubody.title).trim().slice(0, 120))
+        }
+        if (typeof ubody.note === 'string') {
+          sets.push('note = ?')
+          vals.push(String(ubody.note).trim().slice(0, 1000) || null)
+        }
+        if (!sets.length) {
+          res.writeHead(400, { 'content-type': 'application/json; charset=utf-8' })
+          return res.end(JSON.stringify({ error: '没有可更新的字段' }))
+        }
+        sets.push(`updated_at = datetime('now')`)
+        db.prepare(`UPDATE tasks SET ${sets.join(', ')} WHERE id = ?`).run(...vals, tid)
+        res.writeHead(200, { 'content-type': 'application/json; charset=utf-8' })
+        return res.end(JSON.stringify({ ok: true }))
+      }
+      if (path === '/portal/api/tasks/delete' && req.method === 'POST') {
+        if (!user) {
+          res.writeHead(401, { 'content-type': 'application/json' })
+          return res.end(JSON.stringify({ error: 'login required' }))
+        }
+        let dbody: Record<string, unknown> = {}
+        try {
+          const v = JSON.parse(await readBody(req)) as unknown
+          if (v && typeof v === 'object') dbody = v as Record<string, unknown>
+        } catch {
+          dbody = {}
+        }
+        const did = Number(dbody.id ?? 0)
+        const task = db.prepare(`SELECT id, created_by FROM tasks WHERE id = ?`).get(did) as { id: number; created_by: string | null } | undefined
+        if (!task) {
+          res.writeHead(404, { 'content-type': 'application/json; charset=utf-8' })
+          return res.end(JSON.stringify({ error: '任务不存在' }))
+        }
+        if (user.role !== 'admin' && task.created_by !== user.username) {
+          res.writeHead(403, { 'content-type': 'application/json; charset=utf-8' })
+          return res.end(JSON.stringify({ error: 'not allowed' }))
+        }
+        db.prepare(`DELETE FROM tasks WHERE id = ?`).run(did)
+        res.writeHead(200, { 'content-type': 'application/json; charset=utf-8' })
+        return res.end(JSON.stringify({ ok: true }))
+      }
       // —— 管理 API（工作台 设置 →「成员管理」插件调用；仅管理员）——
       if (path.startsWith('/portal/api/admin/')) {
         if (!user) {
