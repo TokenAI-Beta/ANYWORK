@@ -1,0 +1,26 @@
+{
+  "deny": [
+    { "label": "递归强删根/家目录等关键位置", "re": "rm\\s+-\\w*(rf|fr)\\w*\\s+(/|/\\*|~/?|\\$HOME/?)(?=\\s|;|\\||&|$)" },
+    { "label": "递归强删团队关键目录（desk-data / desk-test / dsh-anywork / 引擎与家目录配置）", "re": "rm\\s+-\\w*(rf|fr)\\w*\\s+[^\\n]*((~/|/home/yangc/|/home/)(desk-data|desk-test|dsh-anywork|deepseek-harness|\\.desk|\\.hermes))" },
+    { "label": "格式化磁盘 / 直写块设备", "re": "\\bmkfs(\\.\\w+)?\\b|\\bdd\\b[^\\n]*of=/dev/|\\bbase64\\s+-d[^\\n]*>/dev/|>\\s*/dev/(sd|nvme|vd|xvd)" },
+    { "label": "删除密钥 / 凭据 / 数据库文件", "re": "rm\\s+-\\w*[rf]\\w*[^\\n]*(\\.ssh|keys\\.env|notify\\.token|desk\\.db)" },
+    { "label": "fork 炸弹", "re": ":\\(\\)\\s*\\{[^}]*\\}" },
+    { "label": "危险权限变更（chmod -R 777 / 递归 chown 根）", "re": "chmod\\s+-R\\s+777\\s+/|chown\\s+-R[^\\n]*\\s/(\\s|;|$)" },
+    { "label": "停用工作台自身服务", "re": "systemctl\\s+(stop|disable|mask|kill)\\s+desk-" },
+    { "label": "sudo 下递归强删", "re": "sudo\\s+rm\\s+-\\w*[rf]" },
+    { "label": "关机 / 重启机器", "re": "(^|[;&|]\\s*)(shutdown|reboot|poweroff|halt)\\b" },
+    { "label": "清空定时任务 / 删系统账户", "re": "crontab\\s+-r|\\b(userdel|groupdel)\\b" },
+    { "label": "数据库破坏性语句", "re": "(drop\\s+table|truncate\\s+table)\\s+(users|api_keys|login_sessions|usage_events)" }
+  ],
+  "ask": [
+    { "label": "sudo 提权", "re": "(^|[;&|]\\s*)sudo\\b" },
+    { "label": "从网络直接管道执行脚本（curl|bash 类）", "re": "(curl|wget)[^\\n|]*\\|\\s*(ba|z|d)?sh\\b" },
+    { "label": "git force push", "re": "git\\s+push[^\\n]*\\s(--force|-f)(\\s|$)" },
+    { "label": "递归 chmod 777（非根路径）", "re": "chmod\\s+-R\\s+777\\b" },
+    { "label": "递归强删绝对路径（工作区之外）", "re": "rm\\s+-\\w*(rf|fr)\\w*\\s+/(?!home/yangc/desk-test/)" },
+    { "label": "批量杀进程", "re": "kill\\s+-9\\s+-1|pkill\\s+-9\\s" },
+    { "label": "写系统配置目录 /etc", "re": "(>>?|tee\\s+(-a\\s+)?)\\s*/etc/" },
+    { "label": "清空防火墙规则", "re": "iptables\\s+-F|nft\\s+flush|ufw\\s+disable" },
+    { "label": "递归改属主", "re": "chown\\s+-R\\b" }
+  ]
+}

@@ -1,0 +1,16 @@
+{
+  "hooks": {
+    "PreToolUse": [
+      {
+        "matcher": "bash",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node /home/yangc/desk-data/hooks/danger-gate.mjs",
+            "timeout": 10
+          }
+        ]
+      }
+    ]
+  }
+}
