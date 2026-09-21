@@ -65,6 +65,8 @@ node src/cli.ts usage alice --month
 
 > 桌面端：想要独立窗口（像软件一样），双击 `deploy/windows/dsh-workbench-app.bat`，或在浏览器里用「安装应用 / 创建快捷方式（在窗口中打开）」。壳加载的就是同一网页，功能自动与网页端同步。
 
+侧栏还带 WorkBuddy 式模块入口：**🧑‍💼 助理**（预设一览）、**🧩 技能·连接器**（技能库全文 + 连接器状态）、**⚡ 自动化**（定时提醒增删，管理员）。
+
 启动成员实例用辅助脚本（自动读 `~/.desk/agents/<user>.key`，自动附带门户 authority 的 `--trusted-host`）：
 
 ```sh

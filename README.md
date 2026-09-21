@@ -65,6 +65,8 @@ Open the portal at `http://<machine>:8080` — each member signs in, sees their 
 
 > Desktop app: for a standalone window, run `deploy/windows/dsh-workbench-app.bat` (Chrome/Edge app mode) or use the browser's "Install app / Create shortcut (open as window)". The shell loads the same web UI, so it stays in sync automatically.
 
+The sidebar also carries WorkBuddy-style modules: **🧑‍💼 Assistants** (agent presets), **🧩 Skills & Connectors** (skill library reader + connector status), **⚡ Automation** (scheduled reminders, admin-managed).
+
 Start a member's dsh instance with the helper (reads `~/.desk/agents/<user>.key`, adds `--trusted-host` for the portal authority automatically):
 
 ```sh

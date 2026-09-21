@@ -151,6 +151,7 @@ P0 复核结果：第 3 条已实测（`--port` 有效；非回环假 Host 对 `
     ➕ 计划外：**Codex 接入（多线程并行工作流）**——WSL 装 codex + 登录态迁移；host 行 `subagent-codex` + `team-assistant` 预设启用 `subagent_codex` 且 workflow 引擎 provider 切到 codex；三实例默认预设设 team-assistant；单发委派/两路并行实测全绿。
     ➕ 计划外：**Codex worktree 并行工作流（团队技能）**——`codex-parallel-worktrees` 进共享技能库；worktree + 后台 codex 并行套路 + 沙箱 commit 坑与两条路线，实测落定。
     ➕ 计划外：**桌面端（应用模式/PWA）**——门户挂 manifest+图标；`deploy/windows/` 桌面资产（图标生成/快捷方式/成员 bat）；壳加载同一网页、与网页端自动同步。
+    ➕ 计划外：**侧栏模块化入口（WorkBuddy 式：助理 / 技能·连接器 / 自动化）**——三个侧栏面板 + 6 个新接口；技能/连接器只读聚合、自动化=提醒增删（管理员）。
 
 ### P3 每人独立工作区 ✅（2026-09-19 完成）
 

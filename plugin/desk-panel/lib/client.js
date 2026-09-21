@@ -1,4 +1,4 @@
-// DSH-ANYWORK 设置页（浏览器侧 cordis 插件）：工作台用量 + 企业知识库（含沉淀）+ 公司盘 + 成员管理 + 通知 + 公告板（侧栏入口）+ 运维 + 任务板
+// DSH-ANYWORK 工作台扩展（浏览器侧 cordis 插件）：设置页=用量/任务板/知识库（含沉淀）/公司盘/成员管理/通知/运维；侧栏=公告 + 助理 + 技能·连接器 + 自动化
 // 产出格式与 dsh 官方客户端插件一致：window.__ModuleLoader__.load({ id, factory })
 // 依赖仅 react（平台种子模块），全部走闭包 require。
 window.__ModuleLoader__.load({
@@ -1678,6 +1678,385 @@ window.__ModuleLoader__.load({
       return h("div", null, trigger, h("div", { key: "panel", style: panelStyle }, kids));
     }
 
+    function AssistantsPanel(props) {
+      var wide = !!(props && props.wide);
+      var aPair = React.useState({ phase: "loading", presets: [] });
+      var st = aPair[0];
+      var setSt = aPair[1];
+      var oPair = React.useState(false);
+      var open = oPair[0];
+      var setOpen = oPair[1];
+
+      function load() {
+        fetch("/portal/api/panel/presets", { headers: { accept: "application/json" } })
+          .then(function (r) {
+            if (!r.ok) throw new Error("HTTP " + r.status);
+            return r.json();
+          })
+          .then(function (d) {
+            setSt({ phase: "ready", presets: (d && d.presets) || [] });
+          })
+          .catch(function () {
+            setSt({ phase: "error", presets: [] });
+          });
+      }
+      React.useEffect(function () {
+        load();
+      }, []);
+
+      function toggle() {
+        var next = !open;
+        setOpen(next);
+        if (next) load();
+      }
+
+      var trigger = h(
+        "button",
+        { onClick: toggle, style: footBtn, title: "团队助理：Agent 预设一览（专家模式）" },
+        "🧑💼" + (wide ? " 助理" : "")
+      );
+      if (!open) return h("div", null, trigger);
+
+      var kids = [];
+      kids.push(
+        h(
+          "div",
+          { key: "hd", style: { display: "flex", justifyContent: "space-between", alignItems: "center" } },
+          h("div", { style: { fontWeight: 700, fontSize: 14 } }, "团队助理"),
+          h("button", { style: btnSmall, onClick: toggle }, "关闭")
+        )
+      );
+      if (st.phase === "loading") kids.push(h("div", { key: "ld", style: muted }, "读取中…"));
+      if (st.phase === "error") kids.push(h("div", { key: "er", style: muted }, "读不到预设（请从门户地址打开且已登录）。"));
+      if (st.phase === "ready") {
+        if (!st.presets.length) {
+          kids.push(h("div", { key: "none", style: muted }, "共享区还没有预设。"));
+        } else {
+          st.presets.forEach(function (p) {
+            kids.push(
+              h(
+                "div",
+                { key: "p" + p.id, style: { borderTop: "1px solid var(--dsw-alias-border-l2, #ccd0d5)", padding: "8px 0" } },
+                h("div", { style: { fontWeight: 600 } }, p.name, p.codex ? h("span", { style: Object.assign({ fontSize: 11, marginLeft: 6 }, muted) }, "含 Codex 并行") : null),
+                h("div", { style: Object.assign({ fontSize: 12, marginTop: 2 }, muted) }, p.description || p.id)
+              )
+            );
+          });
+        }
+        kids.push(
+          h(
+            "div",
+            { key: "tip", style: Object.assign({ fontSize: 12, marginTop: 8, borderTop: "1px solid var(--dsw-alias-border-l2, #ccd0d5)", paddingTop: 8 }, muted) },
+            "助理 = 预设人格与工具组合。新会话默认用哪个：设置 → Agent 预设；共享区 presets/ 下可自行增减。"
+          )
+        );
+      }
+      return h("div", null, trigger, h("div", { key: "panel", style: panelStyle }, kids));
+    }
+
+    function SkillsConnPanel(props) {
+      var wide = !!(props && props.wide);
+      var sPair = React.useState({ phase: "loading", skills: [], items: [] });
+      var st = sPair[0];
+      var setSt = sPair[1];
+      var tPair = React.useState("skills");
+      var tab = tPair[0];
+      var setTab = tPair[1];
+      var oPair = React.useState(false);
+      var open = oPair[0];
+      var setOpen = oPair[1];
+      var dPair = React.useState({ phase: "none", id: "", name: "", content: "" });
+      var det = dPair[0];
+      var setDet = dPair[1];
+
+      function load() {
+        Promise.all([
+          fetch("/portal/api/panel/skills", { headers: { accept: "application/json" } }).then(function (r) {
+            if (!r.ok) throw new Error("HTTP " + r.status);
+            return r.json();
+          }),
+          fetch("/portal/api/panel/connectors", { headers: { accept: "application/json" } }).then(function (r) {
+            if (!r.ok) throw new Error("HTTP " + r.status);
+            return r.json();
+          }),
+        ])
+          .then(function (rs) {
+            setSt({ phase: "ready", skills: (rs[0] && rs[0].skills) || [], items: (rs[1] && rs[1].items) || [] });
+          })
+          .catch(function () {
+            setSt({ phase: "error", skills: [], items: [] });
+          });
+      }
+      React.useEffect(function () {
+        load();
+      }, []);
+
+      function toggle() {
+        var next = !open;
+        setOpen(next);
+        if (!next) setDet({ phase: "none", id: "", name: "", content: "" });
+      }
+
+      function viewSkill(sh) {
+        setDet({ phase: "loading", id: sh.id, name: sh.name, content: "" });
+        fetch("/portal/api/panel/skill?name=" + encodeURIComponent(sh.id), { headers: { accept: "application/json" } })
+          .then(function (r) {
+            return r.json();
+          })
+          .then(function (d) {
+            if (d && d.error) setDet({ phase: "error", id: sh.id, name: sh.name, content: d.error });
+            else setDet({ phase: "ready", id: sh.id, name: sh.name, content: (d && d.content) || "" });
+          })
+          .catch(function () {
+            setDet({ phase: "error", id: sh.id, name: sh.name, content: "读取失败" });
+          });
+      }
+
+      function tabBtn(active, label, onClick) {
+        return h("button", { style: active ? Object.assign({}, btnLight, { fontWeight: 700 }) : btnLight, onClick: onClick }, label);
+      }
+
+      var trigger = h("button", { onClick: toggle, style: footBtn, title: "专家技能库 + 连接器状态" }, "🧩" + (wide ? " 技能·连接器" : ""));
+      if (!open) return h("div", null, trigger);
+
+      var kids = [];
+      kids.push(
+        h(
+          "div",
+          { key: "hd", style: { display: "flex", justifyContent: "space-between", alignItems: "center" } },
+          h("div", { style: { fontWeight: 700, fontSize: 14 } }, "专家技能 · 连接器"),
+          h("button", { style: btnSmall, onClick: toggle }, "关闭")
+        )
+      );
+      kids.push(
+        h(
+          "div",
+          { key: "tabs", style: { display: "flex", gap: 8, margin: "8px 0" } },
+          tabBtn(tab === "skills", "技能", function () {
+            setTab("skills");
+            setDet({ phase: "none", id: "", name: "", content: "" });
+          }),
+          tabBtn(tab === "conn", "连接器", function () {
+            setTab("conn");
+            setDet({ phase: "none", id: "", name: "", content: "" });
+          })
+        )
+      );
+      if (st.phase === "loading") kids.push(h("div", { key: "ld", style: muted }, "读取中…"));
+      else if (st.phase === "error") kids.push(h("div", { key: "er", style: muted }, "读不到（请从门户地址打开且已登录）。"));
+      else if (tab === "skills") {
+        if (det.phase !== "none") {
+          kids.push(
+            h(
+              "div",
+              { key: "det-hd", style: { display: "flex", gap: 8, alignItems: "center", marginBottom: 6 } },
+              h("button", { style: btnLight, onClick: function () { setDet({ phase: "none", id: "", name: "", content: "" }); } }, "← 返回"),
+              h("div", { style: { fontWeight: 600 } }, det.name || det.id)
+            )
+          );
+          if (det.phase === "loading") kids.push(h("div", { key: "dl", style: muted }, "读取中…"));
+          else kids.push(h("pre", { key: "dc", style: Object.assign({}, codeBox, { whiteSpace: "pre-wrap", maxHeight: 380, overflow: "auto" }) }, det.content));
+        } else if (!st.skills.length) {
+          kids.push(h("div", { key: "none", style: muted }, "共享技能库空空如也。"));
+        } else {
+          st.skills.forEach(function (sh) {
+            kids.push(
+              h(
+                "div",
+                { key: "s" + sh.id, style: { borderTop: "1px solid var(--dsw-alias-border-l2, #ccd0d5)", padding: "8px 0", cursor: "pointer" }, onClick: function () { viewSkill(sh); } },
+                h("div", { style: { fontWeight: 600 } }, sh.name, h("span", { style: Object.assign({ fontSize: 11, marginLeft: 6 }, muted) }, sh.id)),
+                h("div", { style: Object.assign({ fontSize: 12, marginTop: 2 }, muted) }, sh.description || ""),
+                sh.whenToUse ? h("div", { style: Object.assign({ fontSize: 11, marginTop: 2 }, muted) }, "触发：" + sh.whenToUse) : null
+              )
+            );
+          });
+          kids.push(h("div", { key: "tip", style: Object.assign({ fontSize: 12, marginTop: 8, borderTop: "1px solid var(--dsw-alias-border-l2, #ccd0d5)", paddingTop: 8 }, muted) }, "点击查看全文；装新技能 = 往共享区 skills/ 放一个文件夹，服务器自动分发到各实例。"));
+        }
+      } else {
+        if (!st.items.length) kids.push(h("div", { key: "cnon", style: muted }, "暂无连接信息。"));
+        st.items.forEach(function (it) {
+          var color = it.ok === true ? "#2e7d32" : it.ok === false ? "#c0392b" : "#9aa0a6";
+          kids.push(
+            h(
+              "div",
+              { key: "c" + it.name, style: { borderTop: "1px solid var(--dsw-alias-border-l2, #ccd0d5)", padding: "8px 0" } },
+              h("div", { style: { fontWeight: 600 } }, h("span", { style: { color: color, marginRight: 6 } }, "●"), it.name),
+              h("div", { style: Object.assign({ fontSize: 12, marginTop: 2 }, muted) }, it.detail || "")
+            )
+          );
+        });
+      }
+      return h("div", null, trigger, h("div", { key: "panel", style: panelStyle }, kids));
+    }
+
+    function AutomationPanel(props) {
+      var wide = !!(props && props.wide);
+      var aPair = React.useState({ phase: "loading", role: "member", reminders: [], recent: [] });
+      var st = aPair[0];
+      var setSt = aPair[1];
+      var oPair = React.useState(false);
+      var open = oPair[0];
+      var setOpen = oPair[1];
+      var mPair = React.useState({ kind: "", text: "" });
+      var msg = mPair[0];
+      var setMsg = mPair[1];
+      var wRef = React.useRef(null);
+      var tRef = React.useRef(null);
+
+      function load() {
+        fetch("/portal/api/panel/auto", { headers: { accept: "application/json" } })
+          .then(function (r) {
+            if (!r.ok) throw new Error("HTTP " + r.status);
+            return r.json();
+          })
+          .then(function (d) {
+            setSt({ phase: "ready", role: (d && d.role) || "member", reminders: (d && d.reminders) || [], recent: (d && d.recent) || [] });
+          })
+          .catch(function () {
+            setSt({ phase: "error", role: "member", reminders: [], recent: [] });
+          });
+      }
+      React.useEffect(function () {
+        load();
+      }, []);
+
+      function toggle() {
+        var next = !open;
+        setOpen(next);
+        if (next) load();
+      }
+
+      function fmtEp(sec) {
+        var d = new Date(Number(sec) * 1000);
+        if (isNaN(d.getTime())) return "";
+        function p2(x) {
+          return (x < 10 ? "0" : "") + x;
+        }
+        return p2(d.getMonth() + 1) + "-" + p2(d.getDate()) + " " + p2(d.getHours()) + ":" + p2(d.getMinutes());
+      }
+
+      function parseWhen(s) {
+        s = String(s || "").trim();
+        var now = new Date();
+        var m;
+        if ((m = /^\+(\d{1,4})\s*m(in)?$/i.exec(s))) return Math.floor(Date.now() / 1000) + Number(m[1]) * 60;
+        if ((m = /^\+(\d{1,3})\s*h(our|r)?$/i.exec(s))) return Math.floor(Date.now() / 1000) + Number(m[1]) * 3600;
+        if ((m = /^明天\s*(\d{1,2}):(\d{2})$/.exec(s))) {
+          var t1 = new Date(now.getFullYear(), now.getMonth(), now.getDate() + 1, Number(m[1]), Number(m[2]), 0, 0);
+          return Math.floor(t1.getTime() / 1000);
+        }
+        if ((m = /^(\d{1,2}):(\d{2})$/.exec(s))) {
+          var t2 = new Date(now.getFullYear(), now.getMonth(), now.getDate(), Number(m[1]), Number(m[2]), 0, 0);
+          if (t2.getTime() <= Date.now()) t2 = new Date(t2.getTime() + 86400000);
+          return Math.floor(t2.getTime() / 1000);
+        }
+        if ((m = /^(\d{1,2})-(\d{1,2})\s+(\d{1,2}):(\d{2})$/.exec(s))) {
+          var t3 = new Date(now.getFullYear(), Number(m[1]) - 1, Number(m[2]), Number(m[3]), Number(m[4]), 0, 0);
+          if (isNaN(t3.getTime())) return 0;
+          if (t3.getTime() <= Date.now()) t3 = new Date(now.getFullYear() + 1, Number(m[1]) - 1, Number(m[2]), Number(m[3]), Number(m[4]), 0, 0);
+          return Math.floor(t3.getTime() / 1000);
+        }
+        return 0;
+      }
+
+      function post(path, body, okText) {
+        setMsg({ kind: "info", text: "处理中…" });
+        fetch(path, { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify(body) })
+          .then(function (r) {
+            return r.json().then(function (d) {
+              return { status: r.status, d: d };
+            });
+          })
+          .then(function (res) {
+            if (res.status !== 200) {
+              setMsg({ kind: "err", text: (res.d && res.d.error) || "HTTP " + res.status });
+              return;
+            }
+            setMsg({ kind: "ok", text: okText });
+            if (wRef.current) wRef.current.value = "";
+            if (tRef.current) tRef.current.value = "";
+            load();
+          })
+          .catch(function (e) {
+            setMsg({ kind: "err", text: String((e && e.message) || e) });
+          });
+      }
+
+      function add() {
+        var text = tRef.current ? tRef.current.value : "";
+        if (!String(text).trim()) {
+          setMsg({ kind: "err", text: "内容不能为空" });
+          return;
+        }
+        var at = parseWhen(wRef.current ? wRef.current.value : "");
+        if (!at) {
+          setMsg({ kind: "err", text: "时间格式：10:00 / 明天 09:00 / 09-22 10:00 / +30m" });
+          return;
+        }
+        post("/portal/api/admin/reminders/add", { at_epoch: at, text: text }, "已添加：到点会推送提醒（微信/Webhook 通道）");
+      }
+
+      var trigger = h("button", { onClick: toggle, style: footBtn, title: "自动化：定时提醒与团队自动化" }, "⚡" + (wide ? " 自动化" : ""));
+      if (!open) return h("div", null, trigger);
+
+      var kids = [];
+      kids.push(
+        h(
+          "div",
+          { key: "hd", style: { display: "flex", justifyContent: "space-between", alignItems: "center" } },
+          h("div", { style: { fontWeight: 700, fontSize: 14 } }, "自动化"),
+          h("button", { style: btnSmall, onClick: toggle }, "关闭")
+        )
+      );
+      if (st.phase === "loading") kids.push(h("div", { key: "ld", style: muted }, "读取中…"));
+      if (st.phase === "error") kids.push(h("div", { key: "er", style: muted }, "读不到（请从门户地址打开且已登录）。"));
+      if (st.phase === "ready") {
+        kids.push(h("div", { key: "sub", style: Object.assign({ fontSize: 12, margin: "4px 0" }, muted) }, "定时提醒（待发送 " + st.reminders.length + " 条）"));
+        if (!st.reminders.length) kids.push(h("div", { key: "nr", style: muted }, "没有待发送的提醒。"));
+        st.reminders.forEach(function (r) {
+          kids.push(
+            h(
+              "div",
+              { key: "r" + r.id, style: { borderTop: "1px solid var(--dsw-alias-border-l2, #ccd0d5)", padding: "6px 0", display: "flex", justifyContent: "space-between", gap: 8, alignItems: "flex-start" } },
+              h(
+                "div",
+                { style: { flex: 1 } },
+                h("div", { style: { fontWeight: 600 } }, r.text),
+                h("div", { style: Object.assign({ fontSize: 12, marginTop: 2 }, muted) }, "⏰ " + fmtEp(r.at_epoch) + (r.title ? " · " + r.title : ""))
+              ),
+              st.role === "admin"
+                ? h("button", { style: btnLight, onClick: function () { post("/portal/api/admin/reminders/rm", { id: r.id }, "已删除"); } }, "删除")
+                : null
+            )
+          );
+        });
+        if (st.role === "admin") {
+          kids.push(
+            h(
+              "div",
+              { key: "add", style: { display: "flex", gap: 6, marginTop: 8, flexWrap: "wrap" } },
+              h("input", { ref: wRef, placeholder: "10:00 / +30m / 明天 09:00", style: { width: 170 }, onKeyDown: function (e) { if (e.key === "Enter") add(); } }),
+              h("input", { ref: tRef, placeholder: "提醒内容", style: { flex: 1, minWidth: 140 }, onKeyDown: function (e) { if (e.key === "Enter") add(); } }),
+              h("button", { style: btnLight, onClick: add }, "添加")
+            )
+          );
+          kids.push(h("div", { key: "tip", style: Object.assign({ fontSize: 12, marginTop: 6 }, muted) }, "到点由通知桥推送。也可以直接对助理说：提醒我 明天 09:00 开会。"));
+        } else {
+          kids.push(h("div", { key: "tip", style: Object.assign({ fontSize: 12, marginTop: 8, borderTop: "1px solid var(--dsw-alias-border-l2, #ccd0d5)", paddingTop: 8 }, muted) }, "成员可见提醒列表；新增/删除请找管理员，或直接对助理说：提醒我 明天 09:00 开会。"));
+        }
+        if (st.recent && st.recent.length) {
+          kids.push(h("div", { key: "rh", style: Object.assign({ fontSize: 12, marginTop: 8 }, muted) }, "最近已发送"));
+          st.recent.forEach(function (r) {
+            kids.push(h("div", { key: "rs" + r.id, style: Object.assign({ fontSize: 12 }, muted) }, "· " + r.text + "（" + fmtEp(r.at_epoch) + "）"));
+          });
+        }
+      }
+      if (msg.kind) {
+        kids.push(h("div", { key: "msg", style: msg.kind === "err" ? { color: "#c0392b", fontSize: 12 } : Object.assign({ fontSize: 12 }, muted) }, msg.text));
+      }
+      return h("div", null, trigger, h("div", { key: "panel", style: panelStyle }, kids));
+    }
+
     function TaskBoard() {
       var pair = React.useState({ phase: "loading", role: "member", me: "", members: [], tasks: [] });
       var st = pair[0];
@@ -1967,6 +2346,45 @@ window.__ModuleLoader__.load({
             },
           },
           AnnounceBoard
+        );
+      });
+      ctx.slots.inject("sidebar.footer.action", function () {
+        return ctx.slots.register(
+          {
+            name: "sidebar.footer.action",
+            id: "desk-assistants",
+            order: 86,
+            label: function () {
+              return "助理";
+            },
+          },
+          AssistantsPanel
+        );
+      });
+      ctx.slots.inject("sidebar.footer.action", function () {
+        return ctx.slots.register(
+          {
+            name: "sidebar.footer.action",
+            id: "desk-skills-conn",
+            order: 87,
+            label: function () {
+              return "技能·连接器";
+            },
+          },
+          SkillsConnPanel
+        );
+      });
+      ctx.slots.inject("sidebar.footer.action", function () {
+        return ctx.slots.register(
+          {
+            name: "sidebar.footer.action",
+            id: "desk-auto",
+            order: 88,
+            label: function () {
+              return "自动化";
+            },
+          },
+          AutomationPanel
         );
       });
       ctx.slots.inject("settings.section", function () {

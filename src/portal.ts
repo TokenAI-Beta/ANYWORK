@@ -18,6 +18,7 @@ import { kbSearch, listKbNotes, readKbNote, removeKbNote, saveKbNote } from './k
 import { listDrive, resolveInDrive, saveToDrive, MAX_UPLOAD } from './drive.ts'
 import { addNotifyRoute, addReminder, dispatchNotify, listNotifyLog, listNotifyRoutes, listReminders, listRemindersSent, readOrCreateNotifyToken, removeNotifyRoute, removeReminder, toggleNotifyRoute } from './notify.ts'
 import { defaultDataDir } from './db.ts'
+import { collectConnectors, collectPresets, collectSkills, readSkill } from './panel.ts'
 import { collectOps } from './ops.ts'
 import { createReadStream, existsSync, statSync } from 'node:fs'
 
@@ -724,6 +725,47 @@ export function startPortal(opts: PortalOptions) {
         return res.end(JSON.stringify({ ok: true }))
       }
       // —— 任务板（登录会话；管理员 / 创建人 / 当前指派人可改，任何人可接领无主任务）——
+      // —— 侧栏面板：助理 / 技能·连接器 / 自动化（团队版扩展）——
+      if (req.method === 'GET' && path === '/portal/api/panel/presets') {
+        if (!user) {
+          res.writeHead(401, { 'content-type': 'application/json' })
+          return res.end(JSON.stringify({ error: 'login required' }))
+        }
+        res.writeHead(200, { 'content-type': 'application/json; charset=utf-8' })
+        return res.end(JSON.stringify({ ok: true, presets: collectPresets() }))
+      }
+      if (req.method === 'GET' && path === '/portal/api/panel/skills') {
+        if (!user) {
+          res.writeHead(401, { 'content-type': 'application/json' })
+          return res.end(JSON.stringify({ error: 'login required' }))
+        }
+        res.writeHead(200, { 'content-type': 'application/json; charset=utf-8' })
+        return res.end(JSON.stringify({ ok: true, skills: collectSkills() }))
+      }
+      if (req.method === 'GET' && path === '/portal/api/panel/skill') {
+        if (!user) {
+          res.writeHead(401, { 'content-type': 'application/json' })
+          return res.end(JSON.stringify({ error: 'login required' }))
+        }
+        res.writeHead(200, { 'content-type': 'application/json; charset=utf-8' })
+        return res.end(JSON.stringify(readSkill(url.searchParams.get('name') ?? '')))
+      }
+      if (req.method === 'GET' && path === '/portal/api/panel/connectors') {
+        if (!user) {
+          res.writeHead(401, { 'content-type': 'application/json' })
+          return res.end(JSON.stringify({ error: 'login required' }))
+        }
+        res.writeHead(200, { 'content-type': 'application/json; charset=utf-8' })
+        return res.end(JSON.stringify({ ok: true, items: collectConnectors(db) }))
+      }
+      if (req.method === 'GET' && path === '/portal/api/panel/auto') {
+        if (!user) {
+          res.writeHead(401, { 'content-type': 'application/json' })
+          return res.end(JSON.stringify({ error: 'login required' }))
+        }
+        res.writeHead(200, { 'content-type': 'application/json; charset=utf-8' })
+        return res.end(JSON.stringify({ ok: true, role: user.role, reminders: listReminders(db), recent: listRemindersSent(db, 5) }))
+      }
       if (path === '/portal/api/tasks' && req.method === 'GET') {
         if (!user) {
           res.writeHead(401, { 'content-type': 'application/json' })
@@ -1070,6 +1112,17 @@ export function startPortal(opts: PortalOptions) {
           const results = await dispatchNotify(db, { title, text, source: 'admin-test' })
           res.writeHead(200, { 'content-type': 'application/json; charset=utf-8' })
           return res.end(JSON.stringify({ results }))
+        }
+        if (req.method === 'POST' && path === '/portal/api/admin/reminders/add') {
+          const body = await readJsonBody()
+          const r = addReminder(db, {
+            atEpoch: Number(body.at_epoch ?? 0),
+            title: String(body.title ?? '').trim(),
+            text: String(body.text ?? ''),
+            source: 'portal-panel',
+          })
+          res.writeHead(200, { 'content-type': 'application/json; charset=utf-8' })
+          return res.end(JSON.stringify(r.error ? { error: r.error } : { ok: true, id: r.id, atEpoch: r.atEpoch }))
         }
         if (req.method === 'POST' && path === '/portal/api/admin/reminders/rm') {
           const body = await readJsonBody()
