@@ -1,4 +1,4 @@
-// DSH-ANYWORK 设置页（浏览器侧 cordis 插件）：工作台用量 + 企业知识库 + 公司盘 + 成员管理 + 通知 + 公告板（侧栏入口）+ 运维 + 任务板
+// DSH-ANYWORK 设置页（浏览器侧 cordis 插件）：工作台用量 + 企业知识库 + 公司盘 + 成员管理 + 通知 + 公告板（侧栏入口）+ 运维 + 任务板 + 报价换算
 // 产出格式与 dsh 官方客户端插件一致：window.__ModuleLoader__.load({ id, factory })
 // 依赖仅 react（平台种子模块），全部走闭包 require。
 window.__ModuleLoader__.load({
@@ -1715,6 +1715,115 @@ window.__ModuleLoader__.load({
       return h("div", { style: Object.assign({}, wrap, { maxWidth: 640 }) }, kids);
     }
 
+    function QuoteConverter() {
+      var pair = React.useState(function () {
+        var rate = "7.10";
+        try {
+          rate = window.localStorage.getItem("desk-quote-rate") || rate;
+        } catch (e) {}
+        return { dmtu: "", grade: "", rate: rate, usd: "", tons: "", unit: "dry", moisture: "" };
+      });
+      var f = pair[0];
+      var setF = pair[1];
+
+      function upd(k, v) {
+        setF(function (p) {
+          var n = {};
+          for (var kk in p) n[kk] = p[kk];
+          n[k] = v;
+          return n;
+        });
+        if (k === "rate") {
+          try {
+            window.localStorage.setItem("desk-quote-rate", v);
+          } catch (e) {}
+        }
+      }
+      function num(x) {
+        var n = parseFloat(String(x == null ? "" : x).replace(/,/g, ""));
+        return isFinite(n) ? n : NaN;
+      }
+      function roundTo(x, d) {
+        var m = Math.pow(10, d);
+        return Math.round(x * m + (x >= 0 ? 1 : -1) * Math.abs(x) * 1e-12 * m) / m;
+      }
+      function hard(x, d) {
+        return isFinite(x) ? roundTo(x, d).toFixed(d) : "—";
+      }
+      function money(x) {
+        if (!isFinite(x)) return "—";
+        return roundTo(x, 2).toLocaleString("zh-CN", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+      }
+
+      var dmtuN = num(f.dmtu);
+      var gradeN = num(f.grade);
+      var rateN = num(f.rate);
+      var usdN = num(f.usd);
+      var tonsN = num(f.tons);
+      var moistN = num(f.moisture);
+
+      var unitPrice = isFinite(dmtuN) && isFinite(gradeN) ? dmtuN * gradeN : NaN;
+      var usdPerTon = isFinite(unitPrice) && isFinite(rateN) && rateN > 0 ? unitPrice / rateN : NaN;
+      var dmtuFromUsd = isFinite(usdN) && isFinite(rateN) && isFinite(gradeN) && gradeN > 0 ? (usdN * rateN) / gradeN : NaN;
+      var wetPrice = isFinite(unitPrice) && isFinite(moistN) ? unitPrice * (1 - moistN / 100) : NaN;
+      var dryTons = NaN;
+      if (isFinite(tonsN)) {
+        if (f.unit === "wet") dryTons = isFinite(moistN) ? tonsN * (1 - moistN / 100) : NaN;
+        else dryTons = tonsN;
+      }
+      var totalCny = isFinite(dryTons) && isFinite(unitPrice) ? dryTons * unitPrice : NaN;
+      var totalUsd = isFinite(totalCny) && isFinite(rateN) && rateN > 0 ? totalCny / rateN : NaN;
+
+      function frow(label, key, ph) {
+        return h(
+          "div",
+          { key: key, style: { display: "flex", alignItems: "center", gap: 8, marginBottom: 6 } },
+          h("span", { style: { width: 116, fontSize: 12, color: "var(--dsw-alias-label-secondary, #6b7280)" } }, label),
+          h("input", { value: f[key], placeholder: ph || "", onChange: function (e) { upd(key, e.target.value); }, style: Object.assign({}, field, { width: 160 }) })
+        );
+      }
+
+      var lines = [];
+      lines.push(h("div", { key: "l1" }, "单价（元/干吨）＝ 吨度价 × 品位 ＝ ", h("b", null, hard(unitPrice, 2))));
+      if (isFinite(usdPerTon)) lines.push(h("div", { key: "l2" }, "折合美元：$" + hard(usdPerTon, 2) + " /干吨（按汇率 " + hard(rateN, 4) + "）"));
+      if (isFinite(wetPrice)) lines.push(h("div", { key: "l3" }, "折湿吨单价：¥" + hard(wetPrice, 2) + " /湿吨（干基 × (1−水分 " + hard(moistN, 2) + "%)）"));
+      if (isFinite(dryTons)) lines.push(h("div", { key: "l4" }, "干吨数：" + hard(dryTons, 3) + " 吨" + (f.unit === "wet" ? "（湿吨 " + hard(tonsN, 3) + " × (1−水分)）" : "")));
+      if (isFinite(totalCny)) lines.push(h("div", { key: "l5" }, "总货值：¥" + money(totalCny) + (isFinite(totalUsd) ? " ≈ $" + money(totalUsd) : "")));
+
+      return h(
+        "div",
+        { style: Object.assign({}, wrap, { maxWidth: 640 }) },
+        h("div", { key: "s1", style: { fontWeight: 600, marginBottom: 6 } }, "报价换算（元/干吨度 ⇄ 元/干吨 · 美元）"),
+        frow("吨度价（元/干吨度）", "dmtu", "如 57.5"),
+        frow("品位（%）", "grade", "如 48.47"),
+        frow("汇率（USD→CNY）", "rate", "如 7.10"),
+        h("div", { key: "s2", style: { fontWeight: 600, margin: "10px 0 6px" } }, "美元价反推吨度价"),
+        frow("美元/干吨（可选）", "usd", "如 392.5"),
+        isFinite(dmtuFromUsd)
+          ? h("div", { key: "r1", style: { fontSize: 12, marginBottom: 8 } }, "→ " + hard(dmtuFromUsd, 2) + " 元/干吨度（美元 × 汇率 ÷ 品位）")
+          : null,
+        h("div", { key: "s3", style: { fontWeight: 600, margin: "10px 0 6px" } }, "总货值"),
+        frow("数量（吨）", "tons", "如 1120"),
+        h(
+          "div",
+          { key: "unit", style: { display: "flex", alignItems: "center", gap: 8, marginBottom: 6 } },
+          h("span", { style: { width: 116, fontSize: 12, color: "var(--dsw-alias-label-secondary, #6b7280)" } }, "数量口径"),
+          h(
+            "select",
+            { value: f.unit, onChange: function (e) { upd("unit", e.target.value); }, style: Object.assign({}, field, { width: 160 }) },
+            [h("option", { key: "d", value: "dry" }, "干吨"), h("option", { key: "w", value: "wet" }, "湿吨")]
+          )
+        ),
+        frow("水分（%）", "moisture", "如 2.75"),
+        h("div", { key: "out", style: codeBox }, lines),
+        h(
+          "div",
+          { key: "note", style: Object.assign({ fontSize: 11 }, muted) },
+          "口径：单价＝吨度价 × 品位（不再除 100）；总货值用未舍入单价计算；结算按干吨（湿吨先扣水分）。结果供快速测算，金额以合同为准。"
+        )
+      );
+    }
+
     var inject = ["slots"];
 
     function apply(ctx) {
@@ -1820,6 +1929,19 @@ window.__ModuleLoader__.load({
             },
           },
           TaskBoard
+        );
+      });
+      ctx.slots.inject("settings.section", function () {
+        return ctx.slots.register(
+          {
+            name: "settings.section",
+            id: "desk-quote",
+            order: 45,
+            label: function () {
+              return "报价换算";
+            },
+          },
+          QuoteConverter
         );
       });
     }
