@@ -1,4 +1,4 @@
-// DSH-ANYWORK 设置页（浏览器侧 cordis 插件）：工作台用量 + 企业知识库 + 公司盘 + 成员管理
+// DSH-ANYWORK 设置页（浏览器侧 cordis 插件）：工作台用量 + 企业知识库 + 公司盘 + 成员管理 + 通知
 // 产出格式与 dsh 官方客户端插件一致：window.__ModuleLoader__.load({ id, factory })
 // 依赖仅 react（平台种子模块），全部走闭包 require。
 window.__ModuleLoader__.load({
@@ -761,6 +761,255 @@ window.__ModuleLoader__.load({
       return h("div", { style: Object.assign({}, wrap, { maxWidth: 640 }) }, kids);
     }
 
+    function NotifySection() {
+      var dataPair = React.useState({ phase: "loading", routes: [], log: [], message: "" });
+      var data = dataPair[0];
+      var setData = dataPair[1];
+      var msgPair = React.useState({ kind: "", text: "" });
+      var msg = msgPair[0];
+      var setMsg = msgPair[1];
+      var testPair = React.useState(null);
+      var testRes = testPair[0];
+      var setTestRes = testPair[1];
+      var kindPair = React.useState("webhook");
+      var kind = kindPair[0];
+      var setKind = kindPair[1];
+      var nRef = React.useRef(null);
+      var tRef = React.useRef(null);
+
+      function load() {
+        fetch("/portal/api/admin/notify", { headers: { accept: "application/json" } })
+          .then(function (r) {
+            if (r.status === 403) throw new Error("NOPERM");
+            if (r.status === 401) throw new Error("NOLOGIN");
+            if (!r.ok) throw new Error("HTTP " + r.status);
+            return r.json();
+          })
+          .then(function (d) {
+            setData({ phase: "ready", routes: d.routes || [], log: d.log || [], message: "" });
+          })
+          .catch(function (e) {
+            setData({ phase: "error", routes: [], log: [], message: String((e && e.message) || e) });
+          });
+      }
+      React.useEffect(function () {
+        load();
+      }, []);
+
+      function post(path, body, okText) {
+        setMsg({ kind: "info", text: "处理中…" });
+        return fetch(path, { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify(body) })
+          .then(function (r) {
+            return r.json().then(function (d) {
+              return { status: r.status, d: d };
+            });
+          })
+          .then(function (res) {
+            if (res.status !== 200) {
+              setMsg({ kind: "err", text: (res.d && res.d.error) || "HTTP " + res.status });
+              return null;
+            }
+            setMsg({ kind: "ok", text: okText });
+            load();
+            return res.d;
+          })
+          .catch(function (e) {
+            setMsg({ kind: "err", text: String((e && e.message) || e) });
+            return null;
+          });
+      }
+
+      if (data.phase === "loading") return h("div", { style: wrap }, "读取通知通道中…");
+      if (data.phase === "error") {
+        if (data.message === "NOPERM")
+          return h(
+            "div",
+            { style: wrap },
+            h("div", null, "本页仅管理员可用。"),
+            h("div", { style: muted }, "用管理员账号从门户登录后配置通知通道。")
+          );
+        return h(
+          "div",
+          { style: wrap },
+          h("div", null, "读不到通知配置（" + data.message + "）。"),
+          h("div", { style: muted }, "请从门户地址打开工作台（经登录会话）再试。")
+        );
+      }
+
+      var routeRows = [];
+      for (var i = 0; i < data.routes.length; i++) {
+        var r = data.routes[i];
+        routeRows.push(
+          h(
+            "div",
+            { key: "r" + i, style: rowBase },
+            h(
+              "div",
+              { style: { display: "flex", justifyContent: "space-between", alignItems: "center", gap: 8 } },
+              h(
+                "span",
+                null,
+                r.name + " ",
+                h("span", { style: Object.assign({ fontSize: 12 }, muted) }, (r.kind === "webhook" ? "webhook" : "hermes") + (r.enabled === 1 ? " · 启用" : " · 停用"))
+              ),
+              h(
+                "span",
+                { style: { display: "flex", gap: 6 } },
+                h(
+                  "button",
+                  {
+                    style: btnSmall,
+                    onClick: (function (name) {
+                      return function () {
+                        post("/portal/api/admin/notify/route-toggle", { name: name }, "已切换：" + name);
+                      };
+                    })(r.name),
+                  },
+                  r.enabled === 1 ? "停用" : "启用"
+                ),
+                h(
+                  "button",
+                  {
+                    style: btnDanger,
+                    onClick: (function (name) {
+                      return function () {
+                        if (!window.confirm("删除通知通道 " + name + "？")) return;
+                        post("/portal/api/admin/notify/route-delete", { name: name }, "已删除：" + name);
+                      };
+                    })(r.name),
+                  },
+                  "删除"
+                )
+              )
+            ),
+            h("div", { style: Object.assign({ fontSize: 12 }, muted) }, String(r.target || "").length > 72 ? String(r.target).slice(0, 72) + "…" : String(r.target || ""))
+          )
+        );
+      }
+
+      var logRows = [];
+      for (var j = 0; j < Math.min(data.log.length, 8); j++) {
+        var g = data.log[j];
+        logRows.push(
+          h(
+            "div",
+            { key: "l" + j, style: { display: "flex", gap: 8, fontSize: 12, padding: "3px 0" } },
+            h("span", { style: muted }, String(g.ts || "").slice(5, 16)),
+            h("span", null, String(g.route_name || "-")),
+            h(
+              "span",
+              { style: g.ok === 1 ? muted : { color: "#c0392b" } },
+              (g.ok === 1 ? "✓ " : "✗ ") + String(g.title || g.text || "").slice(0, 24)
+            )
+          )
+        );
+      }
+
+      var kids = [];
+      kids.push(h("div", { key: "t1", style: { fontSize: 15, fontWeight: 700 } }, "通知通道（" + data.routes.length + "）"));
+      kids.push(h("div", { key: "rr", style: {} }, routeRows.length ? routeRows : h("div", { style: muted }, "还没有通知通道——加一个，工作台就能往外推消息（提醒 / 告警 / 任务完成）。")));
+      kids.push(
+        h(
+          "div",
+          { key: "nf", style: { display: "flex", flexDirection: "column", gap: 6, marginTop: 4 } },
+          h("div", { style: { fontWeight: 600 } }, "添加通道"),
+          h(
+            "select",
+            {
+              value: kind,
+              onChange: function (e) {
+                setKind(e.target.value);
+              },
+              style: field,
+            },
+            h("option", { value: "webhook" }, "webhook —— 企业微信 / 钉钉 / 任意 HTTP 端点"),
+            h("option", { value: "hermes" }, "hermes —— 经 通知平台（weixin 微信等）")
+          ),
+          h("input", { ref: nRef, placeholder: "名称（英文小写，如 wecom-group / wechat-me）", style: field }),
+          h("input", {
+            ref: tRef,
+            placeholder: kind === "webhook" ? "https://qyapi.weixin.qq.com/cgi-bin/webhook/send?key=…" : "weixin",
+            style: field,
+          }),
+          h(
+            "button",
+            {
+              style: btnDark,
+              onClick: function () {
+                var name = nRef.current ? nRef.current.value.trim() : "";
+                var target = tRef.current ? tRef.current.value.trim() : "";
+                post("/portal/api/admin/notify/route-add", { name: name, kind: kind, target: target }, "通道已添加：" + name).then(function (d) {
+                  if (d && tRef.current) tRef.current.value = "";
+                });
+              },
+            },
+            "添加通道"
+          )
+        )
+      );
+      kids.push(
+        h(
+          "div",
+          { key: "test", style: { display: "flex", alignItems: "center", gap: 8, marginTop: 4 } },
+          h(
+            "button",
+            {
+              style: btnLight,
+              onClick: function () {
+                setTestRes({ phase: "loading" });
+                fetch("/portal/api/admin/notify-test", { method: "POST", headers: { "content-type": "application/json" }, body: "{}" })
+                  .then(function (r) {
+                    return r.json();
+                  })
+                  .then(function (d) {
+                    setTestRes({ phase: "ready", results: d.results || [] });
+                    load();
+                  })
+                  .catch(function (e) {
+                    setTestRes({ phase: "ready", results: [{ route: "-", ok: false, info: String((e && e.message) || e) }] });
+                  });
+              },
+            },
+            "发送测试通知"
+          ),
+          h("span", { style: Object.assign({ fontSize: 12 }, muted) }, "会发往所有启用通道（含手机）")
+        )
+      );
+      if (testRes && testRes.phase === "ready") {
+        var trNodes = [];
+        for (var k = 0; k < testRes.results.length; k++) {
+          var tr = testRes.results[k];
+          trNodes.push(
+            h(
+              "div",
+              { key: "tr" + k, style: { fontSize: 12, color: tr.ok ? undefined : "#c0392b" } },
+              (tr.ok ? "✓ " : "✗ ") + tr.route + "：" + tr.info
+            )
+          );
+        }
+        kids.push(h("div", { key: "trs", style: { display: "flex", flexDirection: "column", gap: 3 } }, trNodes));
+      }
+      if (msg.kind) {
+        kids.push(
+          h(
+            "div",
+            { key: "msg", style: msg.kind === "err" ? { color: "#c0392b", fontSize: 12 } : Object.assign({ fontSize: 12 }, muted) },
+            msg.text
+          )
+        );
+      }
+      kids.push(h("div", { key: "t2", style: { fontSize: 15, fontWeight: 700, marginTop: 8 } }, "最近发送"));
+      kids.push(h("div", { key: "logs", style: {} }, logRows.length ? logRows : h("div", { style: muted }, "还没有发送记录")));
+      kids.push(
+        h(
+          "div",
+          { key: "tip", style: muted },
+          "agent 侧发通知：~/desk-data/bin/desk-notify \"标题\" \"正文\"（令牌在 ~/desk-data/notify.token，仅本机）。企业微信群机器人：群设置 → 群机器人 → 复制 Webhook 地址，粘进上面的通道即可。"
+        )
+      );
+      return h("div", { style: Object.assign({}, wrap, { maxWidth: 640 }) }, kids);
+    }
+
     var inject = ["slots"];
 
     function apply(ctx) {
@@ -814,6 +1063,19 @@ window.__ModuleLoader__.load({
             },
           },
           AdminSection
+        );
+      });
+      ctx.slots.inject("settings.section", function () {
+        return ctx.slots.register(
+          {
+            name: "settings.section",
+            id: "desk-notify",
+            order: 90,
+            label: function () {
+              return "通知";
+            },
+          },
+          NotifySection
         );
       });
     }

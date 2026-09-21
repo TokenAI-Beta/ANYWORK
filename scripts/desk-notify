@@ -1,0 +1,52 @@
+#!/usr/bin/env python3
+# desk-notify：给团队工作台发通知（供工作台里的 agent / 成员使用）
+# 用法：
+#   desk-notify "正文"
+#   desk-notify "标题" "正文"
+#   读管道：echo "正文" | desk-notify
+# 推送目标 = 管理员在 工作台 设置 →「通知」里配置的所有启用通道。
+import json
+import os
+import sys
+import urllib.request
+
+
+def main():
+    args = sys.argv[1:]
+    title, text = "", ""
+    if len(args) >= 2:
+        title, text = args[0], args[1]
+    elif len(args) == 1:
+        text = args[0]
+    else:
+        text = sys.stdin.read().strip()
+    if not text:
+        print('用法：desk-notify "标题" "正文"   （或 desk-notify "正文"）')
+        return 1
+    tok = ""
+    try:
+        with open(os.path.expanduser("~/desk-data/notify.token")) as f:
+            tok = f.read().strip()
+    except OSError:
+        pass
+    body = json.dumps({"title": title, "text": text, "source": "agent"}).encode("utf-8")
+    req = urllib.request.Request(
+        "http://127.0.0.1:8080/portal/api/notify",
+        data=body,
+        headers={"content-type": "application/json", "x-desk-notify-token": tok},
+        method="POST",
+    )
+    try:
+        with urllib.request.urlopen(req, timeout=30) as r:
+            d = json.loads(r.read().decode("utf-8"))
+        results = d.get("results", [])
+        for item in results:
+            print(("✓ " if item.get("ok") else "✗ ") + str(item.get("route")) + "：" + str(item.get("info")))
+        return 0 if any(i.get("ok") for i in results) else 1
+    except Exception as e:  # noqa: BLE001
+        print("desk-notify 发送失败：%s" % e)
+        return 1
+
+
+if __name__ == "__main__":
+    sys.exit(main())

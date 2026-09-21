@@ -4,6 +4,7 @@ import { homedir } from 'node:os'
 import { join } from 'node:path'
 import { defaultDataDir, openDb } from './db.ts'
 import { startGateway } from './gateway.ts'
+import { readOrCreateNotifyToken } from './notify.ts'
 import { startPortal } from './portal.ts'
 
 function loadRealKey(): string {
@@ -24,6 +25,7 @@ const portalHost = process.env.DESK_PORTAL_HOST ?? '0.0.0.0'
 const upstream = process.env.DESK_UPSTREAM ?? 'https://api.deepseek.com'
 
 const db = openDb()
+readOrCreateNotifyToken(defaultDataDir()) // 通知桥令牌：首启生成，agent 侧 desk-notify 读取
 const realKey = loadRealKey()
 startGateway({ db, upstream, realKey, port: gatewayPort })
 startPortal({ db, port: portalPort, host: portalHost })

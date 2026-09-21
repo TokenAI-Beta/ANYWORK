@@ -16,6 +16,8 @@ import { eventCost, monthStartUtc, prices } from './pricing.ts'
 import { addChannel, listChannels, removeChannel, setChannelEnabled } from './channel.ts'
 import { kbSearch } from './kb.ts'
 import { listDrive, resolveInDrive, saveToDrive, MAX_UPLOAD } from './drive.ts'
+import { addNotifyRoute, dispatchNotify, listNotifyLog, listNotifyRoutes, readOrCreateNotifyToken, removeNotifyRoute, toggleNotifyRoute } from './notify.ts'
+import { defaultDataDir } from './db.ts'
 import { createReadStream, existsSync, statSync } from 'node:fs'
 
 export interface PortalOptions {
@@ -488,6 +490,30 @@ export function startPortal(opts: PortalOptions) {
         })
         return
       }
+      // —— 通知桥：agent 侧入口（desk-notify 脚本；令牌认证，不走登录会话）——
+      if (path === '/portal/api/notify' && req.method === 'POST') {
+        const token = String(req.headers['x-desk-notify-token'] ?? '')
+        const expect = readOrCreateNotifyToken(defaultDataDir())
+        if (!token || token !== expect) {
+          res.writeHead(401, { 'content-type': 'application/json' })
+          return res.end(JSON.stringify({ error: 'invalid notify token' }))
+        }
+        let body: Record<string, unknown> = {}
+        try {
+          const v = JSON.parse(await readBody(req)) as unknown
+          if (v && typeof v === 'object') body = v as Record<string, unknown>
+        } catch {
+          body = {}
+        }
+        const text = String(body.text ?? '').trim()
+        if (!text) {
+          res.writeHead(400, { 'content-type': 'application/json; charset=utf-8' })
+          return res.end(JSON.stringify({ error: 'text 不能为空' }))
+        }
+        const results = await dispatchNotify(db, { title: String(body.title ?? '').trim(), text, source: String(body.source ?? 'agent') })
+        res.writeHead(200, { 'content-type': 'application/json; charset=utf-8' })
+        return res.end(JSON.stringify({ results }))
+      }
       // —— 管理 API（工作台 设置 →「成员管理」插件调用；仅管理员）——
       if (path.startsWith('/portal/api/admin/')) {
         if (!user) {
@@ -632,6 +658,40 @@ export function startPortal(opts: PortalOptions) {
           if (cur) setChannelEnabled(db, name, cur.enabled !== 1)
           res.writeHead(200, { 'content-type': 'application/json; charset=utf-8' })
           return res.end(JSON.stringify({ name, enabled: cur ? cur.enabled !== 1 : false }))
+        }
+        if (req.method === 'GET' && path === '/portal/api/admin/notify') {
+          res.writeHead(200, { 'content-type': 'application/json; charset=utf-8' })
+          return res.end(JSON.stringify({ routes: listNotifyRoutes(db), log: listNotifyLog(db, 12) }))
+        }
+        if (req.method === 'POST' && path === '/portal/api/admin/notify/route-add') {
+          const body = await readJsonBody()
+          const r = addNotifyRoute(db, { name: String(body.name ?? ''), kind: String(body.kind ?? ''), target: String(body.target ?? '') })
+          if ('error' in r) {
+            res.writeHead(400, { 'content-type': 'application/json; charset=utf-8' })
+            return res.end(JSON.stringify({ error: r.error }))
+          }
+          res.writeHead(200, { 'content-type': 'application/json; charset=utf-8' })
+          return res.end(JSON.stringify({ ok: true }))
+        }
+        if (req.method === 'POST' && path === '/portal/api/admin/notify/route-delete') {
+          const body = await readJsonBody()
+          removeNotifyRoute(db, String(body.name ?? '').trim())
+          res.writeHead(200, { 'content-type': 'application/json; charset=utf-8' })
+          return res.end(JSON.stringify({ ok: true }))
+        }
+        if (req.method === 'POST' && path === '/portal/api/admin/notify/route-toggle') {
+          const body = await readJsonBody()
+          toggleNotifyRoute(db, String(body.name ?? '').trim())
+          res.writeHead(200, { 'content-type': 'application/json; charset=utf-8' })
+          return res.end(JSON.stringify({ ok: true }))
+        }
+        if (req.method === 'POST' && path === '/portal/api/admin/notify-test') {
+          const body = await readJsonBody()
+          const title = String(body.title ?? '工作台通知测试').trim()
+          const text = String(body.text ?? '这是一条来自 DSH-ANYWORK 的测试通知，收到即通。').trim()
+          const results = await dispatchNotify(db, { title, text, source: 'admin-test' })
+          res.writeHead(200, { 'content-type': 'application/json; charset=utf-8' })
+          return res.end(JSON.stringify({ results }))
         }
         res.writeHead(404, { 'content-type': 'application/json; charset=utf-8' })
         return res.end(JSON.stringify({ error: 'unknown admin api' }))
