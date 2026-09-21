@@ -61,7 +61,7 @@ node src/cli.ts user agent alice 3301      # bind her dsh instance port
 node src/cli.ts usage alice --month
 ```
 
-Open the portal at `http://<machine>:8080` — each member signs in, sees their own usage, and lands in their own dsh instance. Admins manage members at `/portal/admin`.
+Open the portal at `http://<machine>:8080` — each member signs in, sees their own usage, and lands in their own dsh instance. Admins manage members and channels inside the workbench (Settings → Members).
 
 Start a member's dsh instance with the helper (reads `~/.desk/agents/<user>.key`, adds `--trusted-host` for the portal authority automatically):
 

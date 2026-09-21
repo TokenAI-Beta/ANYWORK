@@ -95,7 +95,7 @@ code { background: #f0f1f3; border-radius: 5px; padding: 1px 5px; font-family: u
 
 function page(title: string, user: SessionUser | null, body: string): string {
   const nav = user
-    ? `<nav><a href="/">工作台</a><a href="/portal/me">我的用量</a>${user.role === 'admin' ? '<a href="/portal/admin">成员管理</a>' : ''}<form method="post" action="/logout" class="inline"><button>退出</button></form></nav><span class="who">${esc(user.username)}</span>`
+    ? `<nav><a href="/">工作台</a><a href="/portal/me">我的用量</a><form method="post" action="/logout" class="inline"><button>退出</button></form></nav><span class="who">${esc(user.username)}</span>`
     : ''
   return `<!doctype html>
 <html lang="zh-CN">
@@ -362,71 +362,6 @@ export function startPortal(opts: PortalOptions) {
     return page('我的用量', user, body)
   }
 
-  const renderAdmin = (user: SessionUser, banner = ''): string => {
-    const users = db
-      .prepare(`SELECT id, username, role, status, monthly_budget_cny AS budget, agent_port, created_at FROM users ORDER BY id`)
-      .all() as Record<string, unknown>[]
-    const mStart = monthStartUtc()
-    const rows = users
-      .map((u) => {
-        const mrows = db
-          .prepare(`SELECT * FROM usage_events WHERE user_id = ? AND ts >= ?`)
-          .all(u.id as number, mStart) as unknown as UsageRow[]
-        const a = aggregate(mrows)
-        return `<tr><td>${u.id}</td><td>${esc(u.username)}</td><td>${esc(u.role)}</td><td>${esc(u.status)}</td><td>${u.agent_port ?? '-'}</td><td>${u.budget ?? '不限'}</td><td>${a.events}</td><td>¥${a.cost.toFixed(4)}</td><td class="muted">${esc(u.created_at)}</td></tr>`
-      })
-      .join('')
-
-    const channels = listChannels(db)
-    const chRows = channels
-      .map(
-        (c) =>
-          `<tr><td>${c.id}</td><td>${esc(c.name)}</td><td class="muted">${esc(c.base_url)}</td><td>${esc(c.models.join(', '))}</td><td>${Object.keys(c.prices).length ? Object.keys(c.prices).length + ' 条' : '—'}</td><td class="muted">${c.api_key ? esc(c.api_key.slice(0, 6)) + '…' : '未设'}</td><td>${c.enabled === 1 ? '启用' : '停用'}</td><td>
-  <form method="post" action="/portal/admin/channels/toggle" class="inline"><input type="hidden" name="name" value="${esc(c.name)}"><button style="padding:4px 10px;font-size:12px">${c.enabled === 1 ? '停用' : '启用'}</button></form>
-  <form method="post" action="/portal/admin/channels/delete" class="inline" onsubmit="return confirm('删除该通道？')"><input type="hidden" name="name" value="${esc(c.name)}"><button style="padding:4px 10px;font-size:12px;background:#c0392b">删除</button></form>
-</td></tr>`,
-      )
-      .join('')
-
-    const body = `
-<h1>成员管理</h1>
-${banner}
-<div class="card">
-  <h2>成员（${users.length}）</h2>
-  <table><thead><tr><th>ID</th><th>用户名</th><th>角色</th><th>状态</th><th>实例端口</th><th>月预算</th><th>本月请求</th><th>本月估算</th><th>创建（UTC）</th></tr></thead><tbody>${rows}</tbody></table>
-  <div class="muted" style="margin-top:8px">预算 / 实例端口 / 换钥匙 / 模型通道：服务器上也可用 <code>node src/cli.ts</code> 系列命令。</div>
-</div>
-<div class="card">
-  <h2>模型通道（${channels.length}）</h2>
-  <table><thead><tr><th>ID</th><th>名称</th><th>Base URL</th><th>模型</th><th>价目表</th><th>Key</th><th>状态</th><th>操作</th></tr></thead><tbody>${chRows || '<tr><td colspan="8" class="muted">暂无外部通道（默认走 DeepSeek 官方通道）</td></tr>'}</tbody></table>
-  <div class="muted" style="margin-top:8px">模型名精确命中 → 自动分流到该通道；未命中 → 默认 DeepSeek 官方。费用按通道自带价目表估算（¥/百万 tokens）。</div>
-</div>
-<div class="card">
-  <h2>加入模型通道</h2>
-  <form method="post" action="/portal/admin/channels">
-    <label>名称（英文小写，如 kimi / moonshot）</label><input name="name" required pattern="[a-z0-9][a-z0-9_-]{0,31}" placeholder="kimi">
-    <label>Base URL（OpenAI 兼容，含 /v1 之类路径）</label><input name="base_url" required placeholder="https://api.moonshot.cn/v1">
-    <label>API Key</label><input name="api_key" type="password" placeholder="sk-...">
-    <label>模型名（英文逗号分隔）</label><input name="models" required placeholder="kimi-k2-0905-preview,moonshot-v1-8k">
-    <label>本地价目表（可选 JSON；¥/百万 tokens，in=输入 out=输出）</label><input name="prices" placeholder='{"kimi-k2-0905-preview":{"in":4,"out":16}}'>
-    <label>备注（可选）</label><input name="note" placeholder="谁在用 / 期限">
-    <div style="margin-top:12px"><button>加入通道</button></div>
-  </form>
-  <div class="muted" style="margin-top:8px">没有价目表的通道按 0 计费（费用以请求发生时的价目表为准）。通道 Key 只存在服务器数据库里。</div>
-</div>
-<div class="card">
-  <h2>新建成员</h2>
-  <form method="post" action="/portal/admin/users">
-    <label>用户名（小写字母数字，2-32 位）</label><input name="username" required pattern="[a-z0-9][a-z0-9_-]{1,31}">
-    <label>初始密码（至少 6 位）</label><input name="password" type="password" required minlength="6">
-    <label>月预算（CNY，可留空 = 不限）</label><input name="budget" type="number" step="0.01" min="0">
-    <div style="margin-top:12px"><button>创建并生成虚拟钥匙</button></div>
-  </form>
-  <div class="muted" style="margin-top:8px">创建后虚拟钥匙只显示一次，请当面交给成员。</div>
-</div>`
-    return page('成员管理', user, body)
-  }
-
   const server = createServer(async (req, res) => {
     const url = new URL(req.url ?? '/', 'http://desk')
     const path = url.pathname
@@ -553,6 +488,154 @@ ${banner}
         })
         return
       }
+      // —— 管理 API（工作台 设置 →「成员管理」插件调用；仅管理员）——
+      if (path.startsWith('/portal/api/admin/')) {
+        if (!user) {
+          res.writeHead(401, { 'content-type': 'application/json' })
+          return res.end(JSON.stringify({ error: 'login required' }))
+        }
+        if (user.role !== 'admin') {
+          res.writeHead(403, { 'content-type': 'application/json' })
+          return res.end(JSON.stringify({ error: 'admin only' }))
+        }
+        const readJsonBody = async (): Promise<Record<string, unknown>> => {
+          try {
+            const v = JSON.parse(await readBody(req)) as unknown
+            return v && typeof v === 'object' ? (v as Record<string, unknown>) : {}
+          } catch {
+            return {}
+          }
+        }
+        if (req.method === 'GET' && path === '/portal/api/admin/overview') {
+          const memberRows = db
+            .prepare(`SELECT id, username, role, status, monthly_budget_cny AS budget, agent_port AS port, created_at FROM users ORDER BY id`)
+            .all() as Record<string, unknown>[]
+          const mStart = monthStartUtc()
+          const members = memberRows.map((u) => {
+            const mrows = db
+              .prepare(`SELECT * FROM usage_events WHERE user_id = ? AND ts >= ?`)
+              .all(u.id as number, mStart) as unknown as UsageRow[]
+            const a = aggregate(mrows)
+            return {
+              id: u.id,
+              username: u.username,
+              role: u.role,
+              status: u.status,
+              port: u.port,
+              budget: u.budget,
+              monthEvents: a.events,
+              monthCost: a.cost,
+              createdAt: u.created_at,
+            }
+          })
+          const channels = listChannels(db).map((c) => ({
+            id: c.id,
+            name: c.name,
+            baseUrl: c.base_url,
+            models: c.models,
+            enabled: c.enabled === 1,
+            keyPrefix: c.api_key ? c.api_key.slice(0, 6) + '…' : '',
+            prices: Object.keys(c.prices).length,
+            note: c.note ?? '',
+          }))
+          res.writeHead(200, { 'content-type': 'application/json; charset=utf-8' })
+          return res.end(JSON.stringify({ members, channels }))
+        }
+        if (req.method === 'POST' && path === '/portal/api/admin/member-create') {
+          const body = await readJsonBody()
+          const username = String(body.username ?? '').trim()
+          const password = String(body.password ?? '')
+          const budgetRaw = String(body.budget ?? '').trim()
+          const jerr = (code: number, message: string) => {
+            res.writeHead(code, { 'content-type': 'application/json; charset=utf-8' })
+            return res.end(JSON.stringify({ error: message }))
+          }
+          if (!/^[a-z0-9][a-z0-9_-]{1,31}$/.test(username)) return jerr(400, '用户名格式不对（小写字母数字，2-32 位）')
+          if (password.length < 6) return jerr(400, '密码至少 6 位')
+          let budget: number | null = null
+          if (budgetRaw) {
+            const n = Number(budgetRaw)
+            if (!Number.isFinite(n) || n <= 0) return jerr(400, '预算需为正数或留空')
+            budget = n
+          }
+          if (db.prepare(`SELECT id FROM users WHERE username = ?`).get(username)) return jerr(409, '用户名已存在')
+          const info = db
+            .prepare(`INSERT INTO users (username, role, status, password_hash, monthly_budget_cny) VALUES (?, 'member', 'active', ?, ?)`)
+            .run(username, hashPassword(password), budget)
+          const userId = Number(info.lastInsertRowid)
+          const token = newVirtualKey()
+          db.prepare(`INSERT INTO api_keys (user_id, token_hash, prefix, label) VALUES (?, ?, ?, 'default')`).run(userId, hashToken(token), token.slice(0, 16))
+          res.writeHead(200, { 'content-type': 'application/json; charset=utf-8' })
+          return res.end(JSON.stringify({ username, key: token }))
+        }
+        if (req.method === 'POST' && path === '/portal/api/admin/member-delete') {
+          const body = await readJsonBody()
+          const username = String(body.username ?? '').trim()
+          const target = db.prepare(`SELECT id, role FROM users WHERE username = ?`).get(username) as { id: number; role: string } | undefined
+          if (!target) {
+            res.writeHead(404, { 'content-type': 'application/json; charset=utf-8' })
+            return res.end(JSON.stringify({ error: '找不到该成员' }))
+          }
+          if (target.role === 'admin') {
+            const other = db.prepare(`SELECT COUNT(*) AS n FROM users WHERE role = 'admin' AND id != ?`).get(target.id) as { n: number }
+            if (other.n === 0) {
+              res.writeHead(400, { 'content-type': 'application/json; charset=utf-8' })
+              return res.end(JSON.stringify({ error: '不能删除唯一的管理员账户' }))
+            }
+          }
+          // usage_events 保留作历史（孤儿行在报表里自然隐藏）；FK 开关包住清删
+          db.exec('PRAGMA foreign_keys = OFF')
+          try {
+            db.prepare(`DELETE FROM api_keys WHERE user_id = ?`).run(target.id)
+            db.prepare(`DELETE FROM login_sessions WHERE user_id = ?`).run(target.id)
+            db.prepare(`DELETE FROM users WHERE id = ?`).run(target.id)
+          } finally {
+            db.exec('PRAGMA foreign_keys = ON')
+          }
+          res.writeHead(200, { 'content-type': 'application/json; charset=utf-8' })
+          return res.end(JSON.stringify({ username }))
+        }
+        if (req.method === 'POST' && path === '/portal/api/admin/channel-create') {
+          const body = await readJsonBody()
+          const name = String(body.name ?? '').trim()
+          const baseUrl = String(body.base_url ?? '').trim()
+          const apiKey = String(body.api_key ?? '').trim()
+          const models = (Array.isArray(body.models) ? (body.models as unknown[]) : String(body.models ?? '').split(','))
+            .map((s) => String(s).trim())
+            .filter(Boolean)
+          let priceObj: Record<string, { in?: number; out?: number }> | undefined
+          if (body.prices && typeof body.prices === 'object' && !Array.isArray(body.prices)) priceObj = body.prices as Record<string, { in?: number; out?: number }>
+          const r = addChannel(db, {
+            name,
+            base_url: baseUrl,
+            api_key: apiKey || undefined,
+            models,
+            prices: priceObj,
+            note: String(body.note ?? '').trim() || undefined,
+          })
+          if ('error' in r) {
+            res.writeHead(400, { 'content-type': 'application/json; charset=utf-8' })
+            return res.end(JSON.stringify({ error: r.error }))
+          }
+          res.writeHead(200, { 'content-type': 'application/json; charset=utf-8' })
+          return res.end(JSON.stringify({ name }))
+        }
+        if (req.method === 'POST' && (path === '/portal/api/admin/channel-toggle' || path === '/portal/api/admin/channel-delete')) {
+          const body = await readJsonBody()
+          const name = String(body.name ?? '').trim()
+          if (path === '/portal/api/admin/channel-delete') {
+            removeChannel(db, name)
+            res.writeHead(200, { 'content-type': 'application/json; charset=utf-8' })
+            return res.end(JSON.stringify({ name }))
+          }
+          const cur = listChannels(db).find((c) => c.name === name)
+          if (cur) setChannelEnabled(db, name, cur.enabled !== 1)
+          res.writeHead(200, { 'content-type': 'application/json; charset=utf-8' })
+          return res.end(JSON.stringify({ name, enabled: cur ? cur.enabled !== 1 : false }))
+        }
+        res.writeHead(404, { 'content-type': 'application/json; charset=utf-8' })
+        return res.end(JSON.stringify({ error: 'unknown admin api' }))
+      }
       if (path === '/favicon.ico') {
         res.writeHead(204)
         return res.end()
@@ -624,113 +707,15 @@ ${banner}
 
       if (req.method === 'GET' && path === '/portal/admin') {
         if (!user) return redirect(res, '/login')
-        if (user.role !== 'admin') return html(res, 403, page('无权访问', user, '<div class="card"><h1>403</h1><div class="muted">需要管理员权限。</div></div>'))
-        const msg = url.searchParams.get('msg') ?? ''
-        const cname = url.searchParams.get('name') ?? ''
-        const banner =
-          msg === 'ch-added'
-            ? `<div class="ok">通道已加入：${esc(cname)}</div>`
-            : msg === 'ch-deleted'
-              ? `<div class="ok">通道已删除：${esc(cname)}</div>`
-              : msg === 'ch-toggled'
-                ? `<div class="ok">通道状态已更新：${esc(cname)}</div>`
-                : ''
-        return html(res, 200, renderAdmin(user, banner))
+        // 管理功能已迁入工作台「设置 → 成员管理」（desk-panel 插件页）；此地址不再提供页面
+        return redirect(res, '/')
       }
 
-      if (req.method === 'POST' && path === '/portal/admin/users') {
-        if (!user) return redirect(res, '/login')
-        if (user.role !== 'admin') return html(res, 403, page('无权访问', user, '<div class="card"><h1>403</h1></div>'))
-        const form = new URLSearchParams(await readBody(req))
-        const username = (form.get('username') ?? '').trim()
-        const password = form.get('password') ?? ''
-        const budgetRaw = (form.get('budget') ?? '').trim()
-        if (!/^[a-z0-9][a-z0-9_-]{1,31}$/.test(username)) {
-          return html(res, 400, page('新建成员', user, `<div class="card"><h1>新建成员</h1><div class="err">用户名格式不对（小写字母数字，2-32 位）</div><a href="/portal/admin">返回</a></div>`))
-        }
-        if (password.length < 6) {
-          return html(res, 400, page('新建成员', user, `<div class="card"><h1>新建成员</h1><div class="err">密码至少 6 位</div><a href="/portal/admin">返回</a></div>`))
-        }
-        let budget: number | null = null
-        if (budgetRaw) {
-          const n = Number(budgetRaw)
-          if (!Number.isFinite(n) || n <= 0) {
-            return html(res, 400, page('新建成员', user, `<div class="card"><h1>新建成员</h1><div class="err">预算需为正数或留空</div><a href="/portal/admin">返回</a></div>`))
-          }
-          budget = n
-        }
-        const dup = db.prepare(`SELECT id FROM users WHERE username = ?`).get(username)
-        if (dup) {
-          return html(res, 409, page('新建成员', user, `<div class="card"><h1>新建成员</h1><div class="err">用户名已存在</div><a href="/portal/admin">返回</a></div>`))
-        }
-        const info = db
-          .prepare(`INSERT INTO users (username, role, status, password_hash, monthly_budget_cny) VALUES (?, 'member', 'active', ?, ?)`)
-          .run(username, hashPassword(password), budget)
-        const userId = Number(info.lastInsertRowid)
-        const token = newVirtualKey()
-        db.prepare(`INSERT INTO api_keys (user_id, token_hash, prefix, label) VALUES (?, ?, ?, 'default')`).run(userId, hashToken(token), token.slice(0, 16))
-        return html(
-          res,
-          200,
-          page(
-            '成员已创建',
-            user,
-            `<div class="card"><h1>成员已创建：${esc(username)}</h1>
-<div class="ok">虚拟钥匙（只显示这一次，请立即交给成员）：</div>
-<div class="key">${esc(token)}</div>
-<div class="muted" style="margin-top:10px">成员在浏览器登录门户即可开始使用；模型调用经网关，按人计量。</div>
-<div style="margin-top:14px"><a href="/portal/admin">← 返回成员管理</a></div></div>`,
-          ),
-        )
-      }
 
-      if (req.method === 'POST' && path === '/portal/admin/channels') {
-        if (!user) return redirect(res, '/login')
-        if (user.role !== 'admin') return html(res, 403, page('无权访问', user, '<div class="card"><h1>403</h1></div>'))
-        const form = new URLSearchParams(await readBody(req))
-        const name = (form.get('name') ?? '').trim()
-        const baseUrl = (form.get('base_url') ?? '').trim()
-        const apiKey = (form.get('api_key') ?? '').trim()
-        const models = (form.get('models') ?? '')
-          .split(',')
-          .map((s) => s.trim())
-          .filter(Boolean)
-        const pricesRaw = (form.get('prices') ?? '').trim()
-        let priceObj: Record<string, { in?: number; out?: number }> | undefined
-        if (pricesRaw) {
-          try {
-            priceObj = JSON.parse(pricesRaw) as Record<string, { in?: number; out?: number }>
-          } catch {
-            return html(res, 400, page('加入通道', user, '<div class="card"><h1>加入通道</h1><div class="err">价目表不是合法 JSON</div><a href="/portal/admin">返回</a></div>'))
-          }
-        }
-        const r = addChannel(db, {
-          name,
-          base_url: baseUrl,
-          api_key: apiKey || undefined,
-          models,
-          prices: priceObj,
-          note: (form.get('note') ?? '').trim() || undefined,
-        })
-        if ('error' in r) {
-          return html(res, 400, page('加入通道', user, `<div class="card"><h1>加入通道</h1><div class="err">${esc(r.error)}</div><a href="/portal/admin">返回</a></div>`))
-        }
-        return redirect(res, `/portal/admin?msg=ch-added&name=${encodeURIComponent(name)}`)
-      }
 
-      if (req.method === 'POST' && (path === '/portal/admin/channels/delete' || path === '/portal/admin/channels/toggle')) {
-        if (!user) return redirect(res, '/login')
-        if (user.role !== 'admin') return html(res, 403, page('无权访问', user, '<div class="card"><h1>403</h1></div>'))
-        const form = new URLSearchParams(await readBody(req))
-        const cname = (form.get('name') ?? '').trim()
-        if (path === '/portal/admin/channels/delete') {
-          removeChannel(db, cname)
-          return redirect(res, `/portal/admin?msg=ch-deleted&name=${encodeURIComponent(cname)}`)
-        }
-        const cur = listChannels(db).find((c) => c.name === cname)
-        if (cur) setChannelEnabled(db, cname, cur.enabled !== 1)
-        return redirect(res, `/portal/admin?msg=ch-toggled&name=${encodeURIComponent(cname)}`)
-      }
+
+
+
 
       // —— 登录闸门 + 反代：其余一切路径 → 该成员的 dsh 实例 ——
       if (!user) return redirect(res, '/login')

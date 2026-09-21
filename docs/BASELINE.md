@@ -88,7 +88,7 @@ New-NetFirewallRule -DisplayName 'DSH-DESK-P0-4' -Direction Inbound -Action Allo
 
 ## P2 门户 + 反代 ✅（2026-09-19，12–15 过线）
 
-- 门户 :8080（与网关同一进程：`node src/server.ts`）：登录 / 登出（内建 scrypt + httpOnly 会话 Cookie、失败 5 次限速 60s）、`/portal/me`（我的用量 + 我的工作台入口）、`/portal/admin`（成员管理 + 页面建号发钥匙）。
+- 门户 :8080（与网关同一进程：`node src/server.ts`）：登录 / 登出（内建 scrypt + httpOnly 会话 Cookie、失败 5 次限速 60s）、`/portal/me`（我的用量 + 我的工作台入口）；管理功能在 工作台 设置 →「成员管理」（desk-panel 插件页，走 `/portal/api/admin/*`），旧 `/portal/admin` 302 回工作台。
 - 反代（14）：门户对非门户路径 catch-all 反代到该成员实例（Host/Origin 原样透传）；`/api` WebSocket 升级透传（未登录 401、无实例 503）；跨成员隔离由会话→实例映射保证。
 - 信任自动化（15）：`scripts/start-agent.sh <user> <port> [home]` 启动实例（自动带 `--trusted-host <门户 authority>`，读 `~/.desk/agents/<user>.key`）。
 - 成员↔实例：alice→u3:3303、boss→u1:3301、bob→u2:3302（`node src/cli.ts user agent` 绑定）。演示账号：alice / boss（admin）/ bob —— 正式启用前更换密码。

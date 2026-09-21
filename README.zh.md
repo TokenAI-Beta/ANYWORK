@@ -61,7 +61,7 @@ node src/cli.ts user agent alice 3301      # 绑定工作台实例端口
 node src/cli.ts usage alice --month
 ```
 
-浏览器打开 `http://<机器>:8080`——成员登录后查看自己的用量，并直接进入自己的 dsh 实例；管理员在 `/portal/admin` 管理成员。
+浏览器打开 `http://<机器>:8080`——成员登录后查看自己的用量，并直接进入自己的 dsh 实例；管理员在工作台 设置 →「成员管理」里管理成员与模型通道。
 
 启动成员实例用辅助脚本（自动读 `~/.desk/agents/<user>.key`，自动附带门户 authority 的 `--trusted-host`）：
 

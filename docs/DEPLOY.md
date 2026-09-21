@@ -25,16 +25,17 @@ sudo bash scripts/install-services.sh
 bash scripts/desk.sh status          # 四单元 active + 健康检查
 
 # 4) 建第一个成员（会打印一次性虚拟钥匙，交给本人）
-node src/cli.ts user add alice --admin   # 管理员（可进 /portal/admin）
+node src/cli.ts user add alice --admin   # 管理员（可进 设置 →「成员管理」）
 node src/cli.ts user passwd alice <密码> # 门户登录密码
 node src/cli.ts user budget alice 50     # 月度预算 CNY（off = 不限）
 node src/cli.ts user agent alice 3303    # 绑定实例端口
+node src/cli.ts user rm alice            # 删除成员（清钥匙行+会话；历史账本保留）
 
 # 5) 给该成员挂上实例单元（deploy/systemd/desk-agent-*.service 里改名字/端口/目录后）
 sudo bash scripts/install-services.sh
 ```
 
-浏览器打开 `http://<机器局域网IP>:8080` 登录；管理员在 `/portal/admin` 管理成员与模型通道。
+浏览器打开 `http://<机器局域网IP>:8080` 登录；管理员在工作台 设置 →「成员管理」里管理成员与模型通道。
 
 ## Windows 侧（三条保活线）
 

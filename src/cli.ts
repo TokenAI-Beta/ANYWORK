@@ -4,6 +4,7 @@
 //   user passwd <username> <password>   设置/重置门户登录密码
 //   user budget <username> <cny|off>    设/清月度预算（CNY）
 //   user agent <username> <port|off>    绑定/解绑该成员的工作台实例端口
+//   user rm <username>                  删除用户（清钥匙行 + 清会话；历史账本保留；拒删最后管理员）
 //   channel list                        列出外部模型通道
 //   channel add <name> <base_url> <api_key> <models(逗号分隔)> [prices(JSON)]
 //   channel rm <name>                   删除通道
@@ -110,6 +111,34 @@ function cmdUserAgent(username: string, value: string): void {
     db.prepare(`UPDATE users SET agent_port = ? WHERE id = ?`).run(n, u.id)
     console.log(`${username}：工作台实例端口 = ${n}`)
   }
+}
+
+function cmdUserRm(username: string): void {
+  const u = db.prepare(`SELECT id, role FROM users WHERE username = ?`).get(username) as { id: number; role: string } | undefined
+  if (!u) {
+    console.log(`找不到用户 ${username}`)
+    return
+  }
+  if (u.role === 'admin') {
+    const { n } = db.prepare(`SELECT COUNT(*) AS n FROM users WHERE role = 'admin' AND id != ?`).get(u.id) as { n: number }
+    if (n === 0) {
+      console.log('拒绝：这是最后一个管理员账户（先给其他账户 --admin，或改角色后再删）。')
+      return
+    }
+  }
+  // usage_events 保留作历史（孤儿行在报表里自然隐藏）；FK 开关包住清删
+  let keysChanges = 0
+  let sessChanges = 0
+  db.exec('PRAGMA foreign_keys = OFF')
+  try {
+    keysChanges = db.prepare(`DELETE FROM api_keys WHERE user_id = ?`).run(u.id).changes as number
+    sessChanges = db.prepare(`DELETE FROM login_sessions WHERE user_id = ?`).run(u.id).changes as number
+    db.prepare(`DELETE FROM users WHERE id = ?`).run(u.id)
+  } finally {
+    db.exec('PRAGMA foreign_keys = ON')
+  }
+  console.log(`${username}：已删除（删除虚拟钥匙 ${keysChanges} 把、清登录会话 ${sessChanges} 条；历史用量保留在账本）`)
+  console.log(`提示：若该成员还配了实例服务（desk-agent-*.service），可用 scripts/desk.sh stop 停掉对应实例。`)
 }
 
 function cmdChannelList(): void {
@@ -222,6 +251,7 @@ else if (cmd === 'user' && sub === 'list') cmdUserList()
 else if (cmd === 'user' && sub === 'passwd' && a1 && a2) cmdUserPasswd(a1, a2)
 else if (cmd === 'user' && sub === 'budget' && a1 && a2) cmdUserBudget(a1, a2)
 else if (cmd === 'user' && sub === 'agent' && a1 && a2) cmdUserAgent(a1, a2)
+else if (cmd === 'user' && sub === 'rm' && a1) cmdUserRm(a1)
 else if (cmd === 'channel' && sub === 'list') cmdChannelList()
 else if (cmd === 'channel' && sub === 'add' && a1 && a2 && a3 && a4) cmdChannelAdd(a1, a2, a3, a4, a5)
 else if (cmd === 'channel' && sub === 'rm' && a1) cmdChannelRemove(a1)
@@ -235,6 +265,7 @@ else {
   console.log('  node src/cli.ts user passwd <username> <password>')
   console.log('  node src/cli.ts user budget <username> <cny|off>')
   console.log('  node src/cli.ts user agent <username> <port|off>')
+  console.log('  node src/cli.ts user rm <username>')
   console.log('  node src/cli.ts channel list')
   console.log('  node src/cli.ts channel add <name> <base_url> <api_key> <models(逗号分隔)> [prices(JSON)]')
   console.log('  node src/cli.ts channel rm <name>')

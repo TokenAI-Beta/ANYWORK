@@ -101,7 +101,7 @@ P0 复核结果：第 3 条已实测（`--port` 有效；非回环假 Host 对 `
 ## 六、对外接口（草案）
 
 - 网关：`POST /chat/completions`（Bearer 虚拟钥匙）、`GET /models`、`GET /healthz`
-- 门户：`GET|POST /login`、`POST /logout`、`GET /portal/me`、`GET|POST /portal/admin/users`、`GET /portal/api/usage`（JSON，供设置页插件/小组件）；其余路径 → 本人实例（HTTP + WS）
+- 门户：`GET|POST /login`、`POST /logout`、`GET /portal/me`、`GET /portal/api/usage|kb|drive|admin/*`（JSON；admin 系列为管理工作台设置页插件专用，仅管理员会话）；其余路径 → 本人实例（HTTP + WS）。`/portal/admin` 已下线（302 回工作台；管理功能见 工作台 设置 →「成员管理」插件页）
 - CLI（已实现）：`user add|list|passwd|budget|agent`、`usage [u] [--month]`；`desk agent start|stop|status`（P3）、`desk backup`（P4）
 
 ## 七、阶段与任务（共 22 项，一次做一项，每项有绿线）
@@ -127,7 +127,7 @@ P0 复核结果：第 3 条已实测（`--port` 有效；非回环假 Host 对 `
 ### P2 账号、登录、门户 ✅（2026-09-19 完成）
 
 12. ✅ **登录**：httpOnly cookie + 登录/登出页。绿线：错密码拒绝、对密码进入。（实现口径：密码散列用内建 **scrypt** 代替 argon2，维持零依赖；登录失败 5 次限速 60 秒。）
-13. ✅ **门户页**：`/portal/me`（我的用量）、`/portal/admin`（成员管理 + 页面建号发钥匙）。绿线：两页可用，数字来自 P1 账本。
+13. ✅ **门户页**：`/portal/me`（我的用量）、`/portal/admin`（成员管理 + 页面建号发钥匙）。绿线：两页可用，数字来自 P1 账本。（2026-09-21：管理功能迁入 工作台 设置 →「成员管理」插件页；`/portal/admin` 下线 302）
 14. ✅ **登录闸门 + 反代**：未登录跳登录；登录后根路径透传本人实例；WS 透传；跨成员拒绝。绿线：两台设备两个账号互测，谁都进不了对方工作台。（实现：Host/Origin 原样透传 + 实例 `--trusted-host` 信任门户 authority；三账号三实例隔离实测通过，WS 101。）
 15. ✅ **信任自动化**：实例启动自动带 `--trusted-host <门户 authority>`。绿线：去掉手工参数重起，页面照常。（`scripts/start-agent.sh`；已用该脚本重起三实例验证。）
     ➕ 计划外：**设置页插件**（`plugin/desk-panel/`）——借 dsh 官方客户端插件机制把「工作台用量」做进工作台「设置」（`settings.section` 槽位；零构建零依赖、未改 dsh 源码；三实例已挂载验证）。
@@ -138,6 +138,7 @@ P0 复核结果：第 3 条已实测（`--port` 有效；非回环假 Host 对 `
     ➕ 计划外：**团队 Agent 预设 v1**——共享目录 `~/desk-data/presets/`（`presets-template/` 首启落位；示例 `team-assistant`）+ 每实例 `DSH_HOME/.agent-presets` 软链；生成工具 `scripts/apply-team-persona.mjs`。
     ➕ 计划外：**会话导出 + 跨会话检索**——导出用官方 web 内置（`Session log` / `/export` → ZIP）；检索用官方 opt-in `tool-session-query`（link: 依赖 + profile 补丁 `openAt: first-search`），`scripts/enable-session-search.sh` 一键开启（幂等；工作区授权）。
     ➕ 计划外：**团队 Soul + 工作区 README（与 团队主助理 同源）**——`soul-template/`（`SOUL.md` 行为准则同源 + `WORKSPACE-AGENTS.md` 工作区 README 模板）+ `scripts/apply-soul.sh` 幂等铺装（实例 `DSH_HOME/AGENTS.md` 软链 + `workspace/AGENTS.md` 同步）；改 soul 一处、全员 agent 同步。
+    ➕ 计划外：**管理插件化（成员删除补缺口）**——成员/通道管理迁入 工作台 设置「成员管理」（desk-panel v4）+ 管理员 JSON API `/portal/api/admin/*` + CLI `user rm`（外键安全清删：`PRAGMA foreign_keys=OFF` 包住，账本保留；唯一管理员守卫）；老 `/portal/admin` 下线。
 
 ### P3 每人独立工作区 ✅（2026-09-19 完成）
 
