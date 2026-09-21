@@ -87,13 +87,34 @@ function sendViaHermes(target: string, msg: NotifyMsg): Promise<string> {
   })
 }
 
+// 微信（hermes 通道）偶发失败（CLI 超时/限流/退桌面端抖动）：失败后 45 秒后台重试一次，并回填日志行
+const HERMES_RETRY_DELAY_MS = 45_000
+function scheduleHermesRetry(db: DatabaseSync, logId: number, target: string, msg: NotifyMsg): void {
+  const timer = setTimeout(() => {
+    void (async () => {
+      try {
+        const info = await sendViaHermes(target, msg)
+        const ok = !/^(失败|未知)/.test(info)
+        if (ok) {
+          db.prepare(`UPDATE notify_log SET ok = 1, info = ? WHERE id = ?`).run('ok（45s 重试成功）', logId)
+        } else {
+          db.prepare(`UPDATE notify_log SET info = ? WHERE id = ?`).run(info.slice(0, 200), logId)
+        }
+      } catch {
+        // 重试本身异常：保持原失败记录
+      }
+    })()
+  }, HERMES_RETRY_DELAY_MS)
+  if (typeof timer.unref === 'function') timer.unref()
+}
+
 export async function dispatchNotify(db: DatabaseSync, msg: NotifyMsg): Promise<NotifyResult[]> {
   const routes = listNotifyRoutes(db).filter((r) => r.enabled === 1)
   const results: NotifyResult[] = []
   for (const r of routes) {
     const info = r.kind === 'webhook' ? await sendViaWebhook(r.target, msg) : r.kind === 'hermes' ? await sendViaHermes(r.target, msg) : '未知通道类型'
     const ok = !/^(失败|未知)/.test(info)
-    db.prepare(`INSERT INTO notify_log (route_id, route_name, title, text, ok, info) VALUES (?, ?, ?, ?, ?, ?)`).run(
+    const ins = db.prepare(`INSERT INTO notify_log (route_id, route_name, title, text, ok, info) VALUES (?, ?, ?, ?, ?, ?)`).run(
       r.id,
       r.name,
       msg.title ?? '',
@@ -101,6 +122,7 @@ export async function dispatchNotify(db: DatabaseSync, msg: NotifyMsg): Promise<
       ok ? 1 : 0,
       info,
     )
+    if (r.kind === 'hermes' && !ok) scheduleHermesRetry(db, Number(ins.lastInsertRowid), r.target, msg)
     results.push({ route: r.name, kind: r.kind, ok, info })
   }
   if (!routes.length) results.push({ route: '(无启用的通知通道)', kind: '-', ok: false, info: '请先在 设置 →「通知」里添加一个通道' })
