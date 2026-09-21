@@ -4,7 +4,7 @@ import { homedir } from 'node:os'
 import { join } from 'node:path'
 import { defaultDataDir, openDb } from './db.ts'
 import { startGateway } from './gateway.ts'
-import { readOrCreateNotifyToken } from './notify.ts'
+import { checkReminders, readOrCreateNotifyToken } from './notify.ts'
 import { startPortal } from './portal.ts'
 
 function loadRealKey(): string {
@@ -29,4 +29,9 @@ readOrCreateNotifyToken(defaultDataDir()) // 通知桥令牌：首启生成，ag
 const realKey = loadRealKey()
 startGateway({ db, upstream, realKey, port: gatewayPort })
 startPortal({ db, port: portalPort, host: portalHost })
+// 定时提醒巡查：启动时补发错过的，之后每 30 秒扫一次
+checkReminders(db).catch(() => {})
+setInterval(() => {
+  checkReminders(db).catch(() => {})
+}, 30000)
 console.log(`[desk] portal on http://${portalHost}:${portalPort} · gateway on http://127.0.0.1:${gatewayPort} · data=${defaultDataDir()}`)

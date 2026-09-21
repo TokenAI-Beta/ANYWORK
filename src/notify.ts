@@ -134,3 +134,58 @@ export function readOrCreateNotifyToken(dataDir: string): string {
   }
   return t
 }
+
+// —— 定时提醒（到点经通知桥推送）——
+
+export interface Reminder {
+  id: number
+  at_epoch: number
+  title: string | null
+  text: string
+  source: string | null
+  sent: number
+  sent_at: string | null
+  info: string | null
+  created_at: string
+}
+
+export function addReminder(
+  db: DatabaseSync,
+  r: { atEpoch: number; title?: string; text: string; source?: string },
+): { ok: true; id: number; atEpoch: number } | { error: string } {
+  const at = Math.floor(Number(r.atEpoch))
+  if (!Number.isFinite(at) || at < Math.floor(Date.now() / 1000) - 60) return { error: '时间无效或已过去' }
+  const text = r.text.trim()
+  if (!text) return { error: '内容不能为空' }
+  const info = db
+    .prepare(`INSERT INTO reminders (at_epoch, title, text, source) VALUES (?, ?, ?, ?)`)
+    .run(at, (r.title ?? '').trim() || null, text, r.source ?? null)
+  return { ok: true, id: Number(info.lastInsertRowid), atEpoch: at }
+}
+
+export function listReminders(db: DatabaseSync): Reminder[] {
+  return db.prepare(`SELECT id, at_epoch, title, text, source, sent, sent_at, info, created_at FROM reminders WHERE sent = 0 ORDER BY at_epoch LIMIT 50`).all() as unknown as Reminder[]
+}
+
+export function listRemindersSent(db: DatabaseSync, limit = 5): Reminder[] {
+  return db.prepare(`SELECT id, at_epoch, title, text, source, sent, sent_at, info, created_at FROM reminders WHERE sent = 1 ORDER BY id DESC LIMIT ?`).all(limit) as unknown as Reminder[]
+}
+
+export function removeReminder(db: DatabaseSync, id: number): void {
+  db.prepare(`DELETE FROM reminders WHERE id = ?`).run(id)
+}
+
+export async function checkReminders(db: DatabaseSync): Promise<number> {
+  const due = db
+    .prepare(`SELECT id, at_epoch, title, text, source FROM reminders WHERE sent = 0 AND at_epoch <= ? ORDER BY at_epoch`)
+    .all(Math.floor(Date.now() / 1000)) as unknown as Reminder[]
+  for (const r of due) {
+    const results = await dispatchNotify(db, { title: r.title || '到点提醒', text: r.text, source: r.source || 'reminder' })
+    const info = results
+      .map((x) => `${x.route}:${x.ok ? 'ok' : x.info}`)
+      .join('; ')
+      .slice(0, 200)
+    db.prepare(`UPDATE reminders SET sent = 1, sent_at = datetime('now'), info = ? WHERE id = ?`).run(info, r.id)
+  }
+  return due.length
+}

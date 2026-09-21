@@ -98,6 +98,18 @@ function migrate(db: DatabaseSync): void {
       info TEXT
     );
 
+    CREATE TABLE IF NOT EXISTS reminders (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      at_epoch INTEGER NOT NULL,
+      title TEXT,
+      text TEXT NOT NULL,
+      source TEXT,
+      sent INTEGER NOT NULL DEFAULT 0,
+      sent_at TEXT,
+      info TEXT,
+      created_at TEXT NOT NULL DEFAULT (datetime('now'))
+    );
+
     CREATE INDEX IF NOT EXISTS idx_usage_user_ts ON usage_events(user_id, ts);
     CREATE INDEX IF NOT EXISTS idx_keys_hash ON api_keys(token_hash);
     CREATE INDEX IF NOT EXISTS idx_sessions_hash ON login_sessions(token_hash);

@@ -1,0 +1,117 @@
+#!/usr/bin/env python3
+# desk-remind：设定定时提醒（到点经通知桥自动推送到手机）
+# 用法：
+#   desk-remind "10:00" "内容"            今天 10:00（已过则明天）
+#   desk-remind "明天 09:00" "内容"
+#   desk-remind "09-22 10:00" "内容"       （今年；已过则明年）
+#   desk-remind "2026-09-22 10:00" "内容"
+#   desk-remind "+30m" "内容"             相对时间（s/分/小时/天 都认：+90s +2h +1d）
+#   desk-remind "10:00" "标题" "正文"       三参 = 标题 + 正文
+#   desk-remind list                      列出待发提醒
+#   desk-remind rm <id>                   删除提醒
+import datetime as dt
+import json
+import os
+import re
+import sys
+import urllib.request
+
+BASE = "http://127.0.0.1:8080"
+
+
+def token():
+    try:
+        with open(os.path.expanduser("~/desk-data/notify.token")) as f:
+            return f.read().strip()
+    except OSError:
+        return ""
+
+
+def call(path, method="GET", body=None):
+    data = json.dumps(body).encode("utf-8") if body is not None else None
+    req = urllib.request.Request(
+        BASE + path,
+        data=data,
+        method=method,
+        headers={"content-type": "application/json", "x-desk-notify-token": token()},
+    )
+    with urllib.request.urlopen(req, timeout=20) as r:
+        return json.loads(r.read().decode("utf-8"))
+
+
+def fmt(ep):
+    return dt.datetime.fromtimestamp(ep).strftime("%m-%d %H:%M")
+
+
+def parse_when(s):
+    s = (s or "").strip()
+    now = dt.datetime.now()
+    m = re.fullmatch(r"\+\s*(\d+)\s*(秒|s|分|分钟|m|min|小时|h|时|天|d)?", s, re.I)
+    if m:
+        n = int(m.group(1))
+        unit = (m.group(2) or "m").lower()
+        if unit in ("秒", "s"):
+            return now + dt.timedelta(seconds=n)
+        if unit in ("分", "分钟", "m", "min"):
+            return now + dt.timedelta(minutes=n)
+        if unit in ("小时", "h", "时"):
+            return now + dt.timedelta(hours=n)
+        return now + dt.timedelta(days=n)
+    m = re.fullmatch(r"(明天|今日|今天)?\s*(\d{1,2}):(\d{2})", s)
+    if m:
+        day = m.group(1)
+        when = now.replace(hour=int(m.group(2)), minute=int(m.group(3)), second=0, microsecond=0)
+        if day == "明天" or (not day and when <= now + dt.timedelta(seconds=30)):
+            when += dt.timedelta(days=1)
+        return when
+    m = re.fullmatch(r"(\d{4})-(\d{1,2})-(\d{1,2})[ T](\d{1,2}):(\d{2})", s)
+    if m:
+        return dt.datetime(int(m.group(1)), int(m.group(2)), int(m.group(3)), int(m.group(4)), int(m.group(5)))
+    m = re.fullmatch(r"(\d{1,2})-(\d{1,2})[ T](\d{1,2}):(\d{2})", s)
+    if m:
+        when = dt.datetime(now.year, int(m.group(1)), int(m.group(2)), int(m.group(3)), int(m.group(4)))
+        if when <= now:
+            when = when.replace(year=now.year + 1)
+        return when
+    return None
+
+
+def main():
+    args = sys.argv[1:]
+    if args and args[0] == "list":
+        d = call("/portal/api/remind")
+        pending = d.get("pending", [])
+        if not pending:
+            print("（没有待发提醒）")
+            return 0
+        for r in pending:
+            print("#%-3s %s  %s" % (r["id"], fmt(r["at_epoch"]), (r.get("title") or "") + (" " if r.get("title") else "") + (r.get("text") or "")))
+        return 0
+    if args and args[0] == "rm":
+        if len(args) < 2 or not args[1].isdigit():
+            print("用法：desk-remind rm <id>")
+            return 1
+        call("/portal/api/remind/rm", "POST", {"id": int(args[1])})
+        print("已删除提醒 #%s" % args[1])
+        return 0
+    if len(args) < 2:
+        print('用法：desk-remind "10:00" "内容"   （或 +30m / 明天 09:00 / list / rm <id>）')
+        return 1
+    when = parse_when(args[0])
+    if when is None:
+        print("时间格式不认识：%s（试试 10:00 / 明天 09:00 / 09-22 10:00 / +30m）" % args[0])
+        return 1
+    title, text = "", args[1]
+    if len(args) >= 3:
+        title, text = args[1], args[2]
+    epoch = int(when.timestamp())
+    if epoch < int(dt.datetime.now().timestamp()) - 60:
+        print("这个时间已经过去了：%s" % args[0])
+        return 1
+    d = call("/portal/api/remind", "POST", {"at_epoch": epoch, "title": title, "text": text, "source": "agent"})
+    print("已设定提醒 #%s：%s · %s" % (d.get("id"), fmt(d.get("at_epoch", epoch)), (title + " " if title else "") + text))
+    return 0
+
+
+if __name__ == "__main__":
+    sys.exit(main())

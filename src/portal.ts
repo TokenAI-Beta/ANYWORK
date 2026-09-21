@@ -16,7 +16,7 @@ import { eventCost, monthStartUtc, prices } from './pricing.ts'
 import { addChannel, listChannels, removeChannel, setChannelEnabled } from './channel.ts'
 import { kbSearch } from './kb.ts'
 import { listDrive, resolveInDrive, saveToDrive, MAX_UPLOAD } from './drive.ts'
-import { addNotifyRoute, dispatchNotify, listNotifyLog, listNotifyRoutes, readOrCreateNotifyToken, removeNotifyRoute, toggleNotifyRoute } from './notify.ts'
+import { addNotifyRoute, addReminder, dispatchNotify, listNotifyLog, listNotifyRoutes, listReminders, listRemindersSent, readOrCreateNotifyToken, removeNotifyRoute, removeReminder, toggleNotifyRoute } from './notify.ts'
 import { defaultDataDir } from './db.ts'
 import { createReadStream, existsSync, statSync } from 'node:fs'
 
@@ -514,6 +514,43 @@ export function startPortal(opts: PortalOptions) {
         res.writeHead(200, { 'content-type': 'application/json; charset=utf-8' })
         return res.end(JSON.stringify({ results }))
       }
+      // —— 通知桥：定时提醒（agent 侧，令牌认证）——
+      if ((path === '/portal/api/remind' || path === '/portal/api/remind/rm') && (req.method === 'GET' || req.method === 'POST')) {
+        const token = String(req.headers['x-desk-notify-token'] ?? '')
+        const expect = readOrCreateNotifyToken(defaultDataDir())
+        if (!token || token !== expect) {
+          res.writeHead(401, { 'content-type': 'application/json' })
+          return res.end(JSON.stringify({ error: 'invalid notify token' }))
+        }
+        if (path === '/portal/api/remind' && req.method === 'GET') {
+          res.writeHead(200, { 'content-type': 'application/json; charset=utf-8' })
+          return res.end(JSON.stringify({ pending: listReminders(db) }))
+        }
+        let rbody: Record<string, unknown> = {}
+        try {
+          const v = JSON.parse(await readBody(req)) as unknown
+          if (v && typeof v === 'object') rbody = v as Record<string, unknown>
+        } catch {
+          rbody = {}
+        }
+        if (path === '/portal/api/remind/rm') {
+          removeReminder(db, Number(rbody.id ?? 0))
+          res.writeHead(200, { 'content-type': 'application/json; charset=utf-8' })
+          return res.end(JSON.stringify({ ok: true }))
+        }
+        const added = addReminder(db, {
+          atEpoch: Number(rbody.at_epoch ?? 0),
+          title: String(rbody.title ?? ''),
+          text: String(rbody.text ?? ''),
+          source: String(rbody.source ?? 'agent'),
+        })
+        if ('error' in added) {
+          res.writeHead(400, { 'content-type': 'application/json; charset=utf-8' })
+          return res.end(JSON.stringify({ error: added.error }))
+        }
+        res.writeHead(200, { 'content-type': 'application/json; charset=utf-8' })
+        return res.end(JSON.stringify({ ok: true, id: added.id, at_epoch: added.atEpoch }))
+      }
       // —— 管理 API（工作台 设置 →「成员管理」插件调用；仅管理员）——
       if (path.startsWith('/portal/api/admin/')) {
         if (!user) {
@@ -661,7 +698,13 @@ export function startPortal(opts: PortalOptions) {
         }
         if (req.method === 'GET' && path === '/portal/api/admin/notify') {
           res.writeHead(200, { 'content-type': 'application/json; charset=utf-8' })
-          return res.end(JSON.stringify({ routes: listNotifyRoutes(db), log: listNotifyLog(db, 12) }))
+          return res.end(
+            JSON.stringify({
+              routes: listNotifyRoutes(db),
+              log: listNotifyLog(db, 12),
+              reminders: { pending: listReminders(db), recent: listRemindersSent(db, 5) },
+            }),
+          )
         }
         if (req.method === 'POST' && path === '/portal/api/admin/notify/route-add') {
           const body = await readJsonBody()
@@ -692,6 +735,12 @@ export function startPortal(opts: PortalOptions) {
           const results = await dispatchNotify(db, { title, text, source: 'admin-test' })
           res.writeHead(200, { 'content-type': 'application/json; charset=utf-8' })
           return res.end(JSON.stringify({ results }))
+        }
+        if (req.method === 'POST' && path === '/portal/api/admin/reminders/rm') {
+          const body = await readJsonBody()
+          removeReminder(db, Number(body.id ?? 0))
+          res.writeHead(200, { 'content-type': 'application/json; charset=utf-8' })
+          return res.end(JSON.stringify({ ok: true }))
         }
         res.writeHead(404, { 'content-type': 'application/json; charset=utf-8' })
         return res.end(JSON.stringify({ error: 'unknown admin api' }))

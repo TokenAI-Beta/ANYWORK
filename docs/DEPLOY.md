@@ -33,6 +33,7 @@ node src/cli.ts user rm alice            # 删除成员（清钥匙行+会话；
 
 # 4b) 通知桥（可选，管理员在 工作台 设置 →「通知」里配置通道；agent 侧脚本随 setup 落位）
 #   agent 发通知：~/desk-data/bin/desk-notify "标题" "正文"
+#   定时提醒：~/desk-data/bin/desk-remind "10:00" "内容"（到点自动推；list / rm <id>）
 #   通道两类：webhook（企业微信/钉钉机器人 URL）· hermes（微信等 通知平台，目标如 weixin）
 
 # 5) 给该成员挂上实例单元（deploy/systemd/desk-agent-*.service 里改名字/端口/目录后）

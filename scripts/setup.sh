@@ -42,8 +42,9 @@ cp -rn "$here/presets-template/." "$HOME/desk-data/presets/" 2>/dev/null || true
 bash "$here/scripts/apply-soul.sh" >/dev/null 2>&1 || true
 mkdir -p "$HOME/desk-data/bin"
 cp -f "$here/scripts/desk-notify" "$HOME/desk-data/bin/desk-notify"
-chmod 755 "$HOME/desk-data/bin/desk-notify"
-ok "kb / drive / skills / presets / soul / desk-notify（已存在的不覆盖）"
+cp -f "$here/scripts/desk-remind" "$HOME/desk-data/bin/desk-remind"
+chmod 755 "$HOME/desk-data/bin/desk-notify" "$HOME/desk-data/bin/desk-remind"
+ok "kb / drive / skills / presets / soul / desk-notify / desk-remind（已存在的不覆盖）"
 
 step "[6/8] 数据库迁移（建表 + 增量列）"
 if (cd "$here" && "$NODE_BIN" --input-type=module -e "import { openDb } from './src/db.ts'; openDb();" >/dev/null 2>&1); then ok "ok"; else bad "迁移失败（先跑一次 node src/server.ts 看报错）"; fi

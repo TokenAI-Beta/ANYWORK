@@ -90,6 +90,14 @@ window.__ModuleLoader__.load({
       return (v / 1024 / 1024 / 1024).toFixed(2) + " GB";
     }
 
+    function fmtTs(ep) {
+      var d = new Date(Number(ep) * 1000);
+      var p = function (n) {
+        return (n < 10 ? "0" : "") + n;
+      };
+      return d.getMonth() + 1 + "-" + p(d.getDate()) + " " + p(d.getHours()) + ":" + p(d.getMinutes());
+    }
+
     function DeskUsageSection() {
       var pair = React.useState({ phase: "loading" });
       var state = pair[0];
@@ -762,7 +770,7 @@ window.__ModuleLoader__.load({
     }
 
     function NotifySection() {
-      var dataPair = React.useState({ phase: "loading", routes: [], log: [], message: "" });
+      var dataPair = React.useState({ phase: "loading", routes: [], log: [], reminders: [], message: "" });
       var data = dataPair[0];
       var setData = dataPair[1];
       var msgPair = React.useState({ kind: "", text: "" });
@@ -786,7 +794,7 @@ window.__ModuleLoader__.load({
             return r.json();
           })
           .then(function (d) {
-            setData({ phase: "ready", routes: d.routes || [], log: d.log || [], message: "" });
+            setData({ phase: "ready", routes: d.routes || [], log: d.log || [], reminders: (d.reminders && d.reminders.pending) || [], message: "" });
           })
           .catch(function (e) {
             setData({ phase: "error", routes: [], log: [], message: String((e && e.message) || e) });
@@ -989,6 +997,46 @@ window.__ModuleLoader__.load({
         }
         kids.push(h("div", { key: "trs", style: { display: "flex", flexDirection: "column", gap: 3 } }, trNodes));
       }
+      var remRows = [];
+      for (var q = 0; q < (data.reminders || []).length; q++) {
+        var rem = data.reminders[q];
+        remRows.push(
+          h(
+            "div",
+            { key: "rem" + q, style: rowBase },
+            h(
+              "div",
+              { style: { display: "flex", justifyContent: "space-between", alignItems: "center", gap: 8 } },
+              h(
+                "span",
+                null,
+                fmtTs(rem.at_epoch) + " ",
+                h("span", { style: Object.assign({ fontSize: 12 }, muted) }, String(rem.title || rem.text || "").slice(0, 30))
+              ),
+              h(
+                "button",
+                {
+                  style: btnSmall,
+                  onClick: (function (id) {
+                    return function () {
+                      post("/portal/api/admin/reminders/rm", { id: id }, "已删除提醒 #" + id);
+                    };
+                  })(rem.id),
+                },
+                "删除"
+              )
+            )
+          )
+        );
+      }
+      kids.push(h("div", { key: "t3", style: { fontSize: 15, fontWeight: 700, marginTop: 8 } }, "定时提醒（" + (data.reminders || []).length + "）"));
+      kids.push(
+        h(
+          "div",
+          { key: "rems", style: {} },
+          remRows.length ? remRows : h("div", { style: muted }, '没有待发提醒。设置：让 agent 跑 ~/desk-data/bin/desk-remind "10:00" "内容"')
+        )
+      );
       if (msg.kind) {
         kids.push(
           h(
@@ -1004,7 +1052,7 @@ window.__ModuleLoader__.load({
         h(
           "div",
           { key: "tip", style: muted },
-          "agent 侧发通知：~/desk-data/bin/desk-notify \"标题\" \"正文\"（令牌在 ~/desk-data/notify.token，仅本机）。企业微信群机器人：群设置 → 群机器人 → 复制 Webhook 地址，粘进上面的通道即可。"
+          "agent 侧：desk-notify \"标题\" \"正文\" 立即发；desk-remind \"10:00\" \"内容\" 定时发（到点自动推，支持 +30m / 明天 09:00）。企业微信群机器人：群设置 → 群机器人 → 复制 Webhook 地址，粘进上面的通道即可。"
         )
       );
       return h("div", { style: Object.assign({}, wrap, { maxWidth: 640 }) }, kids);
