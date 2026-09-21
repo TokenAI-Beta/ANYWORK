@@ -1,4 +1,4 @@
-// DSH-ANYWORK 设置页（浏览器侧 cordis 插件）：工作台用量 + 企业知识库 + 公司盘 + 成员管理 + 通知 + 公告板（侧栏入口）+ 运维 + 任务板 + 报价换算
+// DSH-ANYWORK 设置页（浏览器侧 cordis 插件）：工作台用量 + 企业知识库（含沉淀）+ 公司盘 + 成员管理 + 通知 + 公告板（侧栏入口）+ 运维 + 任务板 + 报价换算
 // 产出格式与 dsh 官方客户端插件一致：window.__ModuleLoader__.load({ id, factory })
 // 依赖仅 react（平台种子模块），全部走闭包 require。
 window.__ModuleLoader__.load({
@@ -260,6 +260,178 @@ window.__ModuleLoader__.load({
       return h("div", { style: wrap }, kids);
     }
 
+    function KbDeposit() {
+      var pair = React.useState({ phase: "loading", role: "member", notes: [], message: "", expanded: "", expandedContent: "" });
+      var st = pair[0];
+      var setSt = pair[1];
+      var tRef = React.useRef(null);
+      var gRef = React.useRef(null);
+      var cRef = React.useRef(null);
+
+      function setMsg(msg) {
+        var n = {};
+        for (var k in st) n[k] = st[k];
+        n.message = msg;
+        setSt(n);
+      }
+
+      React.useEffect(function () {
+        fetch("/portal/api/kb/list", { headers: { accept: "application/json" } })
+          .then(function (r) {
+            if (!r.ok) throw new Error("HTTP " + r.status);
+            return r.json();
+          })
+          .then(function (d) {
+            setSt({ phase: "ready", role: d.role || "member", notes: d.notes || [], message: "", expanded: "", expandedContent: "" });
+          })
+          .catch(function (e) {
+            setSt({ phase: "error", role: "member", notes: [], message: String((e && e.message) || e), expanded: "", expandedContent: "" });
+          });
+      }, []);
+
+      function reload(msg) {
+        fetch("/portal/api/kb/list", { headers: { accept: "application/json" } })
+          .then(function (r) {
+            return r.json();
+          })
+          .then(function (d) {
+            setSt({ phase: "ready", role: d.role || "member", notes: d.notes || [], message: msg || "", expanded: "", expandedContent: "" });
+          })
+          .catch(function () {
+            setMsg(msg || "");
+          });
+      }
+
+      function save() {
+        var title = tRef.current ? tRef.current.value : "";
+        var tags = gRef.current ? gRef.current.value : "";
+        var content = cRef.current ? cRef.current.value : "";
+        if (!String(content).trim()) {
+          setMsg("内容不能为空");
+          return;
+        }
+        setMsg("保存中…");
+        fetch("/portal/api/kb/save", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ title: title, tags: tags, content: content }) })
+          .then(function (r) {
+            return r.json().then(function (d) {
+              return { status: r.status, d: d };
+            });
+          })
+          .then(function (res) {
+            if (res.status !== 200) {
+              setMsg((res.d && res.d.error) || "HTTP " + res.status);
+              return;
+            }
+            if (tRef.current) tRef.current.value = "";
+            if (gRef.current) gRef.current.value = "";
+            if (cRef.current) cRef.current.value = "";
+            reload("已沉淀：notes/" + res.d.name);
+          })
+          .catch(function (e) {
+            setMsg(String((e && e.message) || e));
+          });
+      }
+
+      function openNote(name) {
+        if (st.expanded === name) {
+          var n1 = {};
+          for (var k1 in st) n1[k1] = st[k1];
+          n1.expanded = "";
+          n1.expandedContent = "";
+          setSt(n1);
+          return;
+        }
+        var n2 = {};
+        for (var k2 in st) n2[k2] = st[k2];
+        n2.expanded = name;
+        n2.expandedContent = "读取中…";
+        setSt(n2);
+        fetch("/portal/api/kb/note?name=" + encodeURIComponent(name), { headers: { accept: "application/json" } })
+          .then(function (r) {
+            return r.json();
+          })
+          .then(function (d) {
+            var n3 = {};
+            for (var k3 in st) n3[k3] = st[k3];
+            n3.expanded = name;
+            n3.expandedContent = d.ok ? d.content : d.error || "读取失败";
+            setSt(n3);
+          })
+          .catch(function (e) {
+            var n4 = {};
+            for (var k4 in st) n4[k4] = st[k4];
+            n4.expanded = name;
+            n4.expandedContent = String((e && e.message) || e);
+            setSt(n4);
+          });
+      }
+
+      function del(name) {
+        if (!window.confirm("删除笔记：" + name + "？")) return;
+        fetch("/portal/api/kb/rm", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ name: name }) })
+          .then(function (r) {
+            return r.json().then(function (d) {
+              return { status: r.status, d: d };
+            });
+          })
+          .then(function (res) {
+            reload(res.status === 200 ? "已删除：" + name : (res.d && res.d.error) || "HTTP " + res.status);
+          })
+          .catch(function (e) {
+            setMsg(String((e && e.message) || e));
+          });
+      }
+
+      var kids = [];
+      kids.push(h("div", { key: "hd", style: { fontWeight: 600, marginBottom: 6 } }, "沉淀一条新笔记（写入共享知识库）"));
+      kids.push(
+        h(
+          "div",
+          { key: "f", style: { display: "flex", flexDirection: "column", gap: 6 } },
+          h(
+            "div",
+            { style: { display: "flex", gap: 8 } },
+            h("input", { ref: tRef, placeholder: "标题（如：铬矿报价速算口径）", style: Object.assign({}, field, { flex: 1 }) }),
+            h("input", { ref: gRef, placeholder: "标签（可选）", style: Object.assign({}, field, { width: 140 }) })
+          ),
+          h("textarea", { ref: cRef, placeholder: "正文（Markdown）——建议写结论 / 口径 / 方法，方便后来人复用", style: Object.assign({}, textareaStyle, { minHeight: 100 }) }),
+          h("div", null, h("button", { style: btnDark, onClick: save }, "沉淀入库"))
+        )
+      );
+      if (st.message) kids.push(h("div", { key: "msg", style: Object.assign({ fontSize: 12 }, muted) }, st.message));
+      kids.push(h("div", { key: "rec", style: { fontWeight: 600, margin: "10px 0 4px" } }, "最近沉淀（" + st.notes.length + "）"));
+      if (st.phase === "error") {
+        kids.push(h("div", { key: "err", style: muted }, "读不到沉淀列表（" + st.message + "）。"));
+      } else {
+        var rows = [];
+        for (var i = 0; i < st.notes.length; i++) {
+          (function (n) {
+            var isOpen = st.expanded === n.name;
+            var actions = [h("button", { key: "v", style: btnSmall, onClick: function () { openNote(n.name); } }, isOpen ? "收起" : "查看")];
+            if (st.role === "admin") {
+              actions.push(h("button", { key: "d", style: btnSmall, onClick: function () { del(n.name); } }, "删除"));
+            }
+            rows.push(
+              h(
+                "div",
+                { key: "n" + n.name, style: rowBase },
+                h(
+                  "div",
+                  { style: { display: "flex", justifyContent: "space-between", alignItems: "center", gap: 8 } },
+                  h("span", { style: { fontWeight: 600 } }, n.title),
+                  h("span", null, actions)
+                ),
+                h("div", { style: Object.assign({ fontSize: 11 }, muted) }, n.mtime + (n.author ? " · " + n.author : "")),
+                isOpen ? h("div", { style: { whiteSpace: "pre-wrap", marginTop: 4 } }, st.expandedContent) : null
+              )
+            );
+          })(st.notes[i]);
+        }
+        kids.push(h("div", { key: "rows" }, rows.length ? rows : h("div", { style: muted }, "还没有沉淀笔记。")));
+      }
+      return h("div", { key: "deposit", style: { marginTop: 14, borderTop: "1px solid var(--dsw-alias-border-l2, #ccd0d5)", paddingTop: 10 } }, kids);
+    }
+
     function KbSection() {
       var pair = React.useState({ phase: "idle", q: "", hits: [], stats: null, message: "", truncated: false });
       var st = pair[0];
@@ -353,6 +525,7 @@ window.__ModuleLoader__.load({
         );
       }
       kids.push(h("div", { key: "tip", style: muted }, "把文档放进服务器 ~/desk-data/kb（目录内有 README）；会话里的 agent 也能直接读它。"));
+      kids.push(h(KbDeposit, { key: "deposit" }));
       return h("div", { style: wrap }, kids);
     }
 

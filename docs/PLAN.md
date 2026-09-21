@@ -2,7 +2,7 @@
 
 **状态：** 实施中（P0 ✅ / P1 ✅ / P2 ✅ / P3 ✅ / P4 🟡 主体完成） · **日期：** 2026-09-18（2026-09-19 更新） · **底座：** 官方 DeepSeek Harness（`@deepseek-ai/dsh`，MIT） · **托管：** github.com/bugbyc0922/DSH-ANYWORK（公开） · **明确不做：** 不采用 TDHarness-coding 的任何代码，独立实现。
 
-> 更新（2026-09-19）：P0 全部通过、P1 完成、**P2 全部完成**（12–15 ✅：登录 / 门户 / 登录闸门+反代 / 信任自动化，均实机验证）；计划外打通 **dsh 客户端插件机制**（设置内嵌「工作台用量」页）；**企业知识库 v1** 上线（共享目录 + 检索接口 + 设置「知识库」页）；**公司盘 v1** 上线（共享文件区 + 浏览/下载/上传 + 设置「公司盘」页）；**多上游模型通道 v1** 上线（网关按模型分流 + 门户通道管理 + CLI）；**P3 完成**（16–19 ✅：systemd 自启 + 崩溃 5 秒重拉 + `wsl --shutdown` 真重启全恢复 + 隔离复查全绿；WSL 2.7 空闲停机已关闭）；**P4 主体完成**（20–22 ✅：setup/backup/restore/logs 脚本 + `DEPLOY.md` + [试用验收](ACCEPTANCE.md) 真实链路实走 + [KNOWN-ISSUES](KNOWN-ISSUES.md)；从零重装待第二台机器实测）；**团队技能库 v1** 上线（`~/desk-data/skills` + 实例软链，dsh 原生技能发现、改完即生效）；**团队 Agent 预设 v1** 上线（`team-assistant` 角色模板，实例软链 `~/.agent-presets`）；**会话导出 + 跨会话检索**已开启（`/export` ZIP + agent 的 `session_search`，脚本 `scripts/enable-session-search.sh`）；**团队 Soul（与 团队主助理 同源）**上线（`soul-template/` + `scripts/apply-soul.sh`，注入位 `DSH_HOME/AGENTS.md`）；**通知桥 v1** 上线（设置页「通知」+ agent 侧 `desk-notify`，实测真实到达 微信 / webhook）；**定时提醒**上线（`desk-remind` + 服务器 30s 巡查，实测微信准点到达）；**成员管理增强**（预算 80%/100% 告警接通知桥 + 在线/最后登录 + 7 天趋势，实测微信到达）；**团队公告板 + 意见反馈**、**运维面板**、**任务板**、**后台任务/子代理（验证+规范）**、**团队安全闸门**与**报价换算页**上线—— 见 [`BASELINE.md`](BASELINE.md) 与 [`devlog/2026-09-19.md`](devlog/2026-09-19.md)。
+> 更新（2026-09-19）：P0 全部通过、P1 完成、**P2 全部完成**（12–15 ✅：登录 / 门户 / 登录闸门+反代 / 信任自动化，均实机验证）；计划外打通 **dsh 客户端插件机制**（设置内嵌「工作台用量」页）；**企业知识库 v1** 上线（共享目录 + 检索接口 + 设置「知识库」页）；**公司盘 v1** 上线（共享文件区 + 浏览/下载/上传 + 设置「公司盘」页）；**多上游模型通道 v1** 上线（网关按模型分流 + 门户通道管理 + CLI）；**P3 完成**（16–19 ✅：systemd 自启 + 崩溃 5 秒重拉 + `wsl --shutdown` 真重启全恢复 + 隔离复查全绿；WSL 2.7 空闲停机已关闭）；**P4 主体完成**（20–22 ✅：setup/backup/restore/logs 脚本 + `DEPLOY.md` + [试用验收](ACCEPTANCE.md) 真实链路实走 + [KNOWN-ISSUES](KNOWN-ISSUES.md)；从零重装待第二台机器实测）；**团队技能库 v1** 上线（`~/desk-data/skills` + 实例软链，dsh 原生技能发现、改完即生效）；**团队 Agent 预设 v1** 上线（`team-assistant` 角色模板，实例软链 `~/.agent-presets`）；**会话导出 + 跨会话检索**已开启（`/export` ZIP + agent 的 `session_search`，脚本 `scripts/enable-session-search.sh`）；**团队 Soul（与 团队主助理 同源）**上线（`soul-template/` + `scripts/apply-soul.sh`，注入位 `DSH_HOME/AGENTS.md`）；**通知桥 v1** 上线（设置页「通知」+ agent 侧 `desk-notify`，实测真实到达 微信 / webhook）；**定时提醒**上线（`desk-remind` + 服务器 30s 巡查，实测微信准点到达）；**成员管理增强**（预算 80%/100% 告警接通知桥 + 在线/最后登录 + 7 天趋势，实测微信到达）；**团队公告板 + 意见反馈**、**运维面板**、**任务板**、**后台任务/子代理（验证+规范）**、**团队安全闸门**、**报价换算页**与**知识库沉淀**上线—— 见 [`BASELINE.md`](BASELINE.md) 与 [`devlog/2026-09-19.md`](devlog/2026-09-19.md)。
 
 ---
 
@@ -148,6 +148,7 @@ P0 复核结果：第 3 条已实测（`--port` 有效；非回环假 Host 对 `
     ➕ 计划外：**官方后台任务 + 子代理**——真机验证可用（jobs 后台跑/收取、subagent 委派回报；官方 UI 自带），工作区 README 补用法规范；codex/claude-code 子代理桥留作未来可选项。
     ➕ 计划外：**团队安全闸门**——官方 hooks 桥 + 20 条危险命令策略（deny 拦截并推微信 / ask 弹审批），`hooks-template/` + `scripts/install-hooks.sh` 幂等铺装；实测危险命令被拦、普通命令不受影响。
     ➕ 计划外：**报价换算页**——设置页「报价换算」（纯前端）：吨度价 ⇄ 元/干吨 · 美元、美元反推、总货值（未舍入单价、干吨结算）；浏览器全流程实测（含浮点显示修正）。
+    ➕ 计划外：**知识库沉淀**——笔记写入共享 kb：UI 表单（设置→知识库）/ `desk-kb` 命令（agent）/ 令牌接口；列表·查看·管理员删除；越权围栏与三路径权限矩阵实测通过。
 
 ### P3 每人独立工作区 ✅（2026-09-19 完成）
 

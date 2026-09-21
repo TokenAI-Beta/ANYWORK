@@ -83,7 +83,7 @@ Windows side: a Startup shortcut boots WSL at logon, WSL idle auto-shutdown is d
 
 ### Workbench settings pages (dsh client plugin)
 
-`plugin/desk-panel/` is a small **dsh client plugin** that adds a set of team pages to the dsh Settings dialog — **工作台用量** (my usage), **任务板** (team task board), **报价换算** (quote converter: 元/干吨度 ⇄ CNY/t · USD/t), **知识库** (knowledge base search), **公司盘** (shared drive), **成员管理** (members & channels — admin), **通知** (notification bridge + reminders — admin), **运维** (ops panel — admin) — plus a **📢 announcement board** pinned in the sidebar footer (announcements + member feedback, unread badge). Built on dsh's official client-plugin API (`settings.section` + `sidebar.footer.action` slots + `dsh plugin`) — **no dsh source changes, no build step, no npm dependencies**. Mount it per instance:
+`plugin/desk-panel/` is a small **dsh client plugin** that adds a set of team pages to the dsh Settings dialog — **工作台用量** (my usage), **任务板** (team task board), **报价换算** (quote converter: 元/干吨度 ⇄ CNY/t · USD/t), **知识库** (knowledge base: search + note deposits), **公司盘** (shared drive), **成员管理** (members & channels — admin), **通知** (notification bridge + reminders — admin), **运维** (ops panel — admin) — plus a **📢 announcement board** pinned in the sidebar footer (announcements + member feedback, unread badge). Built on dsh's official client-plugin API (`settings.section` + `sidebar.footer.action` slots + `dsh plugin`) — **no dsh source changes, no build step, no npm dependencies**. Mount it per instance:
 
 ```sh
 DSH_HOME=<instance home> node <dsh checkout>/apps/cli/lib/bin.js plugin --profile web add \

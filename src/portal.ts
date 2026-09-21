@@ -14,7 +14,7 @@ import {
 import { hashToken, newVirtualKey } from './keys.ts'
 import { eventCost, monthStartUtc, prices } from './pricing.ts'
 import { addChannel, listChannels, removeChannel, setChannelEnabled } from './channel.ts'
-import { kbSearch } from './kb.ts'
+import { kbSearch, listKbNotes, readKbNote, removeKbNote, saveKbNote } from './kb.ts'
 import { listDrive, resolveInDrive, saveToDrive, MAX_UPLOAD } from './drive.ts'
 import { addNotifyRoute, addReminder, dispatchNotify, listNotifyLog, listNotifyRoutes, listReminders, listRemindersSent, readOrCreateNotifyToken, removeNotifyRoute, removeReminder, toggleNotifyRoute } from './notify.ts'
 import { defaultDataDir } from './db.ts'
@@ -410,13 +410,73 @@ export function startPortal(opts: PortalOptions) {
         )
       }
       if (req.method === 'GET' && path === '/portal/api/kb/search') {
-        if (!user) {
+        const kbTok = String(req.headers['x-desk-notify-token'] ?? '')
+        const kbTokOk = kbTok !== '' && kbTok === readOrCreateNotifyToken(defaultDataDir())
+        if (!user && !kbTokOk) {
           res.writeHead(401, { 'content-type': 'application/json' })
           return res.end(JSON.stringify({ error: 'login required' }))
         }
         const q = (url.searchParams.get('q') ?? '').slice(0, 100)
         res.writeHead(200, { 'content-type': 'application/json; charset=utf-8' })
         return res.end(JSON.stringify(kbSearch(q)))
+      }
+      if (req.method === 'GET' && path === '/portal/api/kb/list') {
+        const token = String(req.headers['x-desk-notify-token'] ?? '')
+        const tokenOk = token !== '' && token === readOrCreateNotifyToken(defaultDataDir())
+        if (!user && !tokenOk) {
+          res.writeHead(401, { 'content-type': 'application/json' })
+          return res.end(JSON.stringify({ error: 'login required' }))
+        }
+        res.writeHead(200, { 'content-type': 'application/json; charset=utf-8' })
+        return res.end(JSON.stringify({ notes: listKbNotes(30), role: user ? user.role : 'agent' }))
+      }
+      if (req.method === 'GET' && path === '/portal/api/kb/note') {
+        if (!user) {
+          res.writeHead(401, { 'content-type': 'application/json' })
+          return res.end(JSON.stringify({ error: 'login required' }))
+        }
+        const r = readKbNote(url.searchParams.get('name') ?? '')
+        res.writeHead('ok' in r ? 200 : /不存在/.test(r.error) ? 404 : 400, { 'content-type': 'application/json; charset=utf-8' })
+        return res.end(JSON.stringify(r))
+      }
+      if (path === '/portal/api/kb/save' && req.method === 'POST') {
+        const token = String(req.headers['x-desk-notify-token'] ?? '')
+        const tokenOk = token !== '' && token === readOrCreateNotifyToken(defaultDataDir())
+        if (!user && !tokenOk) {
+          res.writeHead(401, { 'content-type': 'application/json' })
+          return res.end(JSON.stringify({ error: 'login required' }))
+        }
+        let kbody: Record<string, unknown> = {}
+        try {
+          const v = JSON.parse(await readBody(req)) as unknown
+          if (v && typeof v === 'object') kbody = v as Record<string, unknown>
+        } catch {
+          kbody = {}
+        }
+        const author = user ? user.username : String(kbody.author ?? 'agent').trim().slice(0, 64) || 'agent'
+        const r = saveKbNote({ title: String(kbody.title ?? ''), content: String(kbody.content ?? ''), tags: String(kbody.tags ?? ''), author })
+        res.writeHead('ok' in r ? 200 : 400, { 'content-type': 'application/json; charset=utf-8' })
+        return res.end(JSON.stringify(r))
+      }
+      if (path === '/portal/api/kb/rm' && req.method === 'POST') {
+        if (!user) {
+          res.writeHead(401, { 'content-type': 'application/json' })
+          return res.end(JSON.stringify({ error: 'login required' }))
+        }
+        if (user.role !== 'admin') {
+          res.writeHead(403, { 'content-type': 'application/json; charset=utf-8' })
+          return res.end(JSON.stringify({ error: 'admin only' }))
+        }
+        let rbody: Record<string, unknown> = {}
+        try {
+          const v = JSON.parse(await readBody(req)) as unknown
+          if (v && typeof v === 'object') rbody = v as Record<string, unknown>
+        } catch {
+          rbody = {}
+        }
+        const r = removeKbNote(rbody.name)
+        res.writeHead('ok' in r ? 200 : 404, { 'content-type': 'application/json; charset=utf-8' })
+        return res.end(JSON.stringify(r))
       }
       if (path === '/portal/api/drive/list' && req.method === 'GET') {
         if (!user) {

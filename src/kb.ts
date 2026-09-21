@@ -1,7 +1,7 @@
 // 企业知识库：对共享目录做零依赖全文检索（子串匹配，小团队够用）
-import { existsSync, readFileSync, readdirSync, statSync } from 'node:fs'
+import { existsSync, mkdirSync, readFileSync, readdirSync, statSync, unlinkSync, writeFileSync } from 'node:fs'
 import { homedir } from 'node:os'
-import { join, relative } from 'node:path'
+import { basename, join, relative, resolve } from 'node:path'
 
 const TEXT_EXT = new Set(['.md', '.txt', '.csv', '.tsv', '.json', '.yml', '.yaml', '.log', '.html', '.psv'])
 const MAX_FILE = 2 * 1024 * 1024
@@ -93,4 +93,105 @@ export function kbSearch(query: string): KbSearchResult {
   }
   if (latest > 0) stats.updatedAt = new Date(latest).toISOString()
   return { q: query, hits, truncated, stats }
+}
+
+
+// —— 知识沉淀：笔记（kb/notes/，由 设置→知识库 的「沉淀」或 desk-kb 命令写入）——
+
+export function kbNotesDir(): string {
+  return join(kbRoot(), 'notes')
+}
+
+function pad2(x: number): string {
+  return String(x).padStart(2, '0')
+}
+
+function localStamp(d: Date): string {
+  return `${d.getFullYear()}-${pad2(d.getMonth() + 1)}-${pad2(d.getDate())} ${pad2(d.getHours())}:${pad2(d.getMinutes())}`
+}
+
+function safeNoteName(name: unknown): string | null {
+  const n = String(name ?? '')
+  if (!n || n !== basename(n) || n.startsWith('.') || !/\.md$/i.test(n)) return null
+  return n
+}
+
+export interface KbNoteMeta {
+  name: string
+  title: string
+  author: string
+  size: number
+  mtime: string
+}
+
+export function listKbNotes(limit = 30): KbNoteMeta[] {
+  const dir = kbNotesDir()
+  let names: string[] = []
+  try {
+    names = readdirSync(dir).filter((n) => /\.md$/i.test(n) && !n.startsWith('.') && !/^readme/i.test(n))
+  } catch {
+    return []
+  }
+  const out: KbNoteMeta[] = []
+  for (const n of names) {
+    try {
+      const st = statSync(join(dir, n))
+      const head = readFileSync(join(dir, n), 'utf8').slice(0, 400)
+      const title = /^title:\s*(.+)$/m.exec(head)?.[1]?.trim() || n.replace(/\.md$/i, '')
+      const author = /^author:\s*(.+)$/m.exec(head)?.[1]?.trim() || ''
+      out.push({ name: n, title, author, size: st.size, mtime: localStamp(new Date(st.mtimeMs)) })
+    } catch {
+      // 跳过读不到的
+    }
+  }
+  out.sort((a, b) => (a.mtime < b.mtime ? 1 : -1))
+  return out.slice(0, limit)
+}
+
+export function saveKbNote(input: { title?: string; content?: string; tags?: string; author?: string }): { ok: true; name: string } | { error: string } {
+  const title = String(input.title ?? '').trim().slice(0, 120)
+  const content = String(input.content ?? '').trim()
+  if (!content) return { error: '内容不能为空' }
+  if (content.length > 100_000) return { error: '内容过长（上限 10 万字符）' }
+  const dir = kbNotesDir()
+  mkdirSync(dir, { recursive: true })
+  const now = new Date()
+  const stamp = `${now.getFullYear()}-${pad2(now.getMonth() + 1)}-${pad2(now.getDate())}-${pad2(now.getHours())}${pad2(now.getMinutes())}`
+  const slugRaw = (title || 'note').replace(/[\/\\:*?"<>|\s]+/g, '-').replace(/^-+|-+$/g, '').slice(0, 40)
+  const slug = slugRaw || 'note'
+  let name = `${stamp}-${slug}.md`
+  let i = 2
+  while (existsSync(join(dir, name))) {
+    name = `${stamp}-${slug}-${i}.md`
+    i += 1
+  }
+  const tags = String(input.tags ?? '').trim().slice(0, 120)
+  const head = `---\ntitle: ${title || slug}\nauthor: ${String(input.author || 'unknown').slice(0, 64)}\ntime: ${localStamp(now)}${tags ? `\ntags: ${tags}` : ''}\n---\n\n`
+  writeFileSync(join(dir, name), head + content + '\n', { encoding: 'utf8', mode: 0o644 })
+  return { ok: true, name }
+}
+
+export function readKbNote(name: unknown): { ok: true; name: string; content: string } | { error: string } {
+  const n = safeNoteName(name)
+  if (!n) return { error: '名称不合法' }
+  const base = resolve(kbNotesDir())
+  const full = resolve(base, n)
+  if (!full.startsWith(base + '/')) return { error: '路径不合法' }
+  try {
+    const content = readFileSync(full, 'utf8').slice(0, 200_000)
+    return { ok: true, name: n, content }
+  } catch {
+    return { error: '笔记不存在' }
+  }
+}
+
+export function removeKbNote(name: unknown): { ok: true } | { error: string } {
+  const n = safeNoteName(name)
+  if (!n) return { error: '名称不合法' }
+  try {
+    unlinkSync(join(kbNotesDir(), n))
+    return { ok: true }
+  } catch {
+    return { error: '笔记不存在' }
+  }
 }
