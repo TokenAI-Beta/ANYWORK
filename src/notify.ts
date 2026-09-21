@@ -87,24 +87,26 @@ function sendViaHermes(target: string, msg: NotifyMsg): Promise<string> {
   })
 }
 
-// 微信（hermes 通道）偶发失败（CLI 超时/限流/退桌面端抖动）：失败后 45 秒后台重试一次，并回填日志行
-const HERMES_RETRY_DELAY_MS = 45_000
-function scheduleHermesRetry(db: DatabaseSync, logId: number, target: string, msg: NotifyMsg): void {
+// 微信（hermes 通道）失败重试：阶梯退避（iLink 上游限流带 30s 冷却；被拒时 CLI 非零退出）
+// 逐次把结果回填 notify_log：某次成功则置 ok=1；全部失败则保留最后一次错误
+const HERMES_RETRY_DELAYS_MS = [45_000, 180_000, 600_000]
+function scheduleHermesRetry(db: DatabaseSync, logId: number, target: string, msg: NotifyMsg, attempt = 0): void {
+  if (attempt >= HERMES_RETRY_DELAYS_MS.length) return
   const timer = setTimeout(() => {
     void (async () => {
       try {
         const info = await sendViaHermes(target, msg)
-        const ok = !/^(失败|未知)/.test(info)
-        if (ok) {
-          db.prepare(`UPDATE notify_log SET ok = 1, info = ? WHERE id = ?`).run('ok（45s 重试成功）', logId)
+        if (!/^(失败|未知)/.test(info)) {
+          db.prepare(`UPDATE notify_log SET ok = 1, info = ? WHERE id = ?`).run(`ok（第 ${attempt + 1} 次重试成功）`, logId)
         } else {
           db.prepare(`UPDATE notify_log SET info = ? WHERE id = ?`).run(info.slice(0, 200), logId)
+          scheduleHermesRetry(db, logId, target, msg, attempt + 1)
         }
       } catch {
-        // 重试本身异常：保持原失败记录
+        // 重试本身异常：保持已有记录
       }
     })()
-  }, HERMES_RETRY_DELAY_MS)
+  }, HERMES_RETRY_DELAYS_MS[attempt])
   if (typeof timer.unref === 'function') timer.unref()
 }
 
