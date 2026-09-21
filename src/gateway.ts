@@ -7,6 +7,7 @@ import type { DatabaseSync } from 'node:sqlite'
 import { hashToken } from './keys.ts'
 import { eventCost, monthStartUtc } from './pricing.ts'
 import { channelCost, listChannels, routeFor, type Channel } from './channel.ts'
+import { maybeBudgetAlert } from './notify.ts'
 
 export interface GatewayOptions {
   db: DatabaseSync
@@ -90,6 +91,8 @@ function record(
     channelName,
     costCny,
   )
+  // 预算告警（异步，不阻塞请求路径；80% / 100% 每用户每月各一次）
+  void maybeBudgetAlert(db, userId).catch(() => {})
 }
 
 /** 从 SSE 文本尾部倒着找最后一个带 usage 的数据块 */

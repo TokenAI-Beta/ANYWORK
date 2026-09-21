@@ -456,7 +456,7 @@ window.__ModuleLoader__.load({
     }
 
     function AdminSection() {
-      var dataPair = React.useState({ phase: "loading", members: [], channels: [], message: "" });
+      var dataPair = React.useState({ phase: "loading", members: [], channels: [], trend: [], message: "" });
       var data = dataPair[0];
       var setData = dataPair[1];
       var msgPair = React.useState({ kind: "", text: "" });
@@ -486,7 +486,7 @@ window.__ModuleLoader__.load({
             return r.json();
           })
           .then(function (d) {
-            setData({ phase: "ready", members: d.members || [], channels: d.channels || [], message: "" });
+            setData({ phase: "ready", members: d.members || [], channels: d.channels || [], trend: d.trend || [], message: "" });
           })
           .catch(function (e) {
             setData({ phase: "error", members: [], channels: [], message: String((e && e.message) || e) });
@@ -578,7 +578,12 @@ window.__ModuleLoader__.load({
             h(
               "div",
               { style: Object.assign({ fontSize: 12 }, muted) },
-              "#" + u.id + " · 实例 " + (u.port || "-") + " · 预算 " + (u.budget != null ? "¥" + u.budget : "不限") + " · 本月 " + fmt(u.monthCost) + " / " + u.monthEvents + " 次 · 建 " + String(u.createdAt || "").slice(0, 10)
+              "#" + u.id + " · 实例 " + (u.port || "-") + " · 预算 " + (u.budget != null ? "¥" + u.budget : "不限") + " · 建 " + String(u.createdAt || "").slice(0, 10)
+            ),
+            h(
+              "div",
+              { style: Object.assign({ fontSize: 12 }, muted) },
+              "本月 " + fmt(u.monthCost) + " / " + u.monthEvents + " 次 · 近 7 天 " + fmt(u.week7) + " · " + (u.online ? "● 活跃会话" : "○ 无会话") + " · 最后登录 " + (u.lastLogin ? String(u.lastLogin).slice(5, 16) : "从未")
             )
           )
         );
@@ -635,6 +640,38 @@ window.__ModuleLoader__.load({
       }
 
       var kids = [];
+      var trend = data.trend || [];
+      var maxV = 0;
+      for (var ti = 0; ti < trend.length; ti++) if (trend[ti].s > maxV) maxV = trend[ti].s;
+      var total7 = 0;
+      for (var tj = 0; tj < trend.length; tj++) total7 += trend[tj].s;
+      var barNodes = [];
+      for (var tk = 0; tk < trend.length; tk++) {
+        var t = trend[tk];
+        barNodes.push(
+          h(
+            "div",
+            { key: "bar" + tk, style: { display: "flex", flexDirection: "column", alignItems: "center", gap: 2 } },
+            h("div", {
+              style: {
+                width: 16,
+                height: Math.max(2, Math.round((t.s / (maxV || 1)) * 44)),
+                background: "var(--dsw-alias-state-business-primary, #4f7cf7)",
+                borderRadius: 3,
+              },
+            }),
+            h("div", { style: { fontSize: 9, color: "var(--dsw-alias-label-tertiary, #65676b)" } }, t.d)
+          )
+        );
+      }
+      kids.push(
+        h(
+          "div",
+          { key: "trend" },
+          h("div", { style: { fontWeight: 600 } }, "近 7 天团队用量 · 合计 " + fmt(total7)),
+          h("div", { style: { display: "flex", gap: 6, alignItems: "flex-end" } }, barNodes)
+        )
+      );
       kids.push(h("div", { key: "t1", style: { fontSize: 15, fontWeight: 700 } }, "成员（" + data.members.length + "）"));
       kids.push(h("div", { key: "mr", style: {} }, memberRows));
       kids.push(
@@ -763,7 +800,7 @@ window.__ModuleLoader__.load({
         h(
           "div",
           { key: "tip", style: muted },
-          "删除成员不可撤销；其历史用量保留在账本。若该成员配了实例服务，可在服务器用 scripts/desk.sh 停掉。通道 Key 只存在服务器数据库。"
+          "删除成员不可撤销；其历史用量保留在账本。成员预算到 80% / 100% 时会经「通知」通道自动提醒管理员。若该成员配了实例服务，可在服务器用 scripts/desk.sh 停掉。通道 Key 只存在服务器数据库。"
         )
       );
       return h("div", { style: Object.assign({}, wrap, { maxWidth: 640 }) }, kids);

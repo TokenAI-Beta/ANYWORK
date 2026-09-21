@@ -571,14 +571,23 @@ export function startPortal(opts: PortalOptions) {
         }
         if (req.method === 'GET' && path === '/portal/api/admin/overview') {
           const memberRows = db
-            .prepare(`SELECT id, username, role, status, monthly_budget_cny AS budget, agent_port AS port, created_at FROM users ORDER BY id`)
+            .prepare(`SELECT id, username, role, status, monthly_budget_cny AS budget, agent_port AS port, created_at, last_login_at FROM users ORDER BY id`)
             .all() as Record<string, unknown>[]
           const mStart = monthStartUtc()
+          const weekAgo = new Date(Date.now() - 7 * 86400 * 1000).toISOString().slice(0, 19).replace('T', ' ')
           const members = memberRows.map((u) => {
             const mrows = db
               .prepare(`SELECT * FROM usage_events WHERE user_id = ? AND ts >= ?`)
               .all(u.id as number, mStart) as unknown as UsageRow[]
             const a = aggregate(mrows)
+            const wrows = db
+              .prepare(`SELECT * FROM usage_events WHERE user_id = ? AND ts >= ?`)
+              .all(u.id as number, weekAgo) as unknown as UsageRow[]
+            let week7 = 0
+            for (const r of wrows) week7 += eventCost(r)
+            const sess = db
+              .prepare(`SELECT COUNT(*) AS n FROM login_sessions WHERE user_id = ? AND expires_at > datetime('now')`)
+              .get(u.id as number) as { n: number }
             return {
               id: u.id,
               username: u.username,
@@ -588,9 +597,26 @@ export function startPortal(opts: PortalOptions) {
               budget: u.budget,
               monthEvents: a.events,
               monthCost: a.cost,
+              week7,
+              lastLogin: u.last_login_at,
+              online: sess.n > 0,
               createdAt: u.created_at,
             }
           })
+          // 近 7 天（北京）团队用量趋势
+          const trendRows = db.prepare(`SELECT * FROM usage_events WHERE ts >= ?`).all(weekAgo) as unknown as UsageRow[]
+          const dayMap = new Map<string, number>()
+          for (const r of trendRows) {
+            const bj = new Date(new Date(String(r.ts).replace(' ', 'T') + 'Z').getTime() + 8 * 3600 * 1000)
+            const key = bj.toISOString().slice(0, 10)
+            dayMap.set(key, (dayMap.get(key) ?? 0) + eventCost(r))
+          }
+          const trend: { d: string; s: number }[] = []
+          for (let i = 6; i >= 0; i--) {
+            const bj = new Date(Date.now() + 8 * 3600 * 1000 - i * 86400 * 1000)
+            const key = bj.toISOString().slice(0, 10)
+            trend.push({ d: key.slice(5), s: Number((dayMap.get(key) ?? 0).toFixed(4)) })
+          }
           const channels = listChannels(db).map((c) => ({
             id: c.id,
             name: c.name,
@@ -602,7 +628,7 @@ export function startPortal(opts: PortalOptions) {
             note: c.note ?? '',
           }))
           res.writeHead(200, { 'content-type': 'application/json; charset=utf-8' })
-          return res.end(JSON.stringify({ members, channels }))
+          return res.end(JSON.stringify({ members, channels, trend }))
         }
         if (req.method === 'POST' && path === '/portal/api/admin/member-create') {
           const body = await readJsonBody()

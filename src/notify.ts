@@ -4,6 +4,7 @@ import { execFile } from 'node:child_process'
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs'
 import { randomBytes } from 'node:crypto'
 import { join } from 'node:path'
+import { eventCost, monthStartUtc } from './pricing.ts'
 import type { DatabaseSync } from 'node:sqlite'
 
 // Hermes CLI（可用 DESK_HERMES_CLI 覆盖；迁移机器时改这里）
@@ -188,4 +189,31 @@ export async function checkReminders(db: DatabaseSync): Promise<number> {
     db.prepare(`UPDATE reminders SET sent = 1, sent_at = datetime('now'), info = ? WHERE id = ?`).run(info, r.id)
   }
   return due.length
+}
+
+// —— 预算告警（本月用量跨过 80% / 100% 时经通知桥提醒管理员；每月每档只发一次）——
+function fmtCny(n: number): string {
+  return n >= 0.01 ? n.toFixed(2) : n.toFixed(6)
+}
+
+export async function maybeBudgetAlert(db: DatabaseSync, userId: number): Promise<void> {
+  const u = db.prepare(`SELECT username, monthly_budget_cny AS budget FROM users WHERE id = ?`).get(userId) as
+    | { username: string; budget: number | null }
+    | undefined
+  if (!u || u.budget == null || u.budget <= 0) return
+  const start = monthStartUtc()
+  const rows = db.prepare(`SELECT * FROM usage_events WHERE user_id = ? AND ts >= ?`).all(userId, start) as unknown as Parameters<typeof eventCost>[0][]
+  let sum = 0
+  for (const r of rows) sum += eventCost(r)
+  const pct = sum / u.budget
+  const level = pct >= 1 ? 100 : pct >= 0.8 ? 80 : 0
+  if (level === 0) return
+  const month = start.slice(0, 7)
+  const ins = db.prepare(`INSERT OR IGNORE INTO budget_alerts (user_id, month, level) VALUES (?, ?, ?)`).run(userId, month, level)
+  if (ins.changes === 0) return
+  await dispatchNotify(db, {
+    title: '预算提醒',
+    text: `成员 ${u.username} 本月用量已到预算的 ${level}%（¥${fmtCny(sum)} / ¥${u.budget}）。`,
+    source: 'budget',
+  })
 }

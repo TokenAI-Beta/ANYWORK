@@ -110,6 +110,15 @@ function migrate(db: DatabaseSync): void {
       created_at TEXT NOT NULL DEFAULT (datetime('now'))
     );
 
+    CREATE TABLE IF NOT EXISTS budget_alerts (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      user_id INTEGER NOT NULL,
+      month TEXT NOT NULL,
+      level INTEGER NOT NULL,
+      created_at TEXT NOT NULL DEFAULT (datetime('now')),
+      UNIQUE(user_id, month, level)
+    );
+
     CREATE INDEX IF NOT EXISTS idx_usage_user_ts ON usage_events(user_id, ts);
     CREATE INDEX IF NOT EXISTS idx_keys_hash ON api_keys(token_hash);
     CREATE INDEX IF NOT EXISTS idx_sessions_hash ON login_sessions(token_hash);
