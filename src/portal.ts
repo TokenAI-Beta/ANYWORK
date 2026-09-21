@@ -18,6 +18,7 @@ import { kbSearch } from './kb.ts'
 import { listDrive, resolveInDrive, saveToDrive, MAX_UPLOAD } from './drive.ts'
 import { addNotifyRoute, addReminder, dispatchNotify, listNotifyLog, listNotifyRoutes, listReminders, listRemindersSent, readOrCreateNotifyToken, removeNotifyRoute, removeReminder, toggleNotifyRoute } from './notify.ts'
 import { defaultDataDir } from './db.ts'
+import { collectOps } from './ops.ts'
 import { createReadStream, existsSync, statSync } from 'node:fs'
 
 export interface PortalOptions {
@@ -551,6 +552,107 @@ export function startPortal(opts: PortalOptions) {
         res.writeHead(200, { 'content-type': 'application/json; charset=utf-8' })
         return res.end(JSON.stringify({ ok: true, id: added.id, at_epoch: added.atEpoch }))
       }
+      // —— 公告板 + 意见反馈（登录会话即可；管理操作需 admin）——
+      if (path === '/portal/api/announcements' && req.method === 'GET') {
+        if (!user) {
+          res.writeHead(401, { 'content-type': 'application/json' })
+          return res.end(JSON.stringify({ error: 'login required' }))
+        }
+        const announcements = db.prepare(`SELECT id, title, body, created_by, created_at FROM announcements ORDER BY id DESC LIMIT 50`).all()
+        const feedback =
+          user.role === 'admin'
+            ? db.prepare(`SELECT id, username, text, created_at FROM feedback ORDER BY id DESC LIMIT 50`).all()
+            : db.prepare(`SELECT id, username, text, created_at FROM feedback WHERE user_id = ? ORDER BY id DESC LIMIT 10`).all(user.id)
+        res.writeHead(200, { 'content-type': 'application/json; charset=utf-8' })
+        return res.end(JSON.stringify({ role: user.role, announcements, feedback }))
+      }
+      if (path === '/portal/api/announcements/post' && req.method === 'POST') {
+        if (!user) {
+          res.writeHead(401, { 'content-type': 'application/json' })
+          return res.end(JSON.stringify({ error: 'login required' }))
+        }
+        if (user.role !== 'admin') {
+          res.writeHead(403, { 'content-type': 'application/json; charset=utf-8' })
+          return res.end(JSON.stringify({ error: 'admin only' }))
+        }
+        let abody: Record<string, unknown> = {}
+        try {
+          const v = JSON.parse(await readBody(req)) as unknown
+          if (v && typeof v === 'object') abody = v as Record<string, unknown>
+        } catch {
+          abody = {}
+        }
+        const title = String(abody.title ?? '').trim().slice(0, 80)
+        const bodyText = String(abody.body ?? '').trim().slice(0, 2000)
+        if (!bodyText) {
+          res.writeHead(400, { 'content-type': 'application/json; charset=utf-8' })
+          return res.end(JSON.stringify({ error: '公告内容不能为空' }))
+        }
+        const info = db.prepare(`INSERT INTO announcements (title, body, created_by) VALUES (?, ?, ?)`).run(title || null, bodyText, user.username)
+        res.writeHead(200, { 'content-type': 'application/json; charset=utf-8' })
+        return res.end(JSON.stringify({ ok: true, id: Number(info.lastInsertRowid) }))
+      }
+      if (path === '/portal/api/announcements/rm' && req.method === 'POST') {
+        if (!user) {
+          res.writeHead(401, { 'content-type': 'application/json' })
+          return res.end(JSON.stringify({ error: 'login required' }))
+        }
+        if (user.role !== 'admin') {
+          res.writeHead(403, { 'content-type': 'application/json; charset=utf-8' })
+          return res.end(JSON.stringify({ error: 'admin only' }))
+        }
+        let rmid = 0
+        try {
+          const v = JSON.parse(await readBody(req)) as Record<string, unknown>
+          rmid = Number(v?.id ?? 0)
+        } catch {
+          rmid = 0
+        }
+        db.prepare(`DELETE FROM announcements WHERE id = ?`).run(rmid)
+        res.writeHead(200, { 'content-type': 'application/json; charset=utf-8' })
+        return res.end(JSON.stringify({ ok: true }))
+      }
+      if (path === '/portal/api/feedback' && req.method === 'POST') {
+        if (!user) {
+          res.writeHead(401, { 'content-type': 'application/json' })
+          return res.end(JSON.stringify({ error: 'login required' }))
+        }
+        let fbody: Record<string, unknown> = {}
+        try {
+          const v = JSON.parse(await readBody(req)) as unknown
+          if (v && typeof v === 'object') fbody = v as Record<string, unknown>
+        } catch {
+          fbody = {}
+        }
+        const ftext = String(fbody.text ?? '').trim().slice(0, 1000)
+        if (!ftext) {
+          res.writeHead(400, { 'content-type': 'application/json; charset=utf-8' })
+          return res.end(JSON.stringify({ error: '反馈内容不能为空' }))
+        }
+        db.prepare(`INSERT INTO feedback (user_id, username, text) VALUES (?, ?, ?)`).run(user.id, user.username, ftext)
+        res.writeHead(200, { 'content-type': 'application/json; charset=utf-8' })
+        return res.end(JSON.stringify({ ok: true }))
+      }
+      if (path === '/portal/api/feedback/rm' && req.method === 'POST') {
+        if (!user) {
+          res.writeHead(401, { 'content-type': 'application/json' })
+          return res.end(JSON.stringify({ error: 'login required' }))
+        }
+        if (user.role !== 'admin') {
+          res.writeHead(403, { 'content-type': 'application/json; charset=utf-8' })
+          return res.end(JSON.stringify({ error: 'admin only' }))
+        }
+        let frmid = 0
+        try {
+          const v = JSON.parse(await readBody(req)) as Record<string, unknown>
+          frmid = Number(v?.id ?? 0)
+        } catch {
+          frmid = 0
+        }
+        db.prepare(`DELETE FROM feedback WHERE id = ?`).run(frmid)
+        res.writeHead(200, { 'content-type': 'application/json; charset=utf-8' })
+        return res.end(JSON.stringify({ ok: true }))
+      }
       // —— 管理 API（工作台 设置 →「成员管理」插件调用；仅管理员）——
       if (path.startsWith('/portal/api/admin/')) {
         if (!user) {
@@ -767,6 +869,11 @@ export function startPortal(opts: PortalOptions) {
           removeReminder(db, Number(body.id ?? 0))
           res.writeHead(200, { 'content-type': 'application/json; charset=utf-8' })
           return res.end(JSON.stringify({ ok: true }))
+        }
+        if (req.method === 'GET' && path === '/portal/api/admin/ops') {
+          const body = await collectOps(db, defaultDataDir())
+          res.writeHead(200, { 'content-type': 'application/json; charset=utf-8' })
+          return res.end(JSON.stringify(body))
         }
         res.writeHead(404, { 'content-type': 'application/json; charset=utf-8' })
         return res.end(JSON.stringify({ error: 'unknown admin api' }))

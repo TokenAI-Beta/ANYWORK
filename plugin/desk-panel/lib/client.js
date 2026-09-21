@@ -1,4 +1,4 @@
-// DSH-ANYWORK 设置页（浏览器侧 cordis 插件）：工作台用量 + 企业知识库 + 公司盘 + 成员管理 + 通知
+// DSH-ANYWORK 设置页（浏览器侧 cordis 插件）：工作台用量 + 企业知识库 + 公司盘 + 成员管理 + 通知 + 公告板（侧栏入口）+ 运维
 // 产出格式与 dsh 官方客户端插件一致：window.__ModuleLoader__.load({ id, factory })
 // 依赖仅 react（平台种子模块），全部走闭包 require。
 window.__ModuleLoader__.load({
@@ -76,6 +76,55 @@ window.__ModuleLoader__.load({
       padding: "10px 12px",
       wordBreak: "break-all",
       fontSize: 13,
+    };
+    var footBtn = {
+      display: "flex",
+      alignItems: "center",
+      justifyContent: "flex-start",
+      gap: 6,
+      padding: "8px 12px",
+      border: 0,
+      borderRadius: 8,
+      background: "transparent",
+      color: "inherit",
+      cursor: "pointer",
+      fontSize: 13,
+      width: "100%",
+      textAlign: "left",
+    };
+    var panelStyle = {
+      position: "fixed",
+      left: 12,
+      bottom: 76,
+      width: 400,
+      maxWidth: "calc(100vw - 24px)",
+      maxHeight: "72vh",
+      overflowY: "auto",
+      background: "var(--dsw-alias-bg-layer-1, #fff)",
+      border: "1px solid var(--dsw-alias-border-l2, #ccd0d5)",
+      borderRadius: 12,
+      boxShadow: "0 10px 30px rgba(0,0,0,0.18)",
+      zIndex: 9999,
+      padding: 12,
+      display: "flex",
+      flexDirection: "column",
+      gap: 8,
+      fontSize: 13,
+      color: "var(--dsw-alias-label-primary, #1c1e21)",
+    };
+    var formCol = { display: "flex", flexDirection: "column", gap: 6 };
+    var textareaStyle = {
+      width: "100%",
+      boxSizing: "border-box",
+      padding: "8px 10px",
+      border: "1px solid var(--dsw-alias-border-l2, #ccd0d5)",
+      borderRadius: 8,
+      background: "var(--dsw-alias-bg-layer-1, #fff)",
+      color: "inherit",
+      fontSize: 13,
+      minHeight: 60,
+      resize: "vertical",
+      fontFamily: "inherit",
     };
 
     function fmt(n) {
@@ -1095,6 +1144,339 @@ window.__ModuleLoader__.load({
       return h("div", { style: Object.assign({}, wrap, { maxWidth: 640 }) }, kids);
     }
 
+    function OpsSection() {
+      var pair = React.useState({ phase: "loading", message: "" });
+      var st = pair[0];
+      var setSt = pair[1];
+
+      function fmtBytes(n) {
+        var v = Number(n || 0);
+        if (v < 1024) return v + " B";
+        if (v < 1024 * 1024) return (v / 1024).toFixed(1) + " KB";
+        if (v < 1024 * 1024 * 1024) return (v / 1024 / 1024).toFixed(1) + " MB";
+        return (v / 1024 / 1024 / 1024).toFixed(2) + " GB";
+      }
+      function fmtDur(sec) {
+        sec = Math.round(Number(sec || 0));
+        var d = Math.floor(sec / 86400);
+        var h = Math.floor((sec % 86400) / 3600);
+        var mm = Math.floor((sec % 3600) / 60);
+        if (d > 0) return d + " 天 " + h + " 小时";
+        if (h > 0) return h + " 小时 " + mm + " 分";
+        return mm + " 分钟";
+      }
+      function load() {
+        setSt({ phase: "loading", message: "" });
+        fetch("/portal/api/admin/ops", { headers: { accept: "application/json" } })
+          .then(function (r) {
+            if (r.status === 403) throw new Error("NOPERM");
+            if (r.status === 401) throw new Error("NOLOGIN");
+            if (!r.ok) throw new Error("HTTP " + r.status);
+            return r.json();
+          })
+          .then(function (d) {
+            setSt({ phase: "ready", data: d, message: "" });
+          })
+          .catch(function (e) {
+            setSt({ phase: "error", message: String((e && e.message) || e) });
+          });
+      }
+      React.useEffect(function () {
+        load();
+      }, []);
+
+      if (st.phase === "loading") return h("div", { style: wrap }, "读取运维状态中…");
+      if (st.phase === "error") {
+        if (st.message === "NOPERM")
+          return h("div", { style: wrap }, h("div", null, "本页仅管理员可用。"), h("div", { style: muted }, "用管理员账号从门户登录后查看。"));
+        return h("div", { style: wrap }, h("div", null, "读不到运维数据（" + st.message + "）。"), h("div", { style: muted }, "请从门户地址打开工作台再试。"));
+      }
+
+      var d = st.data;
+      var kids = [];
+
+      var svcRows = (d.services || []).map(function (s, i) {
+        return h(
+          "div",
+          { key: "s" + i, style: { display: "flex", justifyContent: "space-between", fontSize: 12, padding: "3px 0" } },
+          h("span", null, (s.active ? "● " : "○ ") + s.name),
+          h("span", { style: muted }, (s.pid ? "pid " + s.pid + " · " : "") + String(s.since || "").slice(4, 20))
+        );
+      });
+      kids.push(h("div", { key: "svc" }, h("div", { style: { fontWeight: 600 } }, "服务（systemd）"), svcRows));
+
+      var http = d.http || {};
+      var httpNodes = Object.keys(http).map(function (k, i) {
+        var v = http[k];
+        var ok = v === 200 || v === 302;
+        return h("span", { key: "h" + i, style: { marginRight: 12, fontSize: 12, color: ok ? undefined : "#c0392b" } }, k + " → " + v);
+      });
+      kids.push(h("div", { key: "http" }, h("div", { style: { fontWeight: 600 } }, "端口探活"), h("div", null, httpNodes)));
+
+      var b = d.backup || {};
+      kids.push(
+        h(
+          "div",
+          { key: "bk" },
+          h("div", { style: { fontWeight: 600 } }, "备份（" + (b.count || 0) + " 份 · 合计 " + fmtBytes(b.totalBytes) + "）"),
+          h(
+            "div",
+            { style: muted },
+            b.last
+              ? "最后：" + b.last.name + " · " + fmtBytes(b.last.size) + " · " + (b.last.mtimeLocal || String(b.last.mtime || "").slice(5, 16).replace("T", " "))
+              : "（还没有备份产物；定时器每日 03:40 跑）"
+          )
+        )
+      );
+
+      var dk = d.disk || {};
+      var dd = d.data || {};
+      kids.push(
+        h(
+          "div",
+          { key: "dk" },
+          h("div", { style: { fontWeight: 600 } }, "磁盘 / 数据"),
+          h("div", { style: muted }, "空闲 " + fmtBytes(dk.free) + " / 共 " + fmtBytes(dk.total) + " · desk.db " + fmtBytes(dd.dbBytes)),
+          h("div", { style: muted }, "知识库 " + fmtBytes(dd.kbBytes) + " · 公司盘 " + fmtBytes(dd.driveBytes))
+        )
+      );
+
+      var hst = d.host || {};
+      var dsk = d.desk || {};
+      kids.push(
+        h(
+          "div",
+          { key: "hst" },
+          h("div", { style: { fontWeight: 600 } }, "主机 / 进程"),
+          h(
+            "div",
+            { style: muted },
+            "WSL 已运行 " + fmtDur(hst.uptime) + " · 内存 " + fmtBytes(Number(hst.totalmem || 0) - Number(hst.freemem || 0)) + " / " + fmtBytes(hst.totalmem) + " · load " + Number(hst.load1 || 0).toFixed(2)
+          ),
+          h("div", { style: muted }, "工作台进程 " + fmtDur(dsk.uptime) + " · node " + (dsk.node || ""))
+        )
+      );
+
+      kids.push(h("div", { key: "rf" }, h("button", { style: btnLight, onClick: load }, "刷新")));
+      return h("div", { style: Object.assign({}, wrap, { maxWidth: 640 }) }, kids);
+    }
+
+    function AnnounceBoard(props) {
+      var wide = !!(props && props.wide);
+      var dataPair = React.useState({ phase: "loading", role: "member", announcements: [], feedback: [] });
+      var data = dataPair[0];
+      var setData = dataPair[1];
+      var openPair = React.useState(false);
+      var open = openPair[0];
+      var setOpen = openPair[1];
+      var unreadPair = React.useState(0);
+      var unread = unreadPair[0];
+      var setUnread = unreadPair[1];
+      var msgPair = React.useState({ kind: "", text: "" });
+      var msg = msgPair[0];
+      var setMsg = msgPair[1];
+      var tRef = React.useRef(null);
+      var bRef = React.useRef(null);
+      var fRef = React.useRef(null);
+
+      function load(markSeenNow) {
+        fetch("/portal/api/announcements", { headers: { accept: "application/json" } })
+          .then(function (r) {
+            if (!r.ok) throw new Error("HTTP " + r.status);
+            return r.json();
+          })
+          .then(function (d) {
+            var ann = d.announcements || [];
+            setData({ phase: "ready", role: d.role || "member", announcements: ann, feedback: d.feedback || [] });
+            var m = 0;
+            for (var i = 0; i < ann.length; i++) if (ann[i].id > m) m = ann[i].id;
+            if (markSeenNow && m > 0) window.localStorage.setItem("desk-announce-seen", String(m));
+            var seen = Number(window.localStorage.getItem("desk-announce-seen") || 0) || 0;
+            var n = 0;
+            for (var j = 0; j < ann.length; j++) if (ann[j].id > seen) n++;
+            setUnread(n);
+          })
+          .catch(function () {
+            setData({ phase: "error", role: "member", announcements: [], feedback: [] });
+          });
+      }
+      React.useEffect(function () {
+        load(false);
+      }, []);
+
+      function post(path, body, okText) {
+        setMsg({ kind: "info", text: "处理中…" });
+        fetch(path, { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify(body) })
+          .then(function (r) {
+            return r.json().then(function (d) {
+              return { status: r.status, d: d };
+            });
+          })
+          .then(function (res) {
+            if (res.status !== 200) {
+              setMsg({ kind: "err", text: (res.d && res.d.error) || "HTTP " + res.status });
+              return;
+            }
+            setMsg({ kind: "ok", text: okText });
+            if (tRef.current) tRef.current.value = "";
+            if (bRef.current) bRef.current.value = "";
+            if (fRef.current) fRef.current.value = "";
+            load(true);
+          })
+          .catch(function (e) {
+            setMsg({ kind: "err", text: String((e && e.message) || e) });
+          });
+      }
+
+      function toggle() {
+        var next = !open;
+        setOpen(next);
+        if (next) load(true);
+      }
+
+      var trigger = h(
+        "button",
+        { onClick: toggle, style: footBtn, title: "团队公告与意见反馈" },
+        "📢" + (wide ? " 公告" : "") + (unread > 0 ? "（" + unread + "）" : "")
+      );
+      if (!open) return h("div", null, trigger);
+
+      var kids = [];
+      kids.push(
+        h(
+          "div",
+          { key: "hd", style: { display: "flex", justifyContent: "space-between", alignItems: "center" } },
+          h("div", { style: { fontWeight: 700, fontSize: 14 } }, "团队公告"),
+          h("button", { style: btnSmall, onClick: toggle }, "关闭")
+        )
+      );
+      if (data.phase === "loading") kids.push(h("div", { key: "ld", style: muted }, "读取中…"));
+      if (data.phase === "error") kids.push(h("div", { key: "er", style: muted }, "读不到公告（需从门户地址打开且已登录）。"));
+      if (data.phase === "ready") {
+        if (data.role === "admin") {
+          kids.push(
+            h(
+              "div",
+              { key: "nf", style: formCol },
+              h("input", { ref: tRef, placeholder: "公告标题（可选）", style: field }),
+              h("textarea", { ref: bRef, placeholder: "公告内容…", style: textareaStyle }),
+              h(
+                "button",
+                {
+                  style: btnDark,
+                  onClick: function () {
+                    post("/portal/api/announcements/post", { title: tRef.current ? tRef.current.value : "", body: bRef.current ? bRef.current.value : "" }, "公告已发布");
+                  },
+                },
+                "发布公告"
+              )
+            )
+          );
+        }
+        var anns = [];
+        for (var i = 0; i < data.announcements.length; i++) {
+          var a = data.announcements[i];
+          anns.push(
+            h(
+              "div",
+              { key: "a" + a.id, style: rowBase },
+              h(
+                "div",
+                { style: { display: "flex", justifyContent: "space-between", alignItems: "center", gap: 8 } },
+                h("span", { style: { fontWeight: 600 } }, a.title || "(无标题)"),
+                data.role === "admin"
+                  ? h(
+                      "button",
+                      {
+                        style: btnSmall,
+                        onClick: (function (id) {
+                          return function () {
+                            if (window.confirm("删除该公告？")) post("/portal/api/announcements/rm", { id: id }, "已删除");
+                          };
+                        })(a.id),
+                      },
+                      "删除"
+                    )
+                  : null
+              ),
+              h("div", { style: Object.assign({ fontSize: 11 }, muted) }, String(a.created_at || "").slice(5, 16) + (a.created_by ? " · " + a.created_by : "")),
+              h("div", { style: { whiteSpace: "pre-wrap" } }, a.body)
+            )
+          );
+        }
+        kids.push(h("div", { key: "anns", style: { display: "flex", flexDirection: "column" } }, anns.length ? anns : h("div", { style: muted }, "暂无公告")));
+        kids.push(
+          h(
+            "div",
+            { key: "fdiv", style: { borderTop: "1px solid var(--dsw-alias-border-l2, #ccd0d5)", marginTop: 6, paddingTop: 8, fontWeight: 600 } },
+            "意见反馈" + (data.role === "admin" ? "（全员）" : "")
+          )
+        );
+        if (data.role !== "admin") {
+          kids.push(
+            h(
+              "div",
+              { key: "ff", style: formCol },
+              h("textarea", { ref: fRef, placeholder: "给管理员提意见 / 报问题…", style: textareaStyle }),
+              h(
+                "button",
+                {
+                  style: btnDark,
+                  onClick: function () {
+                    post("/portal/api/feedback", { text: fRef.current ? fRef.current.value : "" }, "反馈已提交，谢谢！");
+                  },
+                },
+                "提交反馈"
+              )
+            )
+          );
+        }
+        var fbs = [];
+        for (var j = 0; j < data.feedback.length; j++) {
+          var fb = data.feedback[j];
+          fbs.push(
+            h(
+              "div",
+              { key: "fb" + fb.id, style: rowBase },
+              h(
+                "div",
+                { style: { display: "flex", justifyContent: "space-between", alignItems: "center", gap: 8 } },
+                h("span", { style: Object.assign({ fontSize: 12 }, muted) }, (fb.username || "-") + " · " + String(fb.created_at || "").slice(5, 16)),
+                data.role === "admin"
+                  ? h(
+                      "button",
+                      {
+                        style: btnSmall,
+                        onClick: (function (id) {
+                          return function () {
+                            post("/portal/api/feedback/rm", { id: id }, "已删除");
+                          };
+                        })(fb.id),
+                      },
+                      "删除"
+                    )
+                  : null
+              ),
+              h("div", { style: { whiteSpace: "pre-wrap" } }, fb.text)
+            )
+          );
+        }
+        kids.push(
+          h(
+            "div",
+            { key: "fbs", style: { display: "flex", flexDirection: "column" } },
+            fbs.length ? fbs : h("div", { style: muted }, data.role === "admin" ? "暂无反馈" : "你还没有提过反馈")
+          )
+        );
+      }
+      if (msg.kind) {
+        kids.push(
+          h("div", { key: "msg", style: msg.kind === "err" ? { color: "#c0392b", fontSize: 12 } : Object.assign({ fontSize: 12 }, muted) }, msg.text)
+        );
+      }
+      return h("div", null, trigger, h("div", { key: "panel", style: panelStyle }, kids));
+    }
+
     var inject = ["slots"];
 
     function apply(ctx) {
@@ -1161,6 +1543,32 @@ window.__ModuleLoader__.load({
             },
           },
           NotifySection
+        );
+      });
+      ctx.slots.inject("sidebar.footer.action", function () {
+        return ctx.slots.register(
+          {
+            name: "sidebar.footer.action",
+            id: "desk-announce",
+            order: 90,
+            label: function () {
+              return "公告";
+            },
+          },
+          AnnounceBoard
+        );
+      });
+      ctx.slots.inject("settings.section", function () {
+        return ctx.slots.register(
+          {
+            name: "settings.section",
+            id: "desk-ops",
+            order: 100,
+            label: function () {
+              return "运维";
+            },
+          },
+          OpsSection
         );
       });
     }
