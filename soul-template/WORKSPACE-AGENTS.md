@@ -9,6 +9,7 @@
 - 长任务不要阻塞会话：用 bash 工具的后台方式（`run_in_background: true`）提交，随后用 `job_list` / `job_output` / `job_kill` 查看、收取与终止（会话头显示后台任务条）。
 - 重活可以派子代理：`subagent`（新建独立子代理）与 `subagent_fork`（叉出当前会话上下文的副本）跑子任务并回报；互相独立的方向可并行委派；用 `send_message` / `list_agents` 继续对话或点名。
 - 沉淀知识：把有价值的结论/口径/方法**沉淀成笔记**进共享知识库：`~/desk-data/bin/desk-kb "标题" "正文"`（长文：`desk-kb "标题"` 后从 stdin 读入；`desk-kb list` / `desk-kb search 关键词` 可查）。全员可搜（设置 →「知识库」）；删除仅管理员。
+- Codex 可用：编码/执行类子任务用 `subagent_codex` 工具委派给 Codex；大规模多路并行编排用 `workflow` 工具（子任务跑在 Codex 上；它不支持结构化输出 schema，用纯文本约定返回值）——都在本会话工作区里跑。
 - 团队 Soul（行为准则）在本实例 DSH_HOME 下的 AGENTS.md（全团队同源）。
 
 <!-- 由 DSH-ANYWORK scripts/apply-soul.sh 维护；成员自定义内容请追加在文件末尾。 -->
