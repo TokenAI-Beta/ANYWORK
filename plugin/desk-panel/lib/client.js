@@ -1,4 +1,4 @@
-// DSH-ANYWORK 工作台扩展（浏览器侧 cordis 插件）：设置页=用量/任务板/知识库（含沉淀）/公司盘/成员管理/通知/运维；侧栏=公告 + 助理 + 技能·连接器 + 自动化
+// DSH-ANYWORK 工作台扩展（浏览器侧 cordis 插件）：设置页=用量/任务板/会话管理/知识库（含沉淀）/公司盘/成员管理/通知/运维；侧栏=公告 + 助理 + 技能·连接器 + 自动化
 // 产出格式与 dsh 官方客户端插件一致：window.__ModuleLoader__.load({ id, factory })
 // 依赖仅 react（平台种子模块），全部走闭包 require。
 window.__ModuleLoader__.load({
@@ -2327,6 +2327,379 @@ window.__ModuleLoader__.load({
       );
     }
 
+    function SessionsMgrSection() {
+      var ownPair = React.useState({ phase: "loading", items: [] });
+      var own = ownPair[0];
+      var setOwn = ownPair[1];
+      var minePair = React.useState({ phase: "loading", requests: [] });
+      var mine = minePair[0];
+      var setMine = minePair[1];
+      var admPair = React.useState({ phase: "idle", me: "", pending: [], recent: [], members: [] });
+      var adm = admPair[0];
+      var setAdm = admPair[1];
+      var selPair = React.useState({ user: "", phase: "idle", sessions: [], note: "" });
+      var sel = selPair[0];
+      var setSel = selPair[1];
+      var msgPair = React.useState({ kind: "", text: "" });
+      var msg = msgPair[0];
+      var setMsg = msgPair[1];
+
+      function p2(x) {
+        return (x < 10 ? "0" : "") + x;
+      }
+
+      function sessLabel(s) {
+        var base = String((s && s.cwd) || "").split("/").filter(Boolean).pop() || "会话";
+        var d = new Date(Number(s && s.updatedAt) || 0);
+        var when = isNaN(d.getTime()) ? "" : p2(d.getMonth() + 1) + "-" + p2(d.getDate()) + " " + p2(d.getHours()) + ":" + p2(d.getMinutes());
+        return base + " · " + String((s && s.sessionId) || "").slice(8, 16) + " · " + when + (s && s.blank ? " · 未开始" : "");
+      }
+
+      function loadOwn() {
+        fetch("/api/session.list", {
+          method: "POST",
+          headers: { "content-type": "application/json" },
+          body: JSON.stringify({ type: "client-request", rpcId: "panel-" + Date.now(), method: "session.list", payload: {} }),
+        })
+          .then(function (r) { return r.json(); })
+          .then(function (d) {
+            var items = d && d.result && d.result.value && d.result.value.items;
+            setOwn({ phase: "ready", items: Array.isArray(items) ? items : [] });
+          })
+          .catch(function () { setOwn({ phase: "error", items: [] }); });
+      }
+
+      function loadMine() {
+        fetch("/portal/api/session-mgr/mine", { headers: { accept: "application/json" } })
+          .then(function (r) { return r.json(); })
+          .then(function (d) { setMine({ phase: "ready", requests: (d && d.requests) || [] }); })
+          .catch(function () { setMine({ phase: "error", requests: [] }); });
+      }
+
+      function loadAdmin() {
+        fetch("/portal/api/admin/session-mgr", { headers: { accept: "application/json" } })
+          .then(function (r) {
+            if (r.status === 403) return null;
+            if (!r.ok) throw new Error("HTTP " + r.status);
+            return r.json();
+          })
+          .then(function (d) {
+            if (!d) { setAdm({ phase: "member", me: "", pending: [], recent: [], members: [] }); return; }
+            setAdm({ phase: "ready", me: d.me || "", pending: d.pending || [], recent: d.recent || [], members: d.members || [] });
+          })
+          .catch(function () { setAdm({ phase: "member", me: "", pending: [], recent: [], members: [] }); });
+      }
+
+      function loadMember(u) {
+        setSel({ user: u, phase: "loading", sessions: [], note: "" });
+        fetch("/portal/api/admin/session-mgr/list?user=" + encodeURIComponent(u), { headers: { accept: "application/json" } })
+          .then(function (r) { return r.json(); })
+          .then(function (d) {
+            if (d && d.error) { setSel({ user: u, phase: "error", sessions: [], note: d.error }); return; }
+            setSel({ user: u, phase: "ready", sessions: (d && d.sessions) || [], note: "" });
+          })
+          .catch(function (e) { setSel({ user: u, phase: "error", sessions: [], note: String((e && e.message) || e) }); });
+      }
+
+      React.useEffect(function () {
+        loadOwn();
+        loadMine();
+        loadAdmin();
+      }, []);
+
+      function post(path, body, okText, after) {
+        setMsg({ kind: "info", text: "处理中…" });
+        fetch(path, { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify(body) })
+          .then(function (r) { return r.json().then(function (d) { return { status: r.status, d: d }; }); })
+          .then(function (res) {
+            if (res.status !== 200 || (res.d && res.d.error)) {
+              setMsg({ kind: "err", text: (res.d && res.d.error) || "HTTP " + res.status });
+              return;
+            }
+            setMsg({ kind: "ok", text: okText });
+            if (after) after();
+          })
+          .catch(function (e) { setMsg({ kind: "err", text: String((e && e.message) || e) }); });
+      }
+
+      function pendingFor(sessionId) {
+        for (var i = 0; i < mine.requests.length; i++) {
+          if (mine.requests[i].session_id === sessionId && mine.requests[i].status === "pending") return mine.requests[i];
+        }
+        return null;
+      }
+
+      function statusChip(st) {
+        if (st === "pending") return "⏳ 待审批";
+        if (st === "approved") return "✅ 已批准";
+        if (st === "rejected") return "❌ 已驳回";
+        if (st === "cancelled") return "已撤销";
+        return String(st);
+      }
+
+      var kids = [];
+      kids.push(h("div", { key: "t", style: { fontSize: 15, fontWeight: 700 } }, "会话管理"));
+      kids.push(
+        h(
+          "div",
+          { key: "sub", style: Object.assign({ fontSize: 12 }, muted) },
+          "删除需管理员确认：成员提交申请 → 管理员批准后执行；管理员可直接删除。执行删除时，对应实例会短暂重启（约 5~10 秒）。"
+        )
+      );
+
+      kids.push(h("div", { key: "own-t", style: { fontSize: 15, fontWeight: 700, marginTop: 10 } }, "我的会话（" + own.items.length + "）"));
+      if (own.phase === "loading") kids.push(h("div", { key: "own-ld", style: muted }, "读取中…"));
+      else if (own.phase === "error") kids.push(h("div", { key: "own-er", style: muted }, "读不到会话列表（需从工作台页面打开）。"));
+      else if (!own.items.length) kids.push(h("div", { key: "own-none", style: muted }, "暂无会话。"));
+      else {
+        var orows = [];
+        own.items.forEach(function (s) {
+          var pend = pendingFor(s.sessionId);
+          var ops = [];
+          if (adm.phase === "ready") {
+            ops.push(
+              h(
+                "button",
+                {
+                  key: "del",
+                  style: btnDanger,
+                  onClick: function () {
+                    if (!window.confirm("直接删除该会话？（管理员直删，实例将短暂重启）")) return;
+                    post("/portal/api/admin/session-mgr/delete", { user: adm.me, session_id: s.sessionId }, "已删除，实例重启中（约 5~10 秒）", function () {
+                      setTimeout(loadOwn, 11000);
+                    });
+                  },
+                },
+                "删除"
+              )
+            );
+            if (pend) {
+              ops.push(
+                h(
+                  "button",
+                  {
+                    key: "cancel",
+                    style: btnLight,
+                    onClick: function () {
+                      post("/portal/api/session-mgr/cancel", { id: pend.id }, "已撤销申请", loadMine);
+                    },
+                  },
+                  "撤销"
+                )
+              );
+            }
+          } else if (pend) {
+            ops.push(h("span", { key: "pend", style: Object.assign({ fontSize: 12 }, muted) }, "⏳ 待管理员确认"));
+            ops.push(
+              h(
+                "button",
+                {
+                  key: "cancel",
+                  style: btnLight,
+                  onClick: function () {
+                    post("/portal/api/session-mgr/cancel", { id: pend.id }, "已撤销申请", loadMine);
+                  },
+                },
+                "撤销"
+              )
+            );
+          } else {
+            ops.push(
+              h(
+                "button",
+                {
+                  key: "req",
+                  style: btnSmall,
+                  onClick: function () {
+                    post("/portal/api/session-mgr/request", { session_id: s.sessionId, title: sessLabel(s) }, "已提交，等待管理员确认", loadMine);
+                  },
+                },
+                "申请删除"
+              )
+            );
+          }
+          orows.push(
+            h(
+              "div",
+              { key: s.sessionId, style: rowBase },
+              h(
+                "div",
+                { style: { display: "flex", justifyContent: "space-between", alignItems: "center", gap: 8 } },
+                h(
+                  "span",
+                  null,
+                  sessLabel(s),
+                  s.running ? h("span", { style: Object.assign({ fontSize: 12 }, muted) }, " · ● 进行中") : null,
+                  s.parentSessionId ? h("span", { style: Object.assign({ fontSize: 12 }, muted) }, " · 子会话") : null
+                ),
+                h("span", { style: { display: "flex", gap: 6, alignItems: "center" } }, ops)
+              ),
+              h("div", { style: Object.assign({ fontSize: 12 }, muted) }, (s.cwd || "-") + (s.agentPreset ? " · 预设 " + s.agentPreset : ""))
+            )
+          );
+        });
+        kids.push(h("div", { key: "own-rows", style: {} }, orows));
+      }
+
+      kids.push(h("div", { key: "mine-t", style: { fontSize: 15, fontWeight: 700, marginTop: 10 } }, "我的申请"));
+      var qrows = [];
+      mine.requests.forEach(function (q) {
+        qrows.push(
+          h(
+            "div",
+            { key: "q" + q.id, style: rowBase },
+            h(
+              "div",
+              { style: { display: "flex", justifyContent: "space-between", gap: 8 } },
+              h("span", null, (q.title || q.session_id) + " "),
+              h("span", { style: Object.assign({ fontSize: 12 }, muted) }, statusChip(q.status) + (q.decided_by ? "（" + q.decided_by + "）" : ""))
+            ),
+            h("div", { style: Object.assign({ fontSize: 12 }, muted) }, String(q.session_id).slice(0, 26) + " · 申请于 " + String(q.created_at || "").slice(5, 16))
+          )
+        );
+      });
+      kids.push(h("div", { key: "mine-rows", style: {} }, qrows.length ? qrows : h("div", { style: muted }, "暂无申请记录。")));
+
+      if (adm.phase === "ready") {
+        kids.push(h("div", { key: "adm-t", style: { fontSize: 15, fontWeight: 700, marginTop: 10 } }, "待审批（" + adm.pending.length + "）"));
+        var prows = [];
+        adm.pending.forEach(function (q) {
+          prows.push(
+            h(
+              "div",
+              { key: "p" + q.id, style: rowBase },
+              h(
+                "div",
+                { style: { display: "flex", justifyContent: "space-between", alignItems: "center", gap: 8 } },
+                h("span", null, q.username + "：「" + (q.title || q.session_id) + "」"),
+                h(
+                  "span",
+                  { style: { display: "flex", gap: 6 } },
+                  h(
+                    "button",
+                    {
+                      style: btnDark,
+                      onClick: function () {
+                        if (!window.confirm("批准并删除 " + q.username + " 的该会话？（对方实例将短暂重启）")) return;
+                        post("/portal/api/admin/session-mgr/decide", { id: q.id, action: "approve" }, "已批准并执行删除（实例约 5~10 秒后自动重启）", function () {
+                          loadMine();
+                          loadAdmin();
+                        });
+                      },
+                    },
+                    "批准删除"
+                  ),
+                  h(
+                    "button",
+                    {
+                      style: btnLight,
+                      onClick: function () {
+                        post("/portal/api/admin/session-mgr/decide", { id: q.id, action: "reject" }, "已驳回", function () {
+                          loadAdmin();
+                        });
+                      },
+                    },
+                    "驳回"
+                  )
+                )
+              ),
+              h("div", { style: Object.assign({ fontSize: 12 }, muted) }, String(q.session_id).slice(0, 26) + " · " + String(q.created_at || "").slice(5, 16))
+            )
+          );
+        });
+        kids.push(h("div", { key: "adm-pending", style: {} }, prows.length ? prows : h("div", { style: muted }, "没有待审批的申请。")));
+
+        kids.push(h("div", { key: "m-t", style: { fontSize: 15, fontWeight: 700, marginTop: 10 } }, "成员会话"));
+        kids.push(
+          h(
+            "div",
+            { key: "m-bar", style: { display: "flex", gap: 6, marginTop: 4, flexWrap: "wrap" } },
+            h(
+              "select",
+              {
+                value: sel.user,
+                onChange: function (e) {
+                  setSel({ user: e.target.value, phase: "idle", sessions: [], note: "" });
+                },
+                style: field,
+              },
+              h("option", { value: "" }, "选择成员…"),
+              adm.members.map(function (m) {
+                return h("option", { key: m.username, value: m.username }, m.username + (m.agent_port ? "" : "（无实例）"));
+              })
+            ),
+            h(
+              "button",
+              {
+                style: btnLight,
+                onClick: function () {
+                  if (!sel.user) {
+                    setMsg({ kind: "err", text: "先选择成员" });
+                    return;
+                  }
+                  loadMember(sel.user);
+                },
+              },
+              "加载会话"
+            )
+          )
+        );
+        if (sel.phase === "loading") kids.push(h("div", { key: "m-ld", style: muted }, "读取中…"));
+        else if (sel.phase === "error") kids.push(h("div", { key: "m-er", style: muted }, sel.note || "读取失败"));
+        else if (sel.phase === "ready") {
+          var mrows = [];
+          sel.sessions.forEach(function (s) {
+            mrows.push(
+              h(
+                "div",
+                { key: "ms" + s.sessionId, style: rowBase },
+                h(
+                  "div",
+                  { style: { display: "flex", justifyContent: "space-between", alignItems: "center", gap: 8 } },
+                  h("span", null, sessLabel(s), s.running ? h("span", { style: Object.assign({ fontSize: 12 }, muted) }, " · ●") : null),
+                  h(
+                    "button",
+                    {
+                      style: btnDanger,
+                      onClick: function () {
+                        if (!window.confirm("直接删除 " + sel.user + " 的该会话？")) return;
+                        post("/portal/api/admin/session-mgr/delete", { user: sel.user, session_id: s.sessionId }, "已删除，实例重启中（约 5~10 秒）", function () {
+                          setTimeout(function () {
+                            loadMember(sel.user);
+                          }, 11000);
+                        });
+                      },
+                    },
+                    "直接删除"
+                  )
+                ),
+                h("div", { style: Object.assign({ fontSize: 12 }, muted) }, (s.cwd || "-") + " · " + String(s.sessionId).slice(8, 26))
+              )
+            );
+          });
+          kids.push(h("div", { key: "m-rows", style: {} }, mrows.length ? mrows : h("div", { style: muted }, "该成员暂无会话。")));
+        }
+
+        if (adm.recent.length) {
+          kids.push(h("div", { key: "r-t", style: { fontSize: 15, fontWeight: 700, marginTop: 10 } }, "最近处理"));
+          adm.recent.forEach(function (q) {
+            kids.push(
+              h(
+                "div",
+                { key: "r" + q.id, style: { fontSize: 12, color: "var(--dsw-alias-label-tertiary, #8a8f98)", padding: "3px 0" } },
+                q.username + " · " + (q.title || q.session_id) + " → " + statusChip(q.status) + (q.decided_by ? "（" + q.decided_by + "）" : "") + " · " + String(q.decided_at || q.created_at || "").slice(5, 16)
+              )
+            );
+          });
+        }
+      }
+
+      if (msg.kind) {
+        kids.push(h("div", { key: "msg", style: msg.kind === "err" ? { color: "#c0392b", fontSize: 12, marginTop: 8 } : Object.assign({ fontSize: 12, marginTop: 8 }, muted) }, msg.text));
+      }
+      return h("div", { style: Object.assign({}, wrap, { maxWidth: 640 }) }, kids);
+    }
+
     function TaskBoard() {
       var pair = React.useState({ phase: "loading", role: "member", me: "", members: [], tasks: [] });
       var st = pair[0];
@@ -2551,6 +2924,19 @@ window.__ModuleLoader__.load({
             },
           },
           DeskUsageSection
+        );
+      });
+      ctx.slots.inject("settings.section", function () {
+        return ctx.slots.register(
+          {
+            name: "settings.section",
+            id: "desk-sessions",
+            order: 58,
+            label: function () {
+              return "会话管理";
+            },
+          },
+          SessionsMgrSection
         );
       });
       ctx.slots.inject("settings.section", function () {

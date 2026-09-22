@@ -146,6 +146,18 @@ function migrate(db: DatabaseSync): void {
       updated_at TEXT NOT NULL DEFAULT (datetime('now'))
     );
 
+    CREATE TABLE IF NOT EXISTS session_del_requests (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      user_id INTEGER NOT NULL,
+      username TEXT NOT NULL,
+      session_id TEXT NOT NULL,
+      title TEXT,
+      status TEXT NOT NULL DEFAULT 'pending',
+      created_at TEXT NOT NULL DEFAULT (datetime('now')),
+      decided_by TEXT,
+      decided_at TEXT
+    );
+
     CREATE INDEX IF NOT EXISTS idx_usage_user_ts ON usage_events(user_id, ts);
     CREATE INDEX IF NOT EXISTS idx_keys_hash ON api_keys(token_hash);
     CREATE INDEX IF NOT EXISTS idx_sessions_hash ON login_sessions(token_hash);

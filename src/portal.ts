@@ -20,6 +20,7 @@ import { addNotifyRoute, addReminder, dispatchNotify, listNotifyLog, listNotifyR
 import { defaultDataDir } from './db.ts'
 import { collectConnectors, collectPresets, collectSkills, readSkill } from './panel.ts'
 import { collectOps } from './ops.ts'
+import { deleteSession, listUserSessions } from './session-mgr.ts'
 import { createReadStream, existsSync, readFileSync, statSync, writeFileSync } from 'node:fs'
 import { join } from 'node:path'
 import { homedir } from 'node:os'
@@ -837,6 +838,71 @@ export function startPortal(opts: PortalOptions) {
         res.writeHead(200, { 'content-type': 'application/json; charset=utf-8' })
         return res.end(JSON.stringify({ ok: true, role: user.role, reminders: listReminders(db), recent: listRemindersSent(db, 5) }))
       }
+      // —— 会话管理（成员：申请删除 / 撤销；管理员审批见 /admin 区）——
+      if (req.method === 'GET' && path === '/portal/api/session-mgr/mine') {
+        if (!user) {
+          res.writeHead(401, { 'content-type': 'application/json' })
+          return res.end(JSON.stringify({ error: 'login required' }))
+        }
+        const reqs = db
+          .prepare(`SELECT id, session_id, title, status, created_at, decided_by, decided_at FROM session_del_requests WHERE user_id = ? ORDER BY id DESC LIMIT 50`)
+          .all(user.id)
+        res.writeHead(200, { 'content-type': 'application/json; charset=utf-8' })
+        return res.end(JSON.stringify({ ok: true, requests: reqs }))
+      }
+      if (req.method === 'POST' && path === '/portal/api/session-mgr/request') {
+        if (!user) {
+          res.writeHead(401, { 'content-type': 'application/json' })
+          return res.end(JSON.stringify({ error: 'login required' }))
+        }
+        let sbody: Record<string, unknown> = {}
+        try {
+          const v = JSON.parse(await readBody(req)) as unknown
+          if (v && typeof v === 'object') sbody = v as Record<string, unknown>
+        } catch {
+          sbody = {}
+        }
+        const sessionId = String(sbody.session_id ?? '').trim()
+        const title = String(sbody.title ?? '').trim().slice(0, 160)
+        const reply = (obj: Record<string, unknown>): void => {
+          res.writeHead(200, { 'content-type': 'application/json; charset=utf-8' })
+          res.end(JSON.stringify(obj))
+        }
+        if (!/^session-[0-9a-fA-F-]{8,64}$/.test(sessionId)) return reply({ error: '会话 ID 不合法' })
+        const dup = db
+          .prepare(`SELECT id FROM session_del_requests WHERE user_id = ? AND session_id = ? AND status = 'pending'`)
+          .get(user.id, sessionId)
+        if (dup) return reply({ error: '该会话已有一条待审批的申请' })
+        db.prepare(`INSERT INTO session_del_requests (user_id, username, session_id, title) VALUES (?, ?, ?, ?)`).run(
+          user.id,
+          user.username,
+          sessionId,
+          title || null,
+        )
+        dispatchNotify(db, {
+          title: '会话删除申请',
+          text: `成员 ${user.username} 请求删除会话「${title || sessionId}」——到 工作台 设置 → 会话管理 审批。`,
+          source: 'session-mgr',
+        }).catch(() => {})
+        return reply({ ok: true })
+      }
+      if (req.method === 'POST' && path === '/portal/api/session-mgr/cancel') {
+        if (!user) {
+          res.writeHead(401, { 'content-type': 'application/json' })
+          return res.end(JSON.stringify({ error: 'login required' }))
+        }
+        let cbody: Record<string, unknown> = {}
+        try {
+          const v = JSON.parse(await readBody(req)) as unknown
+          if (v && typeof v === 'object') cbody = v as Record<string, unknown>
+        } catch {
+          cbody = {}
+        }
+        const id = Number(cbody.id ?? 0)
+        db.prepare(`UPDATE session_del_requests SET status = 'cancelled', decided_at = datetime('now') WHERE id = ? AND user_id = ? AND status = 'pending'`).run(id, user.id)
+        res.writeHead(200, { 'content-type': 'application/json; charset=utf-8' })
+        return res.end(JSON.stringify({ ok: true }))
+      }
       if (path === '/portal/api/tasks' && req.method === 'GET') {
         if (!user) {
           res.writeHead(401, { 'content-type': 'application/json' })
@@ -1143,6 +1209,64 @@ export function startPortal(opts: PortalOptions) {
           if (cur) setChannelEnabled(db, name, cur.enabled !== 1)
           res.writeHead(200, { 'content-type': 'application/json; charset=utf-8' })
           return res.end(JSON.stringify({ name, enabled: cur ? cur.enabled !== 1 : false }))
+        }
+        if (req.method === 'GET' && path === '/portal/api/admin/session-mgr') {
+          const pending = db
+            .prepare(`SELECT id, user_id, username, session_id, title, status, created_at FROM session_del_requests WHERE status = 'pending' ORDER BY id DESC`)
+            .all()
+          const recent = db
+            .prepare(`SELECT id, username, session_id, title, status, created_at, decided_by, decided_at FROM session_del_requests WHERE status != 'pending' ORDER BY id DESC LIMIT 20`)
+            .all()
+          const members = db.prepare(`SELECT username, agent_port FROM users WHERE status = 'active' ORDER BY id`).all()
+          res.writeHead(200, { 'content-type': 'application/json; charset=utf-8' })
+          return res.end(JSON.stringify({ ok: true, me: user.username, pending, recent, members }))
+        }
+        if (req.method === 'POST' && path === '/portal/api/admin/session-mgr/decide') {
+          const body = await readJsonBody()
+          const id = Number(body.id ?? 0)
+          const action = String(body.action ?? '')
+          const reply = (obj: Record<string, unknown>): void => {
+            res.writeHead(200, { 'content-type': 'application/json; charset=utf-8' })
+            res.end(JSON.stringify(obj))
+          }
+          if (action !== 'approve' && action !== 'reject') return reply({ error: 'action 仅支持 approve / reject' })
+          const row = db.prepare(`SELECT * FROM session_del_requests WHERE id = ? AND status = 'pending'`).get(id) as
+            | { username: string; session_id: string }
+            | undefined
+          if (!row) return reply({ error: '申请不存在或已处理' })
+          if (action === 'approve') {
+            const r = deleteSession(row.username, row.session_id)
+            if ('error' in r) return reply({ error: r.error })
+            db.prepare(`UPDATE session_del_requests SET status = 'approved', decided_by = ?, decided_at = datetime('now') WHERE id = ?`).run(user.username, id)
+            return reply({ ok: true, deleted: true })
+          }
+          db.prepare(`UPDATE session_del_requests SET status = 'rejected', decided_by = ?, decided_at = datetime('now') WHERE id = ?`).run(user.username, id)
+          return reply({ ok: true, rejected: true })
+        }
+        if (req.method === 'GET' && path === '/portal/api/admin/session-mgr/list') {
+          const target = String(url.searchParams.get('user') ?? '').trim()
+          const reply = (obj: Record<string, unknown>): void => {
+            res.writeHead(200, { 'content-type': 'application/json; charset=utf-8' })
+            res.end(JSON.stringify(obj))
+          }
+          if (!/^[a-z0-9_-]{1,32}$/.test(target)) return reply({ error: '用户名不合法' })
+          const r = await listUserSessions(db, target)
+          if ('error' in r) return reply({ error: r.error })
+          return reply({ ok: true, sessions: r.sessions })
+        }
+        if (req.method === 'POST' && path === '/portal/api/admin/session-mgr/delete') {
+          const body = await readJsonBody()
+          const target = String(body.user ?? '').trim()
+          const sessionId = String(body.session_id ?? '').trim()
+          const reply = (obj: Record<string, unknown>): void => {
+            res.writeHead(200, { 'content-type': 'application/json; charset=utf-8' })
+            res.end(JSON.stringify(obj))
+          }
+          const exists = db.prepare(`SELECT username FROM users WHERE username = ?`).get(target)
+          if (!exists) return reply({ error: '成员不存在' })
+          const r = deleteSession(target, sessionId)
+          if ('error' in r) return reply({ error: r.error })
+          return reply({ ok: true, killed: r.killed })
         }
         if (req.method === 'GET' && path === '/portal/api/admin/upstream') {
           res.writeHead(200, { 'content-type': 'application/json; charset=utf-8' })
