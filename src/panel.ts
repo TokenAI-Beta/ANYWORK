@@ -143,6 +143,23 @@ export function collectConnectors(db: DatabaseSync): ConnectorInfo[] {
     detail: routes.length ? `路由 ${routes.length} 条，启用 ${en.length} 条` + (en.length ? '：' + en.map((r) => r.name).join('、') : '') : '未配置通知路由',
   })
 
+  const tg = routes.filter((r) => r.kind === 'telegram')
+  items.push({
+    name: 'Telegram（连接器）',
+    ok: tg.length ? tg.some((r) => r.enabled === 1) : null,
+    detail: tg.length
+      ? `Bot API · 路由 ${tg.length} 条（启用 ${tg.filter((r) => r.enabled === 1).length}）：${tg.map((r) => r.name).join('、')}`
+      : '未配置 —— 设置 → 通知 添加：bot_token|chat_id（@BotFather 建机器人；直连不通可加 |api_base）',
+  })
+  const wa = routes.filter((r) => r.kind === 'whatsapp')
+  items.push({
+    name: 'WhatsApp（连接器）',
+    ok: wa.length ? wa.some((r) => r.enabled === 1) : null,
+    detail: wa.length
+      ? `路由 ${wa.length} 条（启用 ${wa.filter((r) => r.enabled === 1).length}）：${wa.map((r) => r.name).join('、')}`
+      : '未配置 —— 支持 CallMeBot（免费个人）/ green-api / UltraMsg 任一网关',
+  })
+
   const codexCandidates = [
     join(homedir(), 'opt', 'node-v24.19.0-linux-x64', 'bin', 'codex'),
     join(homedir(), '.local', 'bin', 'codex'),

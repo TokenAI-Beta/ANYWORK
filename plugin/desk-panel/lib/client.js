@@ -1210,7 +1210,7 @@ window.__ModuleLoader__.load({
                 "span",
                 null,
                 r.name + " ",
-                h("span", { style: Object.assign({ fontSize: 12 }, muted) }, (r.kind === "webhook" ? "webhook" : "hermes") + (r.enabled === 1 ? " · 启用" : " · 停用"))
+                h("span", { style: Object.assign({ fontSize: 12 }, muted) }, String(r.kind || "-") + (r.enabled === 1 ? " · 启用" : " · 停用"))
               ),
               h(
                 "span",
@@ -1242,7 +1242,16 @@ window.__ModuleLoader__.load({
                 )
               )
             ),
-            h("div", { style: Object.assign({ fontSize: 12 }, muted) }, String(r.target || "").length > 72 ? String(r.target).slice(0, 72) + "…" : String(r.target || ""))
+            h("div", { style: Object.assign({ fontSize: 12 }, muted) }, (function () {
+              var t = String(r.target || "");
+              if (r.kind === "telegram" || r.kind === "whatsapp") {
+                var p = t.split("|");
+                if (r.kind === "telegram") return "token=***|chat=" + (p[1] || "") + (p[2] ? "|" + p[2] : "");
+                if (p[0] === "callmebot") return "callmebot|***|" + (p[2] || "");
+                return (p[0] || "") + "|" + (p[1] || "") + "|***|" + (p[3] || "") + (p[4] ? "|" + p[4] : "");
+              }
+              return t.length > 72 ? t.slice(0, 72) + "…" : t;
+            })())
           )
         );
       }
@@ -1283,14 +1292,32 @@ window.__ModuleLoader__.load({
               style: field,
             },
             h("option", { value: "webhook" }, "webhook —— 企业微信 / 钉钉 / 任意 HTTP 端点"),
-            h("option", { value: "hermes" }, "hermes —— 经 通知平台（weixin 微信等）")
+            h("option", { value: "hermes" }, "hermes —— 经 通知平台（weixin 微信等）"),
+            h("option", { value: "telegram" }, "telegram —— Bot API（BotFather 机器人，直连/反代）"),
+            h("option", { value: "whatsapp" }, "whatsapp —— CallMeBot（免费个人）/ green-api / UltraMsg")
           ),
           h("input", { ref: nRef, placeholder: "名称（英文小写，如 wecom-group / wechat-me）", style: field }),
           h("input", {
             ref: tRef,
-            placeholder: kind === "webhook" ? "https://qyapi.weixin.qq.com/cgi-bin/webhook/send?key=…" : "weixin",
+            placeholder:
+              kind === "webhook"
+                ? "https://qyapi.weixin.qq.com/cgi-bin/webhook/send?key=…"
+                : kind === "hermes"
+                  ? "weixin"
+                  : kind === "telegram"
+                    ? "bot_token|chat_id（可选 |api_base 反代）"
+                    : "callmebot|apikey|手机号 或 greenapi|id|token|chatId 或 ultramsg|id|token|to",
             style: field,
           }),
+          kind === "telegram" || kind === "whatsapp"
+            ? h(
+                "div",
+                { style: Object.assign({ fontSize: 12 }, muted) },
+                kind === "telegram"
+                  ? "向 @BotFather 要 bot_token；chat_id 用 @频道名或数字 ID；直连失败时追加 |api_base 指向反代。"
+                  : "CallMeBot：给 +34 644 51 95 23 发消息索取 apikey（免费、个人通知）；green-api / UltraMsg 为商业网关（实例 ID + 令牌 + 收件人）。"
+              )
+            : null,
           h(
             "button",
             {

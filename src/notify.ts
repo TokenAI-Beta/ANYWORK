@@ -13,7 +13,7 @@ const HERMES_CLI = process.env.DESK_HERMES_CLI || '/mnt/d/hermes/hermes-agent/ve
 export interface NotifyRoute {
   id: number
   name: string
-  kind: string // 'webhook' | 'hermes'
+  kind: string // 'webhook' | 'hermes' | 'telegram' | 'whatsapp'
   target: string
   enabled: number
   created_at: string
@@ -41,9 +41,22 @@ export function addNotifyRoute(db: DatabaseSync, r: { name: string; kind: string
   const kind = r.kind.trim()
   const target = r.target.trim()
   if (!/^[a-z0-9][a-z0-9_-]{0,31}$/.test(name)) return { error: '名称请用英文小写（如 wechat-me / wecom-group）' }
-  if (kind !== 'webhook' && kind !== 'hermes') return { error: 'kind 只支持 webhook / hermes' }
+  if (kind !== 'webhook' && kind !== 'hermes' && kind !== 'telegram' && kind !== 'whatsapp')
+    return { error: 'kind 只支持 webhook / hermes / telegram / whatsapp' }
   if (!target) return { error: '目标不能为空' }
   if (kind === 'webhook' && !/^https?:\/\//.test(target)) return { error: 'webhook 目标需为 http(s):// 开头的 URL' }
+  if (kind === 'telegram') {
+    const p = target.split('|')
+    if (!p[0] || !p[1]) return { error: 'telegram 目标格式：bot_token|chat_id（可加 |api_base）' }
+  }
+  if (kind === 'whatsapp') {
+    const p = target.split('|').map((x) => x.trim())
+    const shapeOk =
+      (p[0] === 'callmebot' && !!p[1] && !!p[2]) ||
+      (p[0] === 'greenapi' && !!p[1] && !!p[2] && !!p[3]) ||
+      (p[0] === 'ultramsg' && !!p[1] && !!p[2] && !!p[3])
+    if (!shapeOk) return { error: 'whatsapp 格式：callmebot|apikey|手机号 或 greenapi|id|token|chatId 或 ultramsg|id|token|to' }
+  }
   if (db.prepare(`SELECT id FROM notify_routes WHERE name = ?`).get(name)) return { error: '同名通道已存在' }
   db.prepare(`INSERT INTO notify_routes (name, kind, target) VALUES (?, ?, ?)`).run(name, kind, target)
   return { ok: true }
@@ -87,6 +100,97 @@ function sendViaHermes(target: string, msg: NotifyMsg): Promise<string> {
   })
 }
 
+// Telegram（Bot API；target = bot_token|chat_id[|api_base]，api_base 可指反代）
+async function sendViaTelegram(target: string, msg: NotifyMsg): Promise<string> {
+  const parts = target.split('|')
+  const token = (parts[0] || '').trim()
+  const chat = (parts[1] || '').trim()
+  const base = (parts[2] || 'https://api.telegram.org').trim().replace(/\/+$/, '')
+  if (!token || !chat) return '失败：telegram 目标格式应为 bot_token|chat_id[|api_base]'
+  const text = (msg.title ? `【${msg.title}】\n` : '') + msg.text
+  const ctrl = new AbortController()
+  const t = setTimeout(() => ctrl.abort(), 12000)
+  try {
+    const r = await fetch(`${base}/bot${token}/sendMessage`, {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ chat_id: chat, text, disable_web_page_preview: true }),
+      signal: ctrl.signal,
+    })
+    const b = await r.text()
+    if (!r.ok) return `失败：HTTP ${r.status} ${b.slice(0, 120)}`
+    return `ok tg:${chat}`
+  } catch (e) {
+    const cause = (e as { cause?: { message?: string } })?.cause?.message
+    return `失败：${String(cause || (e as Error)?.message || e).slice(0, 120)}`
+  } finally {
+    clearTimeout(t)
+  }
+}
+
+// WhatsApp（三种网关；target = provider|字段…[|base]）
+async function sendViaWhatsapp(target: string, msg: NotifyMsg): Promise<string> {
+  const parts = target.split('|').map((x) => x.trim())
+  const provider = parts[0]
+  const text = (msg.title ? `【${msg.title}】\n` : '') + msg.text
+  const ctrl = new AbortController()
+  const t = setTimeout(() => ctrl.abort(), 12000)
+  try {
+    if (provider === 'callmebot') {
+      const key = parts[1] || ''
+      const phone = parts[2] || ''
+      const base = (parts[3] || 'https://api.callmebot.com').replace(/\/+$/, '')
+      if (!key || !phone) return '失败：whatsapp 目标格式应为 callmebot|apikey|手机号[|base]'
+      const r = await fetch(
+        `${base}/whatsapp.php?phone=${encodeURIComponent(phone)}&text=${encodeURIComponent(text)}&apikey=${encodeURIComponent(key)}`,
+        { signal: ctrl.signal },
+      )
+      const b = await r.text()
+      if (!r.ok || /error/i.test(b.slice(0, 400))) return `失败：HTTP ${r.status} ${b.slice(0, 100)}`
+      return `ok wa:${provider}:${phone}`
+    }
+    if (provider === 'greenapi') {
+      const id = parts[1] || ''
+      const token = parts[2] || ''
+      const chat = parts[3] || ''
+      const base = (parts[4] || 'https://api.green-api.com').replace(/\/+$/, '')
+      if (!id || !token || !chat) return '失败：whatsapp 目标格式应为 greenapi|idInstance|apiToken|chatId[|base]'
+      const r = await fetch(`${base}/waInstance${id}/sendMessage/${token}`, {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({ chatId: chat, message: text }),
+        signal: ctrl.signal,
+      })
+      const b = await r.text()
+      if (!r.ok) return `失败：HTTP ${r.status} ${b.slice(0, 120)}`
+      return `ok wa:${provider}:${chat}`
+    }
+    if (provider === 'ultramsg') {
+      const id = parts[1] || ''
+      const token = parts[2] || ''
+      const to = parts[3] || ''
+      const base = (parts[4] || 'https://api.ultramsg.com').replace(/\/+$/, '')
+      if (!id || !token || !to) return '失败：whatsapp 目标格式应为 ultramsg|instanceId|token|to[|base]'
+      const form = new URLSearchParams({ token, to, body: text })
+      const r = await fetch(`${base}/instance${id}/messages/chat`, {
+        method: 'POST',
+        headers: { 'content-type': 'application/x-www-form-urlencoded' },
+        body: form.toString(),
+        signal: ctrl.signal,
+      })
+      const b = await r.text()
+      if (!r.ok) return `失败：HTTP ${r.status} ${b.slice(0, 120)}`
+      return `ok wa:${provider}:${to}`
+    }
+    return '失败：whatsapp provider 仅支持 callmebot / greenapi / ultramsg'
+  } catch (e) {
+    const cause = (e as { cause?: { message?: string } })?.cause?.message
+    return `失败：${String(cause || (e as Error)?.message || e).slice(0, 120)}`
+  } finally {
+    clearTimeout(t)
+  }
+}
+
 // 微信（hermes 通道）失败重试：阶梯退避（iLink 上游限流带 30s 冷却；被拒时 CLI 非零退出）
 // 逐次把结果回填 notify_log：某次成功则置 ok=1；全部失败则保留最后一次错误
 const HERMES_RETRY_DELAYS_MS = [45_000, 180_000, 600_000]
@@ -114,7 +218,16 @@ export async function dispatchNotify(db: DatabaseSync, msg: NotifyMsg): Promise<
   const routes = listNotifyRoutes(db).filter((r) => r.enabled === 1)
   const results: NotifyResult[] = []
   for (const r of routes) {
-    const info = r.kind === 'webhook' ? await sendViaWebhook(r.target, msg) : r.kind === 'hermes' ? await sendViaHermes(r.target, msg) : '未知通道类型'
+    const info =
+      r.kind === 'webhook'
+        ? await sendViaWebhook(r.target, msg)
+        : r.kind === 'hermes'
+          ? await sendViaHermes(r.target, msg)
+          : r.kind === 'telegram'
+            ? await sendViaTelegram(r.target, msg)
+            : r.kind === 'whatsapp'
+              ? await sendViaWhatsapp(r.target, msg)
+              : '未知通道类型'
     const ok = !/^(失败|未知)/.test(info)
     const ins = db.prepare(`INSERT INTO notify_log (route_id, route_name, title, text, ok, info) VALUES (?, ?, ?, ?, ?, ?)`).run(
       r.id,
