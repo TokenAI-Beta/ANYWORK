@@ -2734,6 +2734,15 @@ window.__ModuleLoader__.load({
       var tRef = React.useRef(null);
       var nRef = React.useRef(null);
       var aRef = React.useRef(null);
+      var subPair = React.useState(0);
+      var submitFor = subPair[0];
+      var setSubmitFor = subPair[1];
+      var sessPair = React.useState({ phase: "idle", items: [] });
+      var sess = sessPair[0];
+      var setSess = sessPair[1];
+      var cRef = React.useRef(null);
+      var snRef = React.useRef(null);
+      var sesRef = React.useRef(null);
 
       function load() {
         fetch("/portal/api/tasks", { headers: { accept: "application/json" } })
@@ -2778,6 +2787,51 @@ window.__ModuleLoader__.load({
           });
       }
 
+      function sessLabel(s) {
+        var base = String((s && s.cwd) || "").split("/").filter(Boolean).pop() || "会话";
+        var d = new Date(Number(s && s.updatedAt) || 0);
+        function p2(x) { return (x < 10 ? "0" : "") + x; }
+        var when = isNaN(d.getTime()) ? "" : p2(d.getMonth() + 1) + "-" + p2(d.getDate()) + " " + p2(d.getHours()) + ":" + p2(d.getMinutes());
+        return base + " · " + String((s && s.sessionId) || "").slice(8, 16) + " · " + when + (s && s.blank ? " · 未开始" : "");
+      }
+
+      function loadSessions() {
+        // 双协议（0.1.5 两段式优先，失败回退旧 session.list）
+        if (sess.phase !== "idle") return;
+        setSess({ phase: "loading", items: [] });
+        fetch("/api/session/list", {
+          method: "POST",
+          headers: { "content-type": "application/json" },
+          body: JSON.stringify({ type: "client-request", rpcId: "task-" + Date.now(), method: "session/list", payload: { args: { _request: {} } } }),
+        })
+          .then(function (r) { return r.json().catch(function () { return null; }); })
+          .then(function (d) {
+            var items = d && d.result && d.result.value && d.result.value.items;
+            if (Array.isArray(items)) { setSess({ phase: "ready", items: items }); return null; }
+            return fetch("/api/session.list", {
+              method: "POST",
+              headers: { "content-type": "application/json" },
+              body: JSON.stringify({ type: "client-request", rpcId: "task-" + Date.now(), method: "session.list", payload: {} }),
+            })
+              .then(function (r2) { return r2.json().catch(function () { return null; }); })
+              .then(function (d2) {
+                var it = d2 && d2.result && d2.result.value && d2.result.value.items;
+                setSess({ phase: "ready", items: Array.isArray(it) ? it : [] });
+              });
+          })
+          .catch(function () { setSess({ phase: "ready", items: [] }); });
+      }
+
+      function shortSessionRefs(raw) {
+        try {
+          var arr = JSON.parse(raw);
+          if (Array.isArray(arr)) {
+            return arr.map(function (x) { return String((x && x.id) || "").slice(8, 24); }).filter(Boolean).join(", ");
+          }
+        } catch (e) {}
+        return String(raw || "").slice(0, 60);
+      }
+
       if (st.phase === "loading") return h("div", { style: wrap }, "读取任务板…");
       if (st.phase === "error") return h("div", { style: wrap }, h("div", null, "读不到任务板（需从门户地址打开且已登录）。"));
 
@@ -2789,14 +2843,17 @@ window.__ModuleLoader__.load({
       var cDoing = 0;
       var cDone = 0;
       var cMine = 0;
+      var cReview = 0;
       for (var ci = 0; ci < st.tasks.length; ci++) {
         var tt = st.tasks[ci];
         if (tt.status === "todo") cTodo++;
         else if (tt.status === "doing") cDoing++;
         else cDone++;
         if (tt.assignee === st.me || tt.created_by === st.me) cMine++;
+        if (tt.review_state === "submitted") cReview++;
       }
       var list = st.tasks.filter(function (t) {
+        if (filter === "review") return t.review_state === "submitted";
         if (filter === "mine") return t.assignee === st.me || t.created_by === st.me;
         if (filter === "all") return true;
         return t.status === filter;
@@ -2835,10 +2892,17 @@ window.__ModuleLoader__.load({
         )
       );
 
+      var RVC = { submitted: ["待验收", "#b7791f"], accepted: ["已验收", "#1f9d55"], rejected: ["已打回", "#c0392b"] };
+      var sessOpts = [];
+      if (sess.phase === "ready") {
+        sessOpts = (sess.items || []).filter(function (s) { return !s.blank; });
+        if (!sessOpts.length) sessOpts = (sess.items || []).slice(0, 12);
+      }
       var fdefs = [
         ["all", "全部 " + st.tasks.length],
         ["todo", "待办 " + cTodo],
         ["doing", "进行中 " + cDoing],
+        ["review", "待验收 " + cReview],
         ["done", "已完成 " + cDone],
         ["mine", "我的 " + cMine],
       ];
@@ -2855,20 +2919,73 @@ window.__ModuleLoader__.load({
         (function (t) {
           var sm = SM[t.status] || SM.todo;
           var canDel = st.role === "admin" || t.created_by === st.me;
+          var isReviewer = st.role === "admin" || t.created_by === st.me;
+          var isSubmitter = !!t.submitted_by && t.submitted_by === st.me;
+          var canSubmit = st.role === "admin" || t.assignee === st.me || t.created_by === st.me;
+          var isSubmitted = t.review_state === "submitted";
           var actions = [];
-          actions.push(
-            h(
-              "button",
-              {
-                key: "nx",
-                style: btnSmall,
-                onClick: function () {
-                  post("/portal/api/tasks/update", { id: t.id, status: NEXT[t.status] || "todo" }, "已更新", false);
+          if (!isSubmitted) {
+            actions.push(
+              h(
+                "button",
+                {
+                  key: "nx",
+                  style: btnSmall,
+                  onClick: function () {
+                    post("/portal/api/tasks/update", { id: t.id, status: NEXT[t.status] || "todo" }, "已更新", false);
+                  },
                 },
-              },
-              NEXT_LABEL[t.status] || "推进"
-            )
-          );
+                NEXT_LABEL[t.status] || "推进"
+              )
+            );
+          }
+          if (canSubmit && !isSubmitted) {
+            actions.push(
+              h(
+                "button",
+                { key: "sb", style: btnSmall, onClick: function () { setSubmitFor(submitFor === t.id ? 0 : t.id); loadSessions(); } },
+                submitFor === t.id ? "收起" : "提交验收"
+              )
+            );
+          }
+          if (isSubmitted && isSubmitter) {
+            actions.push(
+              h(
+                "button",
+                {
+                  key: "cx",
+                  style: btnSmall,
+                  onClick: function () {
+                    if (window.confirm("撤回对「" + t.title + "」的提交？")) post("/portal/api/tasks/review", { id: t.id, action: "cancel" }, "已撤回提交", false);
+                  },
+                },
+                "撤回"
+              )
+            );
+          }
+          if (isSubmitted && isReviewer) {
+            actions.push(
+              h(
+                "button",
+                { key: "ap", style: btnSmall, onClick: function () { post("/portal/api/tasks/review", { id: t.id, action: "accept" }, "已验收通过", false); } },
+                "通过"
+              )
+            );
+            actions.push(
+              h(
+                "button",
+                {
+                  key: "rj",
+                  style: btnSmall,
+                  onClick: function () {
+                    var r = window.prompt("打回理由（必填）：");
+                    if (r && r.trim()) post("/portal/api/tasks/review", { id: t.id, action: "reject", note: r.trim() }, "已打回", false);
+                  },
+                },
+                "打回"
+              )
+            );
+          }
           if (!t.assignee) {
             actions.push(
               h(
@@ -2911,6 +3028,67 @@ window.__ModuleLoader__.load({
               ),
               t.note ? h("div", { style: { whiteSpace: "pre-wrap" } }, t.note) : null,
               h("div", { style: Object.assign({ fontSize: 11 }, muted) }, "指派：" + (t.assignee || "未指派") + " · " + (t.created_by || "-") + " · " + fmtAt(t.updated_at)),
+              t.review_state && t.review_state !== "none"
+                ? h(
+                    "div",
+                    { style: { marginTop: 4, padding: "6px 8px", borderRadius: 6, background: "rgba(127,127,127,0.08)", fontSize: 12, display: "flex", flexDirection: "column", gap: 2 } },
+                    h(
+                      "div",
+                      { style: { fontWeight: 600, color: (RVC[t.review_state] || [])[1] || "#8a8f98" } },
+                      ((RVC[t.review_state] || [t.review_state])[0] || t.review_state) + " · 提交：" + (t.submitted_by || "-") + (t.submitted_at ? " · " + fmtAt(t.submitted_at) : "")
+                    ),
+                    t.submit_note ? h("div", null, "说明：" + t.submit_note) : null,
+                    t.commit_refs ? h("div", { style: { whiteSpace: "pre-wrap", fontFamily: "monospace", fontSize: 11, opacity: 0.85 } }, t.commit_refs) : null,
+                    t.session_refs ? h("div", { style: { opacity: 0.85 } }, "关联会话：" + shortSessionRefs(t.session_refs)) : null,
+                    t.review_note
+                      ? h("div", null, (t.review_state === "rejected" ? "打回理由：" : "评审意见：") + t.review_note + (t.reviewed_by ? "（" + t.reviewed_by + "）" : ""))
+                      : null
+                  )
+                : null,
+              submitFor === t.id
+                ? h(
+                    "div",
+                    { style: { marginTop: 4, padding: "8px", borderRadius: 6, background: "rgba(127,127,127,0.08)", display: "flex", flexDirection: "column", gap: 6, fontSize: 12 } },
+                    h("div", { style: { fontWeight: 600 } }, "提交验收"),
+                    h("textarea", { ref: cRef, placeholder: "提交内容（每行一条：commit 链接 / sha + 说明；可空）", style: Object.assign({}, field, { minHeight: 52, fontFamily: "inherit", resize: "vertical" }) }),
+                    h("input", { ref: snRef, placeholder: "提交说明（一句话，可空）", style: field }),
+                    h(
+                      "select",
+                      { ref: sesRef, style: field },
+                      [h("option", { key: "none", value: "" }, sess.phase === "loading" ? "读取会话中…" : sessOpts.length ? "关联会话（可选）" : "关联会话（暂无可选）")].concat(
+                        sessOpts.map(function (s) {
+                          return h("option", { key: s.sessionId, value: s.sessionId }, sessLabel(s));
+                        })
+                      )
+                    ),
+                    h(
+                      "div",
+                      { style: { display: "flex", gap: 6 } },
+                      h(
+                        "button",
+                        {
+                          style: btnSmall,
+                          onClick: function () {
+                            setSubmitFor(0);
+                            post(
+                              "/portal/api/tasks/submit",
+                              {
+                                id: t.id,
+                                note: snRef.current ? snRef.current.value : "",
+                                commits: cRef.current ? cRef.current.value : "",
+                                session_id: sesRef.current ? sesRef.current.value : "",
+                              },
+                              "已提交，等待验收",
+                              false
+                            );
+                          },
+                        },
+                        "提交"
+                      ),
+                      h("button", { style: btnSmall, onClick: function () { setSubmitFor(0); } }, "取消")
+                    )
+                  )
+                : null,
               h("div", { style: { display: "flex", gap: 6 } }, actions)
             )
           );

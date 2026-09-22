@@ -175,4 +175,18 @@ function migrate(db: DatabaseSync): void {
   if (!ecols.some((c) => c.name === 'cost_cny')) {
     db.exec('ALTER TABLE usage_events ADD COLUMN cost_cny REAL')
   }
+  // 任务评审闭环（2026-09-22）：提交/验收字段，增量列
+  const tcols = db.prepare('PRAGMA table_info(tasks)').all() as { name: string }[]
+  const addTaskCol = (name: string, ddl: string) => {
+    if (!tcols.some((c) => c.name === name)) db.exec(`ALTER TABLE tasks ADD COLUMN ${ddl}`)
+  }
+  addTaskCol('review_state', `review_state TEXT NOT NULL DEFAULT 'none'`)
+  addTaskCol('submitted_by', 'submitted_by TEXT')
+  addTaskCol('submitted_at', 'submitted_at TEXT')
+  addTaskCol('submit_note', 'submit_note TEXT')
+  addTaskCol('commit_refs', 'commit_refs TEXT')
+  addTaskCol('session_refs', 'session_refs TEXT')
+  addTaskCol('reviewed_by', 'reviewed_by TEXT')
+  addTaskCol('reviewed_at', 'reviewed_at TEXT')
+  addTaskCol('review_note', 'review_note TEXT')
 }

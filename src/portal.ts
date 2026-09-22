@@ -916,7 +916,9 @@ export function startPortal(opts: PortalOptions) {
         }
         const tasks = db
           .prepare(
-            `SELECT id, title, note, status, assignee, created_by, created_at, updated_at FROM tasks
+            `SELECT id, title, note, status, assignee, created_by, created_at, updated_at,
+                    review_state, submitted_by, submitted_at, submit_note, commit_refs, session_refs,
+                    reviewed_by, reviewed_at, review_note FROM tasks
              ORDER BY CASE status WHEN 'doing' THEN 0 WHEN 'todo' THEN 1 ELSE 2 END, id DESC LIMIT 200`,
           )
           .all()
@@ -1016,6 +1018,135 @@ export function startPortal(opts: PortalOptions) {
         }
         sets.push(`updated_at = datetime('now')`)
         db.prepare(`UPDATE tasks SET ${sets.join(', ')} WHERE id = ?`).run(...vals, tid)
+        res.writeHead(200, { 'content-type': 'application/json; charset=utf-8' })
+        return res.end(JSON.stringify({ ok: true }))
+      }
+      // —— 任务：提交验收（指派/创建人）——
+      if (path === '/portal/api/tasks/submit' && req.method === 'POST') {
+        if (!user) {
+          res.writeHead(401, { 'content-type': 'application/json' })
+          return res.end(JSON.stringify({ error: 'login required' }))
+        }
+        let sbody: Record<string, unknown> = {}
+        try {
+          const v = JSON.parse(await readBody(req)) as unknown
+          if (v && typeof v === 'object') sbody = v as Record<string, unknown>
+        } catch {
+          sbody = {}
+        }
+        const sid = Number(sbody.id ?? 0)
+        const task = db
+          .prepare(`SELECT id, title, status, assignee, created_by, review_state FROM tasks WHERE id = ?`)
+          .get(sid) as
+          | { id: number; title: string; status: string; assignee: string | null; created_by: string | null; review_state: string }
+          | undefined
+        if (!task) {
+          res.writeHead(404, { 'content-type': 'application/json; charset=utf-8' })
+          return res.end(JSON.stringify({ error: '任务不存在' }))
+        }
+        const allowed = user.role === 'admin' || task.assignee === user.username || task.created_by === user.username
+        if (!allowed) {
+          res.writeHead(403, { 'content-type': 'application/json; charset=utf-8' })
+          return res.end(JSON.stringify({ error: 'not allowed' }))
+        }
+        if (task.review_state === 'submitted') {
+          res.writeHead(400, { 'content-type': 'application/json; charset=utf-8' })
+          return res.end(JSON.stringify({ error: '已有待验收的提交（可先撤回）' }))
+        }
+        const submitNote = typeof sbody.note === 'string' ? String(sbody.note).trim().slice(0, 500) : ''
+        const commitRefs = typeof sbody.commits === 'string' ? String(sbody.commits).trim().slice(0, 2000) : ''
+        const sessionId = typeof sbody.session_id === 'string' ? String(sbody.session_id).trim().slice(0, 128) : ''
+        const sessionRefs = sessionId ? JSON.stringify([{ id: sessionId }]) : null
+        db.prepare(
+          `UPDATE tasks SET review_state = 'submitted', submitted_by = ?, submitted_at = datetime('now'),
+             submit_note = ?, commit_refs = ?, session_refs = ?,
+             reviewed_by = NULL, reviewed_at = NULL, review_note = NULL,
+             status = CASE WHEN status = 'todo' THEN 'doing' ELSE status END,
+             updated_at = datetime('now') WHERE id = ?`,
+        ).run(user.username, submitNote || null, commitRefs || null, sessionRefs, sid)
+        const extra = [commitRefs ? '含提交链接' : '', sessionId ? '含关联会话' : ''].filter(Boolean).join('、')
+        dispatchNotify(db, {
+          title: '任务待验收',
+          text: `成员 ${user.username} 提交任务 #${task.id}「${task.title}」待验收${extra ? '（' + extra + '）' : ''}——到 工作台 设置 → 任务板 处理。`,
+          source: 'task-review',
+        }).catch(() => {})
+        res.writeHead(200, { 'content-type': 'application/json; charset=utf-8' })
+        return res.end(JSON.stringify({ ok: true }))
+      }
+      // —— 任务：评审（创建人/管理员：通过·打回；提交人：撤回）——
+      if (path === '/portal/api/tasks/review' && req.method === 'POST') {
+        if (!user) {
+          res.writeHead(401, { 'content-type': 'application/json' })
+          return res.end(JSON.stringify({ error: 'login required' }))
+        }
+        let rbody: Record<string, unknown> = {}
+        try {
+          const v = JSON.parse(await readBody(req)) as unknown
+          if (v && typeof v === 'object') rbody = v as Record<string, unknown>
+        } catch {
+          rbody = {}
+        }
+        const rid = Number(rbody.id ?? 0)
+        const action = String(rbody.action ?? '')
+        const task = db
+          .prepare(`SELECT id, title, assignee, created_by, review_state, submitted_by FROM tasks WHERE id = ?`)
+          .get(rid) as
+          | { id: number; title: string; assignee: string | null; created_by: string | null; review_state: string; submitted_by: string | null }
+          | undefined
+        if (!task) {
+          res.writeHead(404, { 'content-type': 'application/json; charset=utf-8' })
+          return res.end(JSON.stringify({ error: '任务不存在' }))
+        }
+        if (task.review_state !== 'submitted') {
+          res.writeHead(400, { 'content-type': 'application/json; charset=utf-8' })
+          return res.end(JSON.stringify({ error: '当前没有待验收的提交' }))
+        }
+        const note = typeof rbody.note === 'string' ? String(rbody.note).trim().slice(0, 500) : ''
+        if (action === 'accept' || action === 'reject') {
+          const canReview = user.role === 'admin' || task.created_by === user.username
+          if (!canReview) {
+            res.writeHead(403, { 'content-type': 'application/json; charset=utf-8' })
+            return res.end(JSON.stringify({ error: 'not allowed' }))
+          }
+          if (action === 'reject' && !note) {
+            res.writeHead(400, { 'content-type': 'application/json; charset=utf-8' })
+            return res.end(JSON.stringify({ error: '打回必须填写理由' }))
+          }
+          if (action === 'accept') {
+            db.prepare(
+              `UPDATE tasks SET review_state = 'accepted', reviewed_by = ?, reviewed_at = datetime('now'),
+                 review_note = ?, status = 'done', updated_at = datetime('now') WHERE id = ?`,
+            ).run(user.username, note || null, rid)
+            dispatchNotify(db, {
+              title: '任务验收通过',
+              text: `任务 #${task.id}「${task.title}」已由 ${user.username} 验收通过${note ? '（' + note + '）' : ''}。`,
+              source: 'task-review',
+            }).catch(() => {})
+          } else {
+            db.prepare(
+              `UPDATE tasks SET review_state = 'rejected', reviewed_by = ?, reviewed_at = datetime('now'),
+                 review_note = ?, status = 'doing', updated_at = datetime('now') WHERE id = ?`,
+            ).run(user.username, note, rid)
+            dispatchNotify(db, {
+              title: '任务被打回',
+              text: `任务 #${task.id}「${task.title}」被 ${user.username} 打回，理由：${note}——请处理后重新提交验收。`,
+              source: 'task-review',
+            }).catch(() => {})
+          }
+        } else if (action === 'cancel') {
+          if (task.submitted_by !== user.username) {
+            res.writeHead(403, { 'content-type': 'application/json; charset=utf-8' })
+            return res.end(JSON.stringify({ error: '只有提交人可以撤回' }))
+          }
+          db.prepare(
+            `UPDATE tasks SET review_state = 'none', submitted_by = NULL, submitted_at = NULL, submit_note = NULL,
+               commit_refs = NULL, session_refs = NULL, reviewed_by = NULL, reviewed_at = NULL, review_note = NULL,
+               updated_at = datetime('now') WHERE id = ?`,
+          ).run(rid)
+        } else {
+          res.writeHead(400, { 'content-type': 'application/json; charset=utf-8' })
+          return res.end(JSON.stringify({ error: 'action 仅支持 accept / reject / cancel' }))
+        }
         res.writeHead(200, { 'content-type': 'application/json; charset=utf-8' })
         return res.end(JSON.stringify({ ok: true }))
       }
