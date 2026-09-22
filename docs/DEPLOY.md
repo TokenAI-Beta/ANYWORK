@@ -103,3 +103,9 @@ python3? 不需要——零依赖
 - 团队共用真 key（默认上游）：成员管理 →「团队共用上游」查看打码值 / 更换（写 `~/.desk/keys.env` 后自动退出进程由 systemd 拉起，5~10 秒）；也可直接编辑该文件后 `kill -9` desk-server 的 MainPID。
 - 排障一句：`curl -s -X POST http://127.0.0.1:33xx/api/credentials.describe -H 'content-type: application/json' -d '{"type":"client-request","rpcId":"x","method":"credentials.describe","payload":{"refs":["DEEPSEEK_API_KEY"]}}'` → 期望 `source:"file", writable:true`。改钥匙免重启（watch 热加载 + 每请求解析）。
 
+## 界面主题（Aqua 玻璃主题，可选）
+
+- 安装/重装：`bash scripts/install-transparent-ui.sh [user …]`（装 npm 包 `dsh-client-ui-aqua@1.3.1` 到各实例 web profile；幂等）。
+- 开关：工作台 设置 → 插件 → 插件配置 →「玻璃主题」（每人浏览器本地开关，关掉即完整还原）。
+- 版本对表：本插件 1.3.x 面向 DSH 0.1.0-rc.5；升级 dsh 后需换对应 fork（Zagadka-3906 / afrel1024 / du-u-uck）。
+
