@@ -18,6 +18,15 @@ export PATH="$HOME/opt/node-v24.19.0-linux-x64/bin:$HOME/bin:$PATH"
 mkdir -p "$home"
 export DSH_HOME="$home"
 export DEEPSEEK_BASE_URL="$gateway"
-export DEEPSEEK_API_KEY="$(tr -d '\n' < "$key_file")"
+
+# 虚拟钥匙：写入可写凭据存储 $DSH_HOME/.credentials.yaml（不再走启动环境变量——
+# 环境层只读且永远压过存储层，会让 Models 设置页的 API Key 输入框被锁死 writable:false）
+doc="$home/.credentials.yaml"
+if [ ! -f "$doc" ]; then
+  printf '# DSH-ANYWORK 虚拟钥匙（agent-run.sh 首次播种；Models 设置页可改，改动即时生效）\nDEEPSEEK_API_KEY: %s\n' "$(tr -d '\n' < "$key_file")" > "$doc"
+elif ! grep -q '^DEEPSEEK_API_KEY:' "$doc"; then
+  printf 'DEEPSEEK_API_KEY: %s\n' "$(tr -d '\n' < "$key_file")" >> "$doc"
+fi
+chmod 600 "$doc"
 
 exec node "$dsh_entry" web --port "$port" --trusted-host "$authority"

@@ -21,9 +21,14 @@ if [ -f "$HOME/desk-data/desk.db" ]; then
 fi
 
 # 2) 打包：快照 + 数据目录（排除活动中的 db 文件）+ 密钥目录
+extra=()
+for u in u1 u2 u3; do
+  [ -f "$HOME/desk-test/$u/.credentials.yaml" ] && extra+=("desk-test/$u/.credentials.yaml")
+done
+
 tar czf "$file" \
   -C "$tmp" desk.db \
-  -C "$HOME" --exclude='desk-data/desk.db*' desk-data .desk
+  -C "$HOME" --exclude='desk-data/desk.db*' desk-data .desk "${extra[@]}"
 
 ls -lh "$file" | awk '{print "已备份:", $NF, "(" $5 ")"}'
 

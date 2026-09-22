@@ -94,3 +94,11 @@ python3? 不需要——零依赖
 | 单实例起不来 | `bash scripts/logs.sh u1`；`~/.desk/agents/<user>.key` 是否存在（600） |
 | 账本不动 | `bash scripts/logs.sh server`；网关 8100 是否在；虚拟钥匙是否被吊销 |
 | 页面报 403 | 实例 `--trusted-host` 是否含门户 authority（改端口/域名后要同步改单元） |
+
+## 凭据（Models 设置页可编辑）
+
+- 虚拟钥匙存 `~/desk-test/uN/.credentials.yaml`（0600，YAML：`DEEPSEEK_API_KEY: sk-desk-…`）。
+- **别再 export `DEEPSEEK_API_KEY`**——环境层只读且压过存储层，会把 Models 页的密钥输入框锁死（`writable:false`）。
+- 播种/修复：`bash scripts/seed-credentials.sh [user …] [--force]`（默认只补缺；用户自定义值保留）。
+- 排障一句：`curl -s -X POST http://127.0.0.1:33xx/api/credentials.describe -H 'content-type: application/json' -d '{"type":"client-request","rpcId":"x","method":"credentials.describe","payload":{"refs":["DEEPSEEK_API_KEY"]}}'` → 期望 `source:"file", writable:true`。改钥匙免重启（watch 热加载 + 每请求解析）。
+

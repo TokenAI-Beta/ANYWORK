@@ -13,6 +13,11 @@ for f in "$HOME/.desk/keys.env" "$HOME/.desk/agents/"*.key; do
   p=$(stat -c %a "$f")
   if [ "$p" = "600" ]; then ok "$f ($p)"; else bad "$f ($p ≠ 600)"; fi
 done
+for f in "$HOME/desk-test/"*"/.credentials.yaml"; do
+  [ -e "$f" ] || continue
+  p=$(stat -c %a "$f")
+  if [ "$p" = "600" ]; then ok "$f ($p)"; else bad "$f ($p ≠ 600)"; fi
+done
 if git grep -IlE 'sk-desk-[0-9a-f]{16,}' -- . >/dev/null 2>&1; then
   bad "仓库里出现疑似真实虚拟钥匙"
 else
