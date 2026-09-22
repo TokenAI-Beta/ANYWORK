@@ -6,7 +6,7 @@
 
 成员各自登录、各自独立工作区；模型的钥匙集中保管、按人计量。大家一起用 agent 干活，产出、账目、方法都留在自己的机器上。
 
-> **状态：建设中（公开开发）。** P0–P3 均已完成并在局域网实机验证。P4（交付化）主体就绪——`setup/backup/restore/logs` 脚本、一页[部署说明](docs/DEPLOY.md)、真实的端到端[验收记录](docs/ACCEPTANCE.md)；从零重装待第二台机器实测。路线图与任务清单见 [`docs/PLAN.md`](docs/PLAN.md)，验证记录见 [`docs/BASELINE.md`](docs/BASELINE.md)，每日进展见 [`docs/devlog/`](docs/devlog/)；**使用手册见 [`docs/GUIDE.md`](docs/GUIDE.md)**。
+> **状态：建设中（公开开发）。** P0–P3 均已完成并在局域网实机验证。P4（交付化）主体就绪——`setup/backup/restore/logs` 脚本、一页[部署说明](docs/DEPLOY.md)、真实的端到端[验收记录](docs/ACCEPTANCE.md)；从零重装待第二台机器实测（**Docker 一条命令空卷部署已实机全链路通过**）。路线图与任务清单见 [`docs/PLAN.md`](docs/PLAN.md)，验证记录见 [`docs/BASELINE.md`](docs/BASELINE.md)，每日进展见 [`docs/devlog/`](docs/devlog/)；**使用手册见 [`docs/GUIDE.md`](docs/GUIDE.md)**。
 
 ## 快速开始（Docker · Linux 服务器通用）
 
@@ -52,7 +52,7 @@ docker compose up -d --build
 | P1 | 模型网关 + 按人计量 | ✅ 已实机验证 |
 | P2 | 账号、登录、门户 | ✅ 登录 / 门户 / 实例反代已上线 |
 | P3 | 每人独立工作区（实例管理、自启守护） | ✅ systemd 单元 + 自启；隔离复查全绿 |
-| P4 | 交付化（安装 / 备份 / 试用验收） | 🟡 脚本与文档就绪；验收实走全绿；从零重装待实测 |
+| P4 | 交付化（安装 / 备份 / 试用验收） | 🟡 脚本与文档就绪；验收实走全绿；Docker 空卷部署已通过；第二台物理机待实测 |
 
 任务共 22 项、每项带验收标准，见 [`docs/PLAN.md`](docs/PLAN.md)。
 

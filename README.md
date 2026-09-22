@@ -6,7 +6,7 @@
 
 Each member signs in with their own account and works in their own isolated workspace. The model API key stays on the server, and usage is metered per person — so a team can share one agent setup without sharing keys, files, or bills.
 
-> **Status: building in public, early stage.** P0–P3 are done and verified on the LAN. P4 (delivery) is largely in place — `setup/backup/restore/logs` scripts, a one-page [deployment guide](docs/DEPLOY.md), and a green end-to-end [acceptance walk](docs/ACCEPTANCE.md); a from-scratch dry-run on a second machine is pending. Roadmap and 22-task plan in [`docs/PLAN.md`](docs/PLAN.md); verified findings in [`docs/BASELINE.md`](docs/BASELINE.md); daily progress in [`docs/devlog/`](docs/devlog/). 📖 **User manual** (Chinese): [`docs/GUIDE.md`](docs/GUIDE.md).
+> **Status: building in public, early stage.** P0–P3 are done and verified on the LAN. P4 (delivery) is largely in place — `setup/backup/restore/logs` scripts, a one-page [deployment guide](docs/DEPLOY.md), and a green end-to-end [acceptance walk](docs/ACCEPTANCE.md); a from-scratch dry-run on a second machine is pending (the one-command Docker deploy completed a full from-scratch empty-volume run on this machine). Roadmap and 22-task plan in [`docs/PLAN.md`](docs/PLAN.md); verified findings in [`docs/BASELINE.md`](docs/BASELINE.md); daily progress in [`docs/devlog/`](docs/devlog/). 📖 **User manual** (Chinese): [`docs/GUIDE.md`](docs/GUIDE.md).
 
 ## Quick start (Docker · any Linux server)
 
@@ -52,7 +52,7 @@ Member browser → Portal (login gate + reverse proxy)
 | P1 | Model gateway + per-person metering | ✅ verified end-to-end |
 | P2 | Accounts, login, portal | ✅ login, portal & instance proxy live |
 | P3 | Per-member workspaces (instance management, autostart) | ✅ systemd units + autostart; isolation check green |
-| P4 | Delivery: install, backup, acceptance | 🟡 scripts & docs done; acceptance walk green; from-scratch dry-run pending |
+| P4 | Delivery: install, backup, acceptance | 🟡 scripts & docs done; acceptance walk green; Docker empty-volume run green; second physical machine pending |
 
 Each task has a concrete acceptance check; the full list is in [`docs/PLAN.md`](docs/PLAN.md).
 
