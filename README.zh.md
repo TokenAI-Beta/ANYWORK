@@ -1,18 +1,24 @@
 # DSH-ANYWORK
 
-[English](README.md) | 中文
+[English](README.md) | 中文 | 📖 [使用手册](docs/GUIDE.md)
 
 **基于 DeepSeek Harness 的自托管团队工作台。**
 
 成员各自登录、各自独立工作区；模型的钥匙集中保管、按人计量。大家一起用 agent 干活，产出、账目、方法都留在自己的机器上。
 
-> **状态：建设中（公开开发）。** P0–P3 均已完成并在局域网实机验证。P4（交付化）主体就绪——`setup/backup/restore/logs` 脚本、一页[部署说明](docs/DEPLOY.md)、真实的端到端[验收记录](docs/ACCEPTANCE.md)；从零重装待第二台机器实测。路线图与任务清单见 [`docs/PLAN.md`](docs/PLAN.md)，验证记录见 [`docs/BASELINE.md`](docs/BASELINE.md)，每日进展见 [`docs/devlog/`](docs/devlog/)；**功能使用说明见 [`docs/GUIDE.md`](docs/GUIDE.md)**。
+> **状态：建设中（公开开发）。** P0–P3 均已完成并在局域网实机验证。P4（交付化）主体就绪——`setup/backup/restore/logs` 脚本、一页[部署说明](docs/DEPLOY.md)、真实的端到端[验收记录](docs/ACCEPTANCE.md)；从零重装待第二台机器实测。路线图与任务清单见 [`docs/PLAN.md`](docs/PLAN.md)，验证记录见 [`docs/BASELINE.md`](docs/BASELINE.md)，每日进展见 [`docs/devlog/`](docs/devlog/)；**使用手册见 [`docs/GUIDE.md`](docs/GUIDE.md)**。
 
 ## 这是什么
 
 - **引擎**：官方 [DeepSeek Harness](https://github.com/deepseek-ai/deepseek-harness)（dsh，MIT）——agent 能力、工具、沙箱直接复用，不改它的源码。
 - **外壳（本项目）**：账号与登录、每人一个独立 dsh 实例与工作区、模型网关（真 key 不下发、按人记账、可限额）、门户页面。工作台内还有团队模块：任务板、知识库、公司盘、通知、公告，以及**会话删除（管理员批准制）**。
 - 一句话：**dsh 管干活，DSH-ANYWORK 管“谁能用、用在哪、花了多少”。**
+
+## 文档
+
+- 📖 **[使用手册（功能使用指南）](docs/GUIDE.md)** —— 每个功能的「入口 → 怎么用 → 注意」＋功能索引总表。
+- [部署说明](docs/DEPLOY.md) · [验收记录](docs/ACCEPTANCE.md) · [已知问题](docs/KNOWN-ISSUES.md)
+- [路线图与任务清单](docs/PLAN.md) · [验证记录](docs/BASELINE.md) · [每日进展](docs/devlog/)
 
 ## 架构（目标形态）
 

@@ -1,18 +1,24 @@
 # DSH-ANYWORK
 
-[English](README.md) | [中文](README.zh.md)
+[English](README.md) | [中文](README.zh.md) | 📖 [User manual](docs/GUIDE.md)
 
 **A self-hosted team workbench built around [DeepSeek Harness](https://github.com/deepseek-ai/deepseek-harness).**
 
 Each member signs in with their own account and works in their own isolated workspace. The model API key stays on the server, and usage is metered per person — so a team can share one agent setup without sharing keys, files, or bills.
 
-> **Status: building in public, early stage.** P0–P3 are done and verified on the LAN. P4 (delivery) is largely in place — `setup/backup/restore/logs` scripts, a one-page [deployment guide](docs/DEPLOY.md), and a green end-to-end [acceptance walk](docs/ACCEPTANCE.md); a from-scratch dry-run on a second machine is pending. Roadmap and 22-task plan in [`docs/PLAN.md`](docs/PLAN.md); verified findings in [`docs/BASELINE.md`](docs/BASELINE.md); daily progress in [`docs/devlog/`](docs/devlog/). Feature-by-feature usage guide (Chinese): [`docs/GUIDE.md`](docs/GUIDE.md).
+> **Status: building in public, early stage.** P0–P3 are done and verified on the LAN. P4 (delivery) is largely in place — `setup/backup/restore/logs` scripts, a one-page [deployment guide](docs/DEPLOY.md), and a green end-to-end [acceptance walk](docs/ACCEPTANCE.md); a from-scratch dry-run on a second machine is pending. Roadmap and 22-task plan in [`docs/PLAN.md`](docs/PLAN.md); verified findings in [`docs/BASELINE.md`](docs/BASELINE.md); daily progress in [`docs/devlog/`](docs/devlog/). 📖 **User manual** (Chinese): [`docs/GUIDE.md`](docs/GUIDE.md).
 
 ## What this is
 
 - **Engine**: the official [DeepSeek Harness](https://github.com/deepseek-ai/deepseek-harness) (`dsh`, MIT) — agent capabilities, tools, and the sandbox are reused as-is. This project does not modify dsh's source.
 - **Shell (this repo)**: accounts and login, one isolated dsh instance and workspace per member, a model gateway that never exposes the real API key (per-person accounting and budget limits), and a portal to tie it together. Team modules inside the workbench: task board, knowledge base, shared drive, notifications, announcements — and **session deletion with admin approval** (members request, admins approve).
 - In one line: **dsh does the work; DSH-ANYWORK decides who gets to use it, where, and at what cost.**
+
+## Documentation
+
+- 📖 **[User manual](docs/GUIDE.md)** — every feature with its entry point, steps and notes (Chinese); includes a full feature index.
+- [Deployment guide](docs/DEPLOY.md) · [Acceptance walk](docs/ACCEPTANCE.md) · [Known issues](docs/KNOWN-ISSUES.md)
+- [Plan & tasks](docs/PLAN.md) · [Verified findings](docs/BASELINE.md) · [Daily devlog](docs/devlog/)
 
 ## Architecture (target)
 
