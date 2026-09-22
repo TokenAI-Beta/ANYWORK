@@ -49,6 +49,15 @@ if not errorlevel 1 (
   pause
 )
 
+findstr /c:"ANYWORK_HOST=192.168.1.50" .env >nul 2>nul
+if not errorlevel 1 (
+  echo [!] 提醒：ANYWORK_HOST 还是示例地址 192.168.1.50:8080。
+  echo     除非你的局域网确实是 192.168.1.x，否则请改成"这台电脑自己的 IP:8080"。
+  echo     ^(cmd 里输 ipconfig，看 IPv4 那一行^)
+  echo     按任意键继续（用示例地址也能启动，但按提示的链接访问不到）；Ctrl+C 退出先去改。
+  pause
+)
+
 echo [i] 开始构建并启动（首次约 15~30 分钟，请保持网络畅通；风扇变响、进度慢都属正常）...
 echo.
 docker compose up -d --build
