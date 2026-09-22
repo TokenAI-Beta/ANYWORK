@@ -16,6 +16,7 @@ for d in kb drive skills presets hooks bin; do mkdir -p "$home/desk-data/$d"; do
 cp -rn "$repo/kb-template/." "$home/desk-data/kb/" 2>/dev/null || true
 cp -rn "$repo/drive-template/." "$home/desk-data/drive/" 2>/dev/null || true
 cp -rn "$repo/skills-template/." "$home/desk-data/skills/" 2>/dev/null || true
+cp -rn "$repo/presets-template/." "$home/desk-data/presets/" 2>/dev/null || true
 for s in desk-notify desk-remind desk-kb; do
   if [ -f "$repo/scripts/$s" ]; then install -m 755 "$repo/scripts/$s" "$home/desk-data/bin/$s"; fi
 done
@@ -89,6 +90,8 @@ for (const r of db.prepare('SELECT username, agent_port FROM users WHERE agent_p
 while IFS=$'\t' read -r u p h; do
   if [ -n "${u:-}" ]; then
     mkdir -p "$h"; chmod 700 "$h"
+    ln -sfn "$home/desk-data/skills" "$h/skills"
+    ln -sfn "$home/desk-data/presets" "$h/.agent-presets"
     # 实例路由：模型流量走团队网关（记进账本；真 key 只留在服务进程，不下发）
     sf="$h/settings.yaml"
     if ! grep -q "llm-deepseek" "$sf" 2>/dev/null; then
@@ -125,6 +128,21 @@ while IFS=$'\t' read -r u p h; do
   install_plugin "$u" "dsh-chat-import" "dsh-chat-import"
   install_plugin "$u" "dsh-better-sidebar@latest" "dsh-better-sidebar" "$home/desk-test/$u/profiles/web/node_modules/node-pty/build/Release/pty.node"
 done < "$home/.desk/run/instances.tsv"
+
+# ── 5b) aqua fork 适配：settings.plugin.item 补 key（0.1.5 keyed slot；幂等） ──
+python3 - <<'AQUA_PATCH' || log "警告：aqua key 补丁未执行"
+import glob, os
+old = '\t\t\t\tname: "settings.plugin.item",\n\t\t\t\tid: "aqua",\n\t\t\t\torder: 5,'
+new = '\t\t\t\tname: "settings.plugin.item",\n\t\t\t\tid: "aqua",\n\t\t\t\tkey: "ui-aqua",\n\t\t\t\torder: 5,'
+for f in glob.glob(os.path.join(os.environ.get("HOME", "/data"), "desk-test", "*", "profiles/web/node_modules/dsh-client-ui-aqua/lib/client.js")):
+    s = open(f, encoding="utf-8").read()
+    if 'key: "ui-aqua"' in s:
+        continue
+    if s.count(old) == 1:
+        open(f, "w", encoding="utf-8").write(s.replace(old, new))
+        print("[bootstrap] aqua key 补丁:", f)
+AQUA_PATCH
+
 
 # ── 6) 团队 Soul / 工作区 README（此时各实例已有 profiles 目录） ──
 bash scripts/apply-soul.sh >/dev/null && log "团队 Soul / 工作区 README 已铺"

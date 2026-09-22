@@ -26,6 +26,9 @@
 ## 现有技能
 
 - `team-report-style/` —— 团队报告写作规范（结论先行 / 标口径 / 禁编造 / 附缺口清单）
+- `codex-parallel-worktrees/` —— 多个互不干扰的代码任务并行跑（git worktree + Codex：批量修 issue / 审 PR / 重构拆分）
+
+> 新增技能后请顺手在本表登记一行（写清"干什么、什么时候用"）。
 
 ## 边界（v1）
 

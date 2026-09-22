@@ -16,9 +16,13 @@ WORKDIR /src
 RUN git clone --depth 1 --branch "${DSH_REF}" "${DSH_REPO}" deepseek-harness
 COPY patches/ /src/patches/
 RUN DSH_SRC=/src/deepseek-harness python3 /src/patches/dsh-branding-anywork-tokenai.py
+# 非 loopback（门户访问）也启用 host 设置持久化：语言/外观等设置才会落盘
+RUN DSH_SRC=/src/deepseek-harness python3 /src/patches/dsh-settings-lan-persistence.py || echo "WARN: settings persistence patch skipped"
 WORKDIR /src/deepseek-harness
 RUN pnpm install
 RUN pnpm build
+RUN pnpm --filter @deepseek-ai/dsh-client-ui-settings run bundle || echo "WARN: ui-settings bundle skipped"
+RUN pnpm --filter @deepseek-ai/dsh-client-ui-settings-general run bundle || echo "WARN: ui-settings-general bundle skipped"
 
 # ---------- 阶段 2：运行时 ----------
 FROM node:24-bookworm-slim AS runtime
