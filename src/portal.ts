@@ -95,6 +95,36 @@ footer { text-align: center; color: #8a8d91; font-size: 12px; padding: 24px 0 32
 .login-wrap { max-width: 380px; margin: 8vh auto; }
 .key { font-family: ui-monospace, Consolas, monospace; background: #f0f1f3; border-radius: 8px; padding: 12px; word-break: break-all; font-size: 14px; }
 code { background: #f0f1f3; border-radius: 5px; padding: 1px 5px; font-family: ui-monospace, Consolas, monospace; font-size: 13px; }
+
+/* —— v2 视觉打磨（2026-09-21）—— */
+body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC", "Microsoft YaHei", system-ui, sans-serif; background: #f4f5f7; -webkit-font-smoothing: antialiased; }
+header { height: 56px; padding: 0 24px; gap: 14px; border-bottom: 1px solid #e8eaed; box-shadow: 0 1px 2px rgba(16,24,40,.03); position: sticky; top: 0; z-index: 10; }
+header .brand { font-size: 15px; letter-spacing: .2px; }
+header nav { gap: 18px; }
+header a { padding: 6px 2px; }
+header a:hover { text-decoration: none; color: #4f7cf7; }
+header form.inline button { background: transparent; color: #6b7078; border: 1px solid #dcdfe4; padding: 5px 12px; font-size: 13px; }
+header form.inline button:hover { color: #d64545; border-color: #f0b4b4; background: #fdf3f3; }
+main { max-width: 880px; margin: 28px auto 0; padding: 0 16px; }
+.card { border-radius: 14px; border: 1px solid #e9ebee; padding: 20px 22px; box-shadow: 0 4px 16px rgba(16,24,40,.05); }
+h1 { font-size: 19px; letter-spacing: .1px; }
+h2 { font-size: 13px; letter-spacing: .3px; }
+table { font-size: 13.5px; }
+th { font-size: 12.5px; padding: 8px; border-bottom: 1px solid #e9ebee; }
+td { padding: 8px; border-bottom: 1px solid #f2f3f5; }
+input, select, textarea { padding: 10px 12px; border: 1px solid #d4d7dc; border-radius: 9px; font-size: 14px; background: #fff; transition: border-color .15s, box-shadow .15s; }
+input:focus, select:focus, textarea:focus { outline: none; border-color: #4f7cf7; box-shadow: 0 0 0 3px rgba(79,124,247,.14); }
+label { margin: 12px 0 5px; }
+button { background: #4f7cf7; border-radius: 9px; padding: 9px 16px; font-weight: 500; transition: background .15s; }
+button:hover { background: #3f6be6; }
+form[action="/login"] button { width: 100%; padding: 11px; font-size: 14.5px; font-weight: 600; margin-top: 6px; }
+.key { border: 1px solid #e9ebee; }
+.muted { color: #70757d; }
+footer { font-size: 12.5px; color: #9aa0a6; padding: 28px 0 36px; }
+.bar { height: 8px; border-radius: 999px; }
+.login-wrap { max-width: 396px; margin: 9vh auto; }
+.login-wrap .card { padding: 30px 28px 26px; }
+.login-wrap h1 { margin-bottom: 4px; font-size: 20px; }
 `
 
 function page(title: string, user: SessionUser | null, body: string): string {
@@ -232,8 +262,9 @@ const DESK_USAGE_JS = `
   if (document.getElementById('desk-usage-fab')) return
   var css = document.createElement('style')
   css.textContent =
-    '#desk-usage-fab{position:fixed;right:18px;bottom:18px;z-index:2147483000;border:0;border-radius:999px;padding:10px 16px;background:#1c1e21;color:#fff;font-size:14px;cursor:pointer;box-shadow:0 4px 14px rgba(0,0,0,.25);font-family:system-ui,"Microsoft YaHei",sans-serif}'
-    + '#desk-usage-panel{position:fixed;right:18px;bottom:64px;z-index:2147483000;width:320px;max-height:70vh;overflow:auto;background:#fff;color:#1c1e21;border:1px solid #e4e6eb;border-radius:12px;box-shadow:0 10px 30px rgba(0,0,0,.18);padding:14px 16px;font-family:system-ui,"Microsoft YaHei",sans-serif;font-size:13px;display:none}'
+    '#desk-usage-fab{position:fixed;right:18px;bottom:18px;z-index:2147483000;border:1px solid #e4e6eb;border-radius:999px;padding:10px 16px;background:#ffffff;color:#1c1e21;font-size:13.5px;cursor:pointer;box-shadow:0 6px 20px rgba(16,24,40,.12);font-family:system-ui,"Microsoft YaHei",sans-serif;transition:box-shadow .15s ease}'
+    + '#desk-usage-fab:hover{box-shadow:0 8px 26px rgba(16,24,40,.18)}'
+    + '#desk-usage-panel{position:fixed;right:18px;bottom:64px;z-index:2147483000;width:324px;max-height:70vh;overflow:auto;background:#fff;color:#1c1e21;border:1px solid #e9ebee;border-radius:14px;box-shadow:0 16px 44px rgba(16,24,40,.18);padding:14px 16px;font-family:system-ui,"Microsoft YaHei",sans-serif;font-size:13px;display:none}'
     + '#desk-usage-panel h3{margin:0 0 8px;font-size:15px}'
     + '#desk-usage-panel .big{font-size:22px;font-weight:700}'
     + '#desk-usage-panel .muted{color:#65676b;font-size:12px}'
@@ -1174,7 +1205,8 @@ export function startPortal(opts: PortalOptions) {
           page(
             '登录',
             null,
-            `<div class="login-wrap"><div class="card"><h1>登录 DSH-ANYWORK</h1>${msg}
+            `<div class="login-wrap"><div class="card"><img src="/portal-icon.svg" width="42" height="42" alt="DSH" style="border-radius:10px;display:block;margin:0 0 12px">
+<h1>登录 DSH-ANYWORK</h1>${msg}
 <form method="post" action="/login">
 <label>用户名</label><input name="username" required autofocus>
 <label>密码</label><input name="password" type="password" required>

@@ -10,6 +10,71 @@ window.__ModuleLoader__.load({
     let React = require("react");
 
     var h = React.createElement;
+    var DESK_CSS = `
+.ddb { display:flex; align-items:center; gap:10px; width:100%; padding:7px 10px; border:0; border-radius:10px; background:transparent; color:inherit; cursor:pointer; font-size:13px; text-align:left; transition:background .13s ease; }
+.ddb:hover { background:var(--dsw-alias-interactive-bg-hover-default, rgba(127,127,127,.12)); }
+.ddb.rail { justify-content:center; padding:7px 6px; }
+.ddb .ic { width:26px; height:26px; border-radius:8px; display:flex; align-items:center; justify-content:center; font-size:15px; background:var(--dsw-alias-bg-base, rgba(127,127,127,.10)); flex:0 0 auto; }
+.ddb .lbl { flex:1; min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.ddb .badge { font-size:10.5px; font-weight:700; line-height:1; padding:3px 7px; border-radius:999px; background:#d64545; color:#fff; }
+.ddp { position:fixed; left:12px; bottom:76px; width:428px; max-width:calc(100vw - 24px); max-height:74vh; display:flex; flex-direction:column; background:var(--dsw-alias-bg-layer-2, #fff); border:1px solid var(--dsw-alias-border-l2, #d0d3d9); border-radius:16px; box-shadow:0 18px 50px rgba(16,24,40,.22), 0 2px 8px rgba(16,24,40,.08); z-index:9999; color:inherit; overflow:hidden; }
+.ddp .hd { display:flex; align-items:center; gap:11px; padding:13px 14px 12px; border-bottom:1px solid var(--dsw-alias-border-l2, #e8eaed); }
+.ddp .hd .ico { width:34px; height:34px; border-radius:10px; display:flex; align-items:center; justify-content:center; font-size:17px; background:var(--dsw-alias-bg-base, #f2f3f5); flex:0 0 auto; }
+.ddp .hd .t1 { font-weight:700; font-size:14px; line-height:1.3; }
+.ddp .hd .t2 { font-size:11.5px; color:var(--dsw-alias-label-tertiary, #8a8f98); margin-top:1px; }
+.ddp .hd .x { margin-left:auto; width:28px; height:28px; border:0; border-radius:8px; background:transparent; color:inherit; cursor:pointer; font-size:13px; opacity:.75; flex:0 0 auto; }
+.ddp .hd .x:hover { background:rgba(127,127,127,.14); opacity:1; }
+.ddp .bd { padding:4px 14px 14px; overflow-y:auto; }
+.ddp .lb { font-size:11px; font-weight:600; letter-spacing:.4px; color:var(--dsw-alias-label-tertiary, #8a8f98); margin:12px 0 2px; }
+.ddp .list { display:flex; flex-direction:column; }
+.ddp .it { display:flex; gap:10px; align-items:flex-start; padding:9px 8px; margin:0 -8px; border-radius:10px; }
+.ddp .it.hv { cursor:pointer; transition:background .12s; }
+.ddp .it.hv:hover { background:rgba(127,127,127,.10); }
+.ddp .it .ico2 { width:26px; height:26px; border-radius:8px; display:flex; align-items:center; justify-content:center; font-size:14px; background:var(--dsw-alias-bg-base, #f2f3f5); flex:0 0 auto; margin-top:1px; }
+.ddp .gr { flex:1; min-width:0; }
+.ddp .th { display:flex; align-items:center; justify-content:space-between; gap:8px; }
+.ddp .t { font-weight:600; font-size:13px; line-height:1.4; }
+.ddp .d { font-size:12px; color:var(--dsw-alias-label-tertiary, #8a8f98); margin-top:2px; line-height:1.55; }
+.ddp .bd2 { font-size:12.5px; margin-top:4px; white-space:pre-wrap; line-height:1.6; }
+.ddp .bdg { display:inline-block; font-size:10px; font-weight:600; line-height:1; padding:3px 7px; border-radius:999px; background:rgba(79,124,247,.12); color:#4f7cf7; margin-left:6px; vertical-align:1px; flex:0 0 auto; }
+.ddp .tag { display:inline-block; font-size:10px; line-height:1; padding:3px 7px; border-radius:999px; background:var(--dsw-alias-bg-base, #f2f3f5); color:var(--dsw-alias-label-tertiary, #8a8f98); flex:0 0 auto; }
+.ddp .dot { width:9px; height:9px; border-radius:50%; flex:0 0 auto; margin-top:7px; box-shadow:0 0 0 3px rgba(127,127,127,.08); }
+.ddp .dot.ok { background:#31a24c; } .ddp .dot.bad { background:#d64545; } .ddp .dot.off { background:#b6bbc2; }
+.ddp .tabs { display:flex; gap:3px; padding:3px; margin:10px 0 2px; background:var(--dsw-alias-bg-base, #f2f3f5); border-radius:10px; }
+.ddp .tabs .tb { flex:1; border:0; border-radius:8px; padding:6px 8px; background:transparent; color:var(--dsw-alias-label-secondary, #5f6570); font-size:12.5px; font-weight:500; cursor:pointer; }
+.ddp .tabs .tb.on { background:var(--dsw-alias-bg-layer-2, #fff); color:inherit; font-weight:600; box-shadow:0 1px 3px rgba(16,24,40,.12); }
+.ddp .code { font-family:ui-monospace, Consolas, monospace; font-size:12px; line-height:1.65; background:var(--dsw-alias-bg-base, #f6f7f8); border:1px solid var(--dsw-alias-border-l2, #e8eaed); border-radius:10px; padding:10px 12px; white-space:pre-wrap; word-break:break-word; max-height:360px; overflow:auto; margin:2px 0 0; }
+.ddp .ft { border-top:1px solid var(--dsw-alias-border-l2, #e8eaed); margin-top:12px; padding:9px 2px 0; font-size:12px; color:var(--dsw-alias-label-secondary, #65676b); line-height:1.65; }
+.ddp .fm { display:flex; flex-direction:column; gap:8px; margin-top:8px; }
+.ddp .row { display:flex; gap:8px; align-items:center; margin-top:8px; flex-wrap:wrap; }
+.ddp .inp { width:100%; min-width:0; height:34px; border:1px solid var(--dsw-alias-border-l2, #d4d7dc); border-radius:9px; padding:0 11px; font-size:12.5px; background:transparent; color:inherit; outline:none; box-sizing:border-box; transition:border-color .15s, box-shadow .15s; }
+.ddp .inp.ta { height:auto; min-height:64px; padding:9px 11px; resize:vertical; line-height:1.6; font-family:inherit; }
+.ddp .inp:focus { border-color:#4f7cf7; box-shadow:0 0 0 3px rgba(79,124,247,.15); }
+.ddp .btn { height:33px; padding:0 14px; border:0; border-radius:9px; background:#4f7cf7; color:#fff; font-size:12.5px; font-weight:600; cursor:pointer; transition:background .15s; }
+.ddp .btn:hover { background:#3f6be6; }
+.ddp .btn.gh { background:transparent; border:1px solid var(--dsw-alias-border-l2, #d4d7dc); color:inherit; font-weight:500; }
+.ddp .btn.gh:hover { background:rgba(127,127,127,.10); }
+.ddp .mini { border:1px solid var(--dsw-alias-border-l2, #d4d7dc); background:transparent; color:inherit; font-size:11.5px; padding:3px 10px; border-radius:7px; cursor:pointer; flex:0 0 auto; opacity:.85; }
+.ddp .mini:hover { background:rgba(127,127,127,.10); opacity:1; }
+.ddp .msg { font-size:12px; margin-top:9px; color:var(--dsw-alias-label-tertiary, #8a8f98); }
+.ddp .msg.err { color:#d64545; } .ddp .msg.ok { color:#31a24c; }
+.ddp .empty { color:var(--dsw-alias-label-tertiary, #8a8f98); font-size:12.5px; padding:10px 2px; }
+.ddp .sub { font-size:12px; color:var(--dsw-alias-label-tertiary, #8a8f98); margin:6px 0 2px; }
+/* 侧栏底部动作区：壳默认为「横排不换行」，多个带文字入口会溢出被挤掉 —— 强制纵向堆叠成菜单 */
+[class*="footerActions"] { flex-direction: column !important; align-items: stretch !important; gap: 2px !important; }
+[class*="footerActions"] > div { width: 100%; }
+`;
+    (function () {
+      try {
+        if (!document.getElementById("dsh-desk-css")) {
+          var st = document.createElement("style");
+          st.id = "dsh-desk-css";
+          st.textContent = DESK_CSS;
+          (document.head || document.documentElement).appendChild(st);
+        }
+      } catch (e) { /* 注入失败不影响功能 */ }
+    })();
+
     var muted = { color: "var(--dsw-alias-label-tertiary, #65676b)" };
     var wrap = {
       maxWidth: 560,
@@ -1537,39 +1602,38 @@ window.__ModuleLoader__.load({
 
       var trigger = h(
         "button",
-        { onClick: toggle, style: footBtn, title: "团队公告与意见反馈" },
-        "📢" + (wide ? " 公告" : "") + (unread > 0 ? "（" + unread + "）" : "")
+        { className: "ddb" + (wide ? "" : " rail"), onClick: toggle, title: "团队公告与意见反馈" },
+        h("span", { className: "ic" }, "📢"),
+        wide ? h("span", { className: "lbl" }, "公告") : null,
+        wide && unread > 0 ? h("span", { className: "badge" }, unread) : null
       );
       if (!open) return h("div", null, trigger);
 
       var kids = [];
-      kids.push(
-        h(
-          "div",
-          { key: "hd", style: { display: "flex", justifyContent: "space-between", alignItems: "center" } },
-          h("div", { style: { fontWeight: 700, fontSize: 14 } }, "团队公告"),
-          h("button", { style: btnSmall, onClick: toggle }, "关闭")
-        )
-      );
-      if (data.phase === "loading") kids.push(h("div", { key: "ld", style: muted }, "读取中…"));
-      if (data.phase === "error") kids.push(h("div", { key: "er", style: muted }, "读不到公告（需从门户地址打开且已登录）。"));
+      if (data.phase === "loading") kids.push(h("div", { key: "ld", className: "empty" }, "读取中…"));
+      if (data.phase === "error") kids.push(h("div", { key: "er", className: "empty" }, "读不到公告（需从门户地址打开且已登录）。"));
       if (data.phase === "ready") {
         if (data.role === "admin") {
+          kids.push(h("div", { key: "nf-lb", className: "lb" }, "发布公告"));
           kids.push(
             h(
               "div",
-              { key: "nf", style: formCol },
-              h("input", { ref: tRef, placeholder: "公告标题（可选）", style: field }),
-              h("textarea", { ref: bRef, placeholder: "公告内容…", style: textareaStyle }),
+              { key: "nf", className: "fm" },
+              h("input", { ref: tRef, className: "inp", placeholder: "公告标题（可选）" }),
+              h("textarea", { ref: bRef, className: "inp ta", placeholder: "公告内容…" }),
               h(
-                "button",
-                {
-                  style: btnDark,
-                  onClick: function () {
-                    post("/portal/api/announcements/post", { title: tRef.current ? tRef.current.value : "", body: bRef.current ? bRef.current.value : "" }, "公告已发布");
+                "div",
+                null,
+                h(
+                  "button",
+                  {
+                    className: "btn",
+                    onClick: function () {
+                      post("/portal/api/announcements/post", { title: tRef.current ? tRef.current.value : "", body: bRef.current ? bRef.current.value : "" }, "公告已发布");
+                    },
                   },
-                },
-                "发布公告"
+                  "发布公告"
+                )
               )
             )
           );
@@ -1580,54 +1644,57 @@ window.__ModuleLoader__.load({
           anns.push(
             h(
               "div",
-              { key: "a" + a.id, style: rowBase },
+              { key: "a" + a.id, className: "it" },
+              h("span", { className: "ico2" }, "📣"),
               h(
                 "div",
-                { style: { display: "flex", justifyContent: "space-between", alignItems: "center", gap: 8 } },
-                h("span", { style: { fontWeight: 600 } }, a.title || "(无标题)"),
-                data.role === "admin"
-                  ? h(
-                      "button",
-                      {
-                        style: btnSmall,
-                        onClick: (function (id) {
-                          return function () {
-                            if (window.confirm("删除该公告？")) post("/portal/api/announcements/rm", { id: id }, "已删除");
-                          };
-                        })(a.id),
-                      },
-                      "删除"
-                    )
-                  : null
-              ),
-              h("div", { style: Object.assign({ fontSize: 11 }, muted) }, fmtAt(a.created_at) + (a.created_by ? " · " + a.created_by : "")),
-              h("div", { style: { whiteSpace: "pre-wrap" } }, a.body)
+                { className: "gr" },
+                h(
+                  "div",
+                  { className: "th" },
+                  h("span", { className: "t" }, a.title || "(无标题)"),
+                  data.role === "admin"
+                    ? h(
+                        "button",
+                        {
+                          className: "mini",
+                          onClick: (function (id) {
+                            return function () {
+                              if (window.confirm("删除该公告？")) post("/portal/api/announcements/rm", { id: id }, "已删除");
+                            };
+                          })(a.id),
+                        },
+                        "删除"
+                      )
+                    : null
+                ),
+                h("div", { className: "d" }, fmtAt(a.created_at) + (a.created_by ? " · " + a.created_by : "")),
+                h("div", { className: "bd2" }, a.body)
+              )
             )
           );
         }
-        kids.push(h("div", { key: "anns", style: { display: "flex", flexDirection: "column" } }, anns.length ? anns : h("div", { style: muted }, "暂无公告")));
-        kids.push(
-          h(
-            "div",
-            { key: "fdiv", style: { borderTop: "1px solid var(--dsw-alias-border-l2, #ccd0d5)", marginTop: 6, paddingTop: 8, fontWeight: 600 } },
-            "意见反馈" + (data.role === "admin" ? "（全员）" : "")
-          )
-        );
+        kids.push(h("div", { key: "anns", className: "list" }, anns.length ? anns : h("div", { className: "empty" }, "暂无公告")));
+        kids.push(h("div", { key: "fdiv", className: "lb" }, "意见反馈" + (data.role === "admin" ? "（全员）" : "")));
         if (data.role !== "admin") {
           kids.push(
             h(
               "div",
-              { key: "ff", style: formCol },
-              h("textarea", { ref: fRef, placeholder: "给管理员提意见 / 报问题…", style: textareaStyle }),
+              { key: "ff", className: "fm" },
+              h("textarea", { ref: fRef, className: "inp ta", placeholder: "给管理员提意见 / 报问题…" }),
               h(
-                "button",
-                {
-                  style: btnDark,
-                  onClick: function () {
-                    post("/portal/api/feedback", { text: fRef.current ? fRef.current.value : "" }, "反馈已提交，谢谢！");
+                "div",
+                null,
+                h(
+                  "button",
+                  {
+                    className: "btn gh",
+                    onClick: function () {
+                      post("/portal/api/feedback", { text: fRef.current ? fRef.current.value : "" }, "反馈已提交，谢谢！");
+                    },
                   },
-                },
-                "提交反馈"
+                  "提交反馈"
+                )
               )
             )
           );
@@ -1638,44 +1705,57 @@ window.__ModuleLoader__.load({
           fbs.push(
             h(
               "div",
-              { key: "fb" + fb.id, style: rowBase },
+              { key: "fb" + fb.id, className: "it" },
+              h("span", { className: "ico2" }, "💬"),
               h(
                 "div",
-                { style: { display: "flex", justifyContent: "space-between", alignItems: "center", gap: 8 } },
-                h("span", { style: Object.assign({ fontSize: 12 }, muted) }, (fb.username || "-") + " · " + fmtAt(fb.created_at)),
-                data.role === "admin"
-                  ? h(
-                      "button",
-                      {
-                        style: btnSmall,
-                        onClick: (function (id) {
-                          return function () {
-                            post("/portal/api/feedback/rm", { id: id }, "已删除");
-                          };
-                        })(fb.id),
-                      },
-                      "删除"
-                    )
-                  : null
-              ),
-              h("div", { style: { whiteSpace: "pre-wrap" } }, fb.text)
+                { className: "gr" },
+                h(
+                  "div",
+                  { className: "th" },
+                  h("span", { className: "d" }, (fb.username || "-") + " · " + fmtAt(fb.created_at)),
+                  data.role === "admin"
+                    ? h(
+                        "button",
+                        {
+                          className: "mini",
+                          onClick: (function (id) {
+                            return function () {
+                              post("/portal/api/feedback/rm", { id: id }, "已删除");
+                            };
+                          })(fb.id),
+                        },
+                        "删除"
+                      )
+                    : null
+                ),
+                h("div", { className: "bd2" }, fb.text)
+              )
             )
           );
         }
-        kids.push(
-          h(
-            "div",
-            { key: "fbs", style: { display: "flex", flexDirection: "column" } },
-            fbs.length ? fbs : h("div", { style: muted }, data.role === "admin" ? "暂无反馈" : "你还没有提过反馈")
-          )
-        );
+        kids.push(h("div", { key: "fbs", className: "list" }, fbs.length ? fbs : h("div", { className: "empty" }, data.role === "admin" ? "暂无反馈" : "你还没有提过反馈")));
       }
       if (msg.kind) {
-        kids.push(
-          h("div", { key: "msg", style: msg.kind === "err" ? { color: "#c0392b", fontSize: 12 } : Object.assign({ fontSize: 12 }, muted) }, msg.text)
-        );
+        kids.push(h("div", { key: "msg", className: "msg" + (msg.kind === "err" ? " err" : msg.kind === "ok" ? " ok" : "") }, msg.text));
       }
-      return h("div", null, trigger, h("div", { key: "panel", style: panelStyle }, kids));
+      return h(
+        "div",
+        null,
+        trigger,
+        h(
+          "div",
+          { key: "panel", className: "ddp" },
+          h(
+            "div",
+            { className: "hd" },
+            h("span", { className: "ico" }, "📢"),
+            h("div", null, h("div", { className: "t1" }, "团队公告"), h("div", { className: "t2" }, "公告与意见反馈")),
+            h("button", { className: "x", onClick: toggle }, "✕")
+          ),
+          h("div", { className: "bd" }, kids)
+        )
+      );
     }
 
     function AssistantsPanel(props) {
@@ -1712,46 +1792,57 @@ window.__ModuleLoader__.load({
 
       var trigger = h(
         "button",
-        { onClick: toggle, style: footBtn, title: "团队助理：Agent 预设一览（专家模式）" },
-        "🧑💼" + (wide ? " 助理" : "")
+        { className: "ddb" + (wide ? "" : " rail"), onClick: toggle, title: "团队助理：Agent 预设一览（专家模式）" },
+        h("span", { className: "ic" }, "🧑‍💼"),
+        wide ? h("span", { className: "lbl" }, "助理") : null
       );
       if (!open) return h("div", null, trigger);
 
       var kids = [];
-      kids.push(
-        h(
-          "div",
-          { key: "hd", style: { display: "flex", justifyContent: "space-between", alignItems: "center" } },
-          h("div", { style: { fontWeight: 700, fontSize: 14 } }, "团队助理"),
-          h("button", { style: btnSmall, onClick: toggle }, "关闭")
-        )
-      );
-      if (st.phase === "loading") kids.push(h("div", { key: "ld", style: muted }, "读取中…"));
-      if (st.phase === "error") kids.push(h("div", { key: "er", style: muted }, "读不到预设（请从门户地址打开且已登录）。"));
+      if (st.phase === "loading") kids.push(h("div", { key: "ld", className: "empty" }, "读取中…"));
+      if (st.phase === "error") kids.push(h("div", { key: "er", className: "empty" }, "读不到预设（请从门户地址打开且已登录）。"));
       if (st.phase === "ready") {
         if (!st.presets.length) {
-          kids.push(h("div", { key: "none", style: muted }, "共享区还没有预设。"));
+          kids.push(h("div", { key: "none", className: "empty" }, "共享区还没有预设。"));
         } else {
+          var rows = [];
           st.presets.forEach(function (p) {
-            kids.push(
+            rows.push(
               h(
                 "div",
-                { key: "p" + p.id, style: { borderTop: "1px solid var(--dsw-alias-border-l2, #ccd0d5)", padding: "8px 0" } },
-                h("div", { style: { fontWeight: 600 } }, p.name, p.codex ? h("span", { style: Object.assign({ fontSize: 11, marginLeft: 6 }, muted) }, "含 Codex 并行") : null),
-                h("div", { style: Object.assign({ fontSize: 12, marginTop: 2 }, muted) }, p.description || p.id)
+                { key: "p" + p.id, className: "it" },
+                h("span", { className: "ico2" }, "🤖"),
+                h(
+                  "div",
+                  { className: "gr" },
+                  h("div", { className: "th" }, h("span", { className: "t" }, p.name), p.codex ? h("span", { className: "bdg" }, "Codex 并行") : null),
+                  h("div", { className: "d" }, p.description || p.id)
+                )
               )
             );
           });
+          kids.push(h("div", { key: "lb", className: "lb" }, "可用助理"));
+          kids.push(h("div", { key: "rows", className: "list" }, rows));
         }
-        kids.push(
+        kids.push(h("div", { key: "tip", className: "ft" }, "助理 = 预设人格与工具组合。默认用哪个：设置 → Agent 预设；共享区 presets/ 下可自行增减，新会话生效。"));
+      }
+      return h(
+        "div",
+        null,
+        trigger,
+        h(
+          "div",
+          { key: "panel", className: "ddp" },
           h(
             "div",
-            { key: "tip", style: Object.assign({ fontSize: 12, marginTop: 8, borderTop: "1px solid var(--dsw-alias-border-l2, #ccd0d5)", paddingTop: 8 }, muted) },
-            "助理 = 预设人格与工具组合。新会话默认用哪个：设置 → Agent 预设；共享区 presets/ 下可自行增减。"
-          )
-        );
-      }
-      return h("div", null, trigger, h("div", { key: "panel", style: panelStyle }, kids));
+            { className: "hd" },
+            h("span", { className: "ico" }, "🧑‍💼"),
+            h("div", null, h("div", { className: "t1" }, "团队助理"), h("div", { className: "t2" }, "Agent 预设（专家模式）")),
+            h("button", { className: "x", onClick: toggle }, "✕")
+          ),
+          h("div", { className: "bd" }, kids)
+        )
+      );
     }
 
     function SkillsConnPanel(props) {
@@ -1812,81 +1903,122 @@ window.__ModuleLoader__.load({
           });
       }
 
-      function tabBtn(active, label, onClick) {
-        return h("button", { style: active ? Object.assign({}, btnLight, { fontWeight: 700 }) : btnLight, onClick: onClick }, label);
-      }
-
-      var trigger = h("button", { onClick: toggle, style: footBtn, title: "专家技能库 + 连接器状态" }, "🧩" + (wide ? " 技能·连接器" : ""));
+      var trigger = h(
+        "button",
+        { className: "ddb" + (wide ? "" : " rail"), onClick: toggle, title: "专家技能库 + 连接器状态" },
+        h("span", { className: "ic" }, "🧩"),
+        wide ? h("span", { className: "lbl" }, "技能·连接器") : null
+      );
       if (!open) return h("div", null, trigger);
 
       var kids = [];
       kids.push(
         h(
           "div",
-          { key: "hd", style: { display: "flex", justifyContent: "space-between", alignItems: "center" } },
-          h("div", { style: { fontWeight: 700, fontSize: 14 } }, "专家技能 · 连接器"),
-          h("button", { style: btnSmall, onClick: toggle }, "关闭")
+          { key: "tabs", className: "tabs" },
+          h(
+            "button",
+            {
+              className: "tb" + (tab === "skills" ? " on" : ""),
+              onClick: function () {
+                setTab("skills");
+                setDet({ phase: "none", id: "", name: "", content: "" });
+              },
+            },
+            "技能" + (st.phase === "ready" ? "（" + st.skills.length + "）" : "")
+          ),
+          h(
+            "button",
+            {
+              className: "tb" + (tab === "conn" ? " on" : ""),
+              onClick: function () {
+                setTab("conn");
+                setDet({ phase: "none", id: "", name: "", content: "" });
+              },
+            },
+            "连接器" + (st.phase === "ready" ? "（" + st.items.length + "）" : "")
+          )
         )
       );
-      kids.push(
-        h(
-          "div",
-          { key: "tabs", style: { display: "flex", gap: 8, margin: "8px 0" } },
-          tabBtn(tab === "skills", "技能", function () {
-            setTab("skills");
-            setDet({ phase: "none", id: "", name: "", content: "" });
-          }),
-          tabBtn(tab === "conn", "连接器", function () {
-            setTab("conn");
-            setDet({ phase: "none", id: "", name: "", content: "" });
-          })
-        )
-      );
-      if (st.phase === "loading") kids.push(h("div", { key: "ld", style: muted }, "读取中…"));
-      else if (st.phase === "error") kids.push(h("div", { key: "er", style: muted }, "读不到（请从门户地址打开且已登录）。"));
+      if (st.phase === "loading") kids.push(h("div", { key: "ld", className: "empty" }, "读取中…"));
+      else if (st.phase === "error") kids.push(h("div", { key: "er", className: "empty" }, "读不到（请从门户地址打开且已登录）。"));
       else if (tab === "skills") {
         if (det.phase !== "none") {
           kids.push(
             h(
               "div",
-              { key: "det-hd", style: { display: "flex", gap: 8, alignItems: "center", marginBottom: 6 } },
-              h("button", { style: btnLight, onClick: function () { setDet({ phase: "none", id: "", name: "", content: "" }); } }, "← 返回"),
-              h("div", { style: { fontWeight: 600 } }, det.name || det.id)
+              { key: "det-hd", className: "row", style: { marginBottom: 2 } },
+              h(
+                "button",
+                {
+                  className: "mini",
+                  onClick: function () {
+                    setDet({ phase: "none", id: "", name: "", content: "" });
+                  },
+                },
+                "← 返回"
+              ),
+              h("span", { className: "t" }, det.name || det.id)
             )
           );
-          if (det.phase === "loading") kids.push(h("div", { key: "dl", style: muted }, "读取中…"));
-          else kids.push(h("pre", { key: "dc", style: Object.assign({}, codeBox, { whiteSpace: "pre-wrap", maxHeight: 380, overflow: "auto" }) }, det.content));
+          if (det.phase === "loading") kids.push(h("div", { key: "dl", className: "empty" }, "读取中…"));
+          else kids.push(h("pre", { key: "dc", className: "code" }, det.content));
         } else if (!st.skills.length) {
-          kids.push(h("div", { key: "none", style: muted }, "共享技能库空空如也。"));
+          kids.push(h("div", { key: "none", className: "empty" }, "共享技能库空空如也。"));
         } else {
+          var rows = [];
           st.skills.forEach(function (sh) {
-            kids.push(
+            rows.push(
               h(
                 "div",
-                { key: "s" + sh.id, style: { borderTop: "1px solid var(--dsw-alias-border-l2, #ccd0d5)", padding: "8px 0", cursor: "pointer" }, onClick: function () { viewSkill(sh); } },
-                h("div", { style: { fontWeight: 600 } }, sh.name, h("span", { style: Object.assign({ fontSize: 11, marginLeft: 6 }, muted) }, sh.id)),
-                h("div", { style: Object.assign({ fontSize: 12, marginTop: 2 }, muted) }, sh.description || ""),
-                sh.whenToUse ? h("div", { style: Object.assign({ fontSize: 11, marginTop: 2 }, muted) }, "触发：" + sh.whenToUse) : null
+                { key: "s" + sh.id, className: "it hv", onClick: function () { viewSkill(sh); } },
+                h("span", { className: "ico2" }, "📘"),
+                h(
+                  "div",
+                  { className: "gr" },
+                  h("div", { className: "th" }, h("span", { className: "t" }, sh.name), h("span", { className: "tag" }, sh.id)),
+                  h("div", { className: "d" }, sh.description || ""),
+                  sh.whenToUse ? h("div", { className: "d" }, "触发：" + sh.whenToUse) : null
+                )
               )
             );
           });
-          kids.push(h("div", { key: "tip", style: Object.assign({ fontSize: 12, marginTop: 8, borderTop: "1px solid var(--dsw-alias-border-l2, #ccd0d5)", paddingTop: 8 }, muted) }, "点击查看全文；装新技能 = 往共享区 skills/ 放一个文件夹，服务器自动分发到各实例。"));
+          kids.push(h("div", { key: "rows", className: "list" }, rows));
+          kids.push(h("div", { key: "tip", className: "ft" }, "点击任意技能查看全文；新增 = 往共享区 skills/ 放一个文件夹，各实例自动分发。"));
         }
       } else {
-        if (!st.items.length) kids.push(h("div", { key: "cnon", style: muted }, "暂无连接信息。"));
+        var crows = [];
         st.items.forEach(function (it) {
-          var color = it.ok === true ? "#2e7d32" : it.ok === false ? "#c0392b" : "#9aa0a6";
-          kids.push(
+          var dotCls = it.ok === true ? "dot ok" : it.ok === false ? "dot bad" : "dot off";
+          crows.push(
             h(
               "div",
-              { key: "c" + it.name, style: { borderTop: "1px solid var(--dsw-alias-border-l2, #ccd0d5)", padding: "8px 0" } },
-              h("div", { style: { fontWeight: 600 } }, h("span", { style: { color: color, marginRight: 6 } }, "●"), it.name),
-              h("div", { style: Object.assign({ fontSize: 12, marginTop: 2 }, muted) }, it.detail || "")
+              { key: "c" + it.name, className: "it" },
+              h("span", { className: dotCls }),
+              h("div", { className: "gr" }, h("div", { className: "t" }, it.name), h("div", { className: "d" }, it.detail || ""))
             )
           );
         });
+        kids.push(h("div", { key: "crows", className: "list" }, crows.length ? crows : h("div", { className: "empty" }, "暂无连接信息。")));
+        kids.push(h("div", { key: "ctip", className: "ft" }, "状态为只读探测：绿 = 已接通，灰 = 未配置（可选），红 = 异常。"));
       }
-      return h("div", null, trigger, h("div", { key: "panel", style: panelStyle }, kids));
+      return h(
+        "div",
+        null,
+        trigger,
+        h(
+          "div",
+          { key: "panel", className: "ddp" },
+          h(
+            "div",
+            { className: "hd" },
+            h("span", { className: "ico" }, "🧩"),
+            h("div", null, h("div", { className: "t1" }, "专家技能 · 连接器"), h("div", { className: "t2" }, "技能库全文 + 连接器状态")),
+            h("button", { className: "x", onClick: toggle }, "✕")
+          ),
+          h("div", { className: "bd" }, kids)
+        )
+      );
     }
 
     function AutomationPanel(props) {
@@ -1996,65 +2128,94 @@ window.__ModuleLoader__.load({
         post("/portal/api/admin/reminders/add", { at_epoch: at, text: text }, "已添加：到点会推送提醒（微信/Webhook 通道）");
       }
 
-      var trigger = h("button", { onClick: toggle, style: footBtn, title: "自动化：定时提醒与团队自动化" }, "⚡" + (wide ? " 自动化" : ""));
+      var trigger = h(
+        "button",
+        { className: "ddb" + (wide ? "" : " rail"), onClick: toggle, title: "自动化：定时提醒与团队自动化" },
+        h("span", { className: "ic" }, "⚡"),
+        wide ? h("span", { className: "lbl" }, "自动化") : null
+      );
       if (!open) return h("div", null, trigger);
 
       var kids = [];
-      kids.push(
-        h(
-          "div",
-          { key: "hd", style: { display: "flex", justifyContent: "space-between", alignItems: "center" } },
-          h("div", { style: { fontWeight: 700, fontSize: 14 } }, "自动化"),
-          h("button", { style: btnSmall, onClick: toggle }, "关闭")
-        )
-      );
-      if (st.phase === "loading") kids.push(h("div", { key: "ld", style: muted }, "读取中…"));
-      if (st.phase === "error") kids.push(h("div", { key: "er", style: muted }, "读不到（请从门户地址打开且已登录）。"));
+      if (st.phase === "loading") kids.push(h("div", { key: "ld", className: "empty" }, "读取中…"));
+      if (st.phase === "error") kids.push(h("div", { key: "er", className: "empty" }, "读不到（请从门户地址打开且已登录）。"));
       if (st.phase === "ready") {
-        kids.push(h("div", { key: "sub", style: Object.assign({ fontSize: 12, margin: "4px 0" }, muted) }, "定时提醒（待发送 " + st.reminders.length + " 条）"));
-        if (!st.reminders.length) kids.push(h("div", { key: "nr", style: muted }, "没有待发送的提醒。"));
+        kids.push(h("div", { key: "sub", className: "lb" }, "待发送提醒（" + st.reminders.length + "）"));
+        if (!st.reminders.length) kids.push(h("div", { key: "nr", className: "empty" }, "还没有待发送的提醒。"));
+        var rows = [];
         st.reminders.forEach(function (r) {
-          kids.push(
+          rows.push(
             h(
               "div",
-              { key: "r" + r.id, style: { borderTop: "1px solid var(--dsw-alias-border-l2, #ccd0d5)", padding: "6px 0", display: "flex", justifyContent: "space-between", gap: 8, alignItems: "flex-start" } },
+              { key: "r" + r.id, className: "it" },
+              h("span", { className: "ico2" }, "⏰"),
               h(
                 "div",
-                { style: { flex: 1 } },
-                h("div", { style: { fontWeight: 600 } }, r.text),
-                h("div", { style: Object.assign({ fontSize: 12, marginTop: 2 }, muted) }, "⏰ " + fmtEp(r.at_epoch) + (r.title ? " · " + r.title : ""))
-              ),
-              st.role === "admin"
-                ? h("button", { style: btnLight, onClick: function () { post("/portal/api/admin/reminders/rm", { id: r.id }, "已删除"); } }, "删除")
-                : null
+                { className: "gr" },
+                h(
+                  "div",
+                  { className: "th" },
+                  h("span", { className: "t" }, r.text),
+                  st.role === "admin"
+                    ? h(
+                        "button",
+                        {
+                          className: "mini",
+                          onClick: function () {
+                            post("/portal/api/admin/reminders/rm", { id: r.id }, "已删除");
+                          },
+                        },
+                        "删除"
+                      )
+                    : null
+                ),
+                h("div", { className: "d" }, "⏰ " + fmtEp(r.at_epoch) + (r.title ? " · " + r.title : ""))
+              )
             )
           );
         });
+        if (rows.length) kids.push(h("div", { key: "rows", className: "list" }, rows));
         if (st.role === "admin") {
           kids.push(
             h(
               "div",
-              { key: "add", style: { display: "flex", gap: 6, marginTop: 8, flexWrap: "wrap" } },
-              h("input", { ref: wRef, placeholder: "10:00 / +30m / 明天 09:00", style: { width: 170 }, onKeyDown: function (e) { if (e.key === "Enter") add(); } }),
-              h("input", { ref: tRef, placeholder: "提醒内容", style: { flex: 1, minWidth: 140 }, onKeyDown: function (e) { if (e.key === "Enter") add(); } }),
-              h("button", { style: btnLight, onClick: add }, "添加")
+              { key: "add", className: "row" },
+              h("input", { ref: wRef, className: "inp", style: { width: 160, flex: "0 0 auto" }, placeholder: "10:00 / +30m / 明天 09:00", onKeyDown: function (e) { if (e.key === "Enter") add(); } }),
+              h("input", { ref: tRef, className: "inp", style: { flex: "1 1 120px", width: "auto" }, placeholder: "提醒内容", onKeyDown: function (e) { if (e.key === "Enter") add(); } }),
+              h("button", { className: "btn", onClick: add }, "添加")
             )
           );
-          kids.push(h("div", { key: "tip", style: Object.assign({ fontSize: 12, marginTop: 6 }, muted) }, "到点由通知桥推送。也可以直接对助理说：提醒我 明天 09:00 开会。"));
+          kids.push(h("div", { key: "tip", className: "ft" }, "到点由通知桥推送微信。也可以直接对助理说：提醒我 明天 09:00 开会。"));
         } else {
-          kids.push(h("div", { key: "tip", style: Object.assign({ fontSize: 12, marginTop: 8, borderTop: "1px solid var(--dsw-alias-border-l2, #ccd0d5)", paddingTop: 8 }, muted) }, "成员可见提醒列表；新增/删除请找管理员，或直接对助理说：提醒我 明天 09:00 开会。"));
+          kids.push(h("div", { key: "tip", className: "ft" }, "成员可见提醒列表；新增 / 删除请找管理员，或直接对助理说：提醒我 明天 09:00 开会。"));
         }
         if (st.recent && st.recent.length) {
-          kids.push(h("div", { key: "rh", style: Object.assign({ fontSize: 12, marginTop: 8 }, muted) }, "最近已发送"));
+          kids.push(h("div", { key: "rh", className: "lb" }, "最近已发送"));
           st.recent.forEach(function (r) {
-            kids.push(h("div", { key: "rs" + r.id, style: Object.assign({ fontSize: 12 }, muted) }, "· " + r.text + "（" + fmtEp(r.at_epoch) + "）"));
+            kids.push(h("div", { key: "rs" + r.id, className: "sub" }, "· " + r.text + "（" + fmtEp(r.at_epoch) + "）"));
           });
         }
       }
       if (msg.kind) {
-        kids.push(h("div", { key: "msg", style: msg.kind === "err" ? { color: "#c0392b", fontSize: 12 } : Object.assign({ fontSize: 12 }, muted) }, msg.text));
+        kids.push(h("div", { key: "msg", className: "msg" + (msg.kind === "err" ? " err" : msg.kind === "ok" ? " ok" : "") }, msg.text));
       }
-      return h("div", null, trigger, h("div", { key: "panel", style: panelStyle }, kids));
+      return h(
+        "div",
+        null,
+        trigger,
+        h(
+          "div",
+          { key: "panel", className: "ddp" },
+          h(
+            "div",
+            { className: "hd" },
+            h("span", { className: "ico" }, "⚡"),
+            h("div", null, h("div", { className: "t1" }, "自动化"), h("div", { className: "t2" }, "定时提醒与团队自动化")),
+            h("button", { className: "x", onClick: toggle }, "✕")
+          ),
+          h("div", { className: "bd" }, kids)
+        )
+      );
     }
 
     function TaskBoard() {
