@@ -139,7 +139,22 @@ export function deleteSession(username: string, sessionId: string): { ok: true; 
       killed = true
     }
   } catch {
-    // 实例未运行也继续清理
+    // 无 systemd（容部署）→ 走下面的 pidfile 兜底
+  }
+  if (!killed) {
+    try {
+      // 容器/无 systemd 部署：包装循环把实例 pid 写到 ~/.desk/run/<成员>.pid（杀后循环 5 秒自拉）
+      const pf = join(homedir(), '.desk', 'run', `${username}.pid`)
+      if (existsSync(pf)) {
+        const pid = Number(readFileSync(pf, 'utf8').trim())
+        if (Number.isFinite(pid) && pid > 1) {
+          process.kill(pid, 'SIGKILL')
+          killed = true
+        }
+      }
+    } catch {
+      // 实例未运行也继续清理
+    }
   }
 
   let removed = 0

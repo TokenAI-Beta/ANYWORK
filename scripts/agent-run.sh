@@ -36,4 +36,9 @@ elif ! grep -qE '^[[:space:]]*DEEPSEEK_API_KEY:' "$doc"; then
 fi
 chmod 600 "$doc"
 
-exec node "$dsh_entry" web --port "$port" --trusted-host "$authority"
+extra_hosts=()
+if [ -n "${DESK_TRUSTED_HOSTS:-}" ]; then
+  IFS=',' read -r -a _th <<< "$DESK_TRUSTED_HOSTS"
+  for h in "${_th[@]}"; do [ -n "$h" ] && extra_hosts+=(--trusted-host "$h"); done
+fi
+exec node "$dsh_entry" web --port "$port" --trusted-host "$authority" "${extra_hosts[@]}"

@@ -14,3 +14,4 @@ Thumbs.db
 backups/
 coverage/
 *.tsbuildinfo
+!.env.example

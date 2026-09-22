@@ -14,7 +14,7 @@ echo "   已更新: $share/SOUL.md"
 
 echo "== 2) 各实例 =="
 found=0
-for home in "$HOME"/desk-test/u*; do
+for home in "$HOME"/desk-test/*; do   # 兼容 uN 与 <用户名> 两种命名（下行 profiles 检查负责过滤）
   [ -d "$home/profiles" ] || continue
   found=1
   if [ -e "$home/AGENTS.md" ] && [ ! -L "$home/AGENTS.md" ]; then
@@ -38,5 +38,5 @@ for home in "$HOME"/desk-test/u*; do
   fi
   echo "   $tgt 已同步（保留自定义尾区 ${#tail} 字符）"
 done
-[ "$found" = "1" ] || echo "   （未发现实例：~/desk-test/u*，跳过）"
+[ "$found" = "1" ] || echo "   （未发现实例：~/desk-test/*，跳过）"
 echo "完成（新会话即生效；无需重启实例）"

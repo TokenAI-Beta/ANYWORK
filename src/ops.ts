@@ -1,5 +1,6 @@
 // 运维面板数据（只读）：服务健康 / 端口探活 / 备份 / 磁盘 / 主机 —— 供 设置 →「运维」页使用
 import { execFile } from 'node:child_process'
+import { readFileSync } from 'node:fs'
 import { readdir, stat, statfs } from 'node:fs/promises'
 import { freemem, homedir, loadavg, totalmem, uptime as osUptime } from 'node:os'
 import { join } from 'node:path'
@@ -31,13 +32,39 @@ export async function collectOps(db: DatabaseSync, dataDir: string): Promise<Rec
     port: number
   }[]
   const units = ['desk-server', ...users.map((u) => `desk-agent-${u.username}`)]
+  // 容器/无 systemd 部署兜底：实例存活看 ~/.desk/run/<成员>.pid
+  const pidAlive = (p: string): boolean => {
+    try {
+      const pid = Number(readFileSync(p, 'utf8').trim())
+      if (!Number.isFinite(pid) || pid <= 1) return false
+      process.kill(pid, 0)
+      return true
+    } catch {
+      return false
+    }
+  }
+  const hasSystemd = (await run('systemctl', ['--version'])).length > 0
   const services = await Promise.all(
     units.map(async (name) => {
+      if (!hasSystemd) {
+        const isServer = name === 'desk-server'
+        const pidFile = join(homedir(), '.desk', 'run', `${name.replace(/^desk-agent-/, '')}.pid`)
+        const pinfo = isServer
+          ? { active: true, pid: String(process.pid) }
+          : (() => {
+              try {
+                return { active: pidAlive(pidFile), pid: readFileSync(pidFile, 'utf8').trim() }
+              } catch {
+                return { active: false, pid: '' }
+              }
+            })()
+        return { name, active: pinfo.active, pid: pinfo.pid, since: '', runner: 'process' }
+      }
       const active = (await run('systemctl', ['is-active', name])) === 'active'
       const show = await run('systemctl', ['show', name, '-p', 'MainPID', '-p', 'ActiveEnterTimestamp'])
       const pid = /MainPID=(\d+)/.exec(show)?.[1] ?? ''
       const since = /ActiveEnterTimestamp=(.+)/.exec(show)?.[1] ?? ''
-      return { name, active, pid, since }
+      return { name, active, pid, since, runner: 'systemd' }
     }),
   )
 

@@ -1,0 +1,7 @@
+.git
+.env
+*.log
+desk-test
+desk-backups
+node_modules
+**/node_modules

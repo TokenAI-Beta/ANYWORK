@@ -1,0 +1,32 @@
+# DSH-ANYWORK · 一条命令部署（Linux 服务器通用）
+#
+#   1) cp .env.example .env   并填写 ANYWORK_HOST 与 DEEPSEEK_API_KEY
+#   2) docker compose up -d --build     （首次构建约 15~25 分钟）
+#   3) 浏览器打开 http://<ANYWORK_HOST>/  （管理员账号见 .env）
+#
+# 数据全部在 docker 卷 anywork_anywork-data 里；升级/重建容器不丢数据。
+# 停止：docker compose down     查看日志：docker compose logs -f
+
+name: anywork
+
+services:
+  anywork:
+    build:
+      context: .
+      dockerfile: deploy/docker/Dockerfile
+    restart: unless-stopped
+    ports:
+      - "${ANYWORK_PORT:-8080}:8080"
+    volumes:
+      - anywork-data:/data
+    environment:
+      ANYWORK_HOST: "${ANYWORK_HOST:?请在 .env 中设置 ANYWORK_HOST（访问地址，如 192.168.1.50:8080）}"
+      ANYWORK_ADMIN_USER: "${ANYWORK_ADMIN_USER:-boss}"
+      ANYWORK_ADMIN_PASSWORD: "${ANYWORK_ADMIN_PASSWORD:-}"
+      ANYWORK_MEMBERS: "${ANYWORK_MEMBERS:-}"
+      ANYWORK_TRUSTED_HOSTS: "${ANYWORK_TRUSTED_HOSTS:-}"
+      DEEPSEEK_API_KEY: "${DEEPSEEK_API_KEY:?请在 .env 中设置 DEEPSEEK_API_KEY}"
+      TZ: "${TZ:-Asia/Shanghai}"
+
+volumes:
+  anywork-data:

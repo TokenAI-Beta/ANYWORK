@@ -8,6 +8,16 @@ Each member signs in with their own account and works in their own isolated work
 
 > **Status: building in public, early stage.** P0–P3 are done and verified on the LAN. P4 (delivery) is largely in place — `setup/backup/restore/logs` scripts, a one-page [deployment guide](docs/DEPLOY.md), and a green end-to-end [acceptance walk](docs/ACCEPTANCE.md); a from-scratch dry-run on a second machine is pending. Roadmap and 22-task plan in [`docs/PLAN.md`](docs/PLAN.md); verified findings in [`docs/BASELINE.md`](docs/BASELINE.md); daily progress in [`docs/devlog/`](docs/devlog/). 📖 **User manual** (Chinese): [`docs/GUIDE.md`](docs/GUIDE.md).
 
+## Quick start (Docker · any Linux server)
+
+```bash
+git clone https://github.com/bugbyc0922/DSH-ANYWORK.git && cd DSH-ANYWORK
+cp .env.example .env    # set ANYWORK_HOST (your access address) and DEEPSEEK_API_KEY
+docker compose up -d --build
+```
+
+Open `http://<ANYWORK_HOST>/`. First build takes ~10-25 min (compiles the dsh engine); all data lives in a Docker volume and survives upgrades. Details in the [deployment guide](docs/DEPLOY.md).
+
 ## What this is
 
 - **Engine**: the official [DeepSeek Harness](https://github.com/deepseek-ai/deepseek-harness) (`dsh`, MIT) — agent capabilities, tools, and the sandbox are reused as-is. This project does not modify dsh's source.

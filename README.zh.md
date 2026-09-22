@@ -8,6 +8,16 @@
 
 > **状态：建设中（公开开发）。** P0–P3 均已完成并在局域网实机验证。P4（交付化）主体就绪——`setup/backup/restore/logs` 脚本、一页[部署说明](docs/DEPLOY.md)、真实的端到端[验收记录](docs/ACCEPTANCE.md)；从零重装待第二台机器实测。路线图与任务清单见 [`docs/PLAN.md`](docs/PLAN.md)，验证记录见 [`docs/BASELINE.md`](docs/BASELINE.md)，每日进展见 [`docs/devlog/`](docs/devlog/)；**使用手册见 [`docs/GUIDE.md`](docs/GUIDE.md)**。
 
+## 快速开始（Docker · Linux 服务器通用）
+
+```bash
+git clone https://github.com/bugbyc0922/DSH-ANYWORK.git && cd DSH-ANYWORK
+cp .env.example .env    # 填两个必填项：ANYWORK_HOST（你的访问地址）与 DEEPSEEK_API_KEY
+docker compose up -d --build
+```
+
+打开 `http://<ANYWORK_HOST>/` 即用。首次构建约 10~25 分钟（含 dsh 引擎编译，之后走缓存很快）；数据全在 Docker 卷里，升级/重建不丢。详见[部署说明](docs/DEPLOY.md)。
+
 ## 这是什么
 
 - **引擎**：官方 [DeepSeek Harness](https://github.com/deepseek-ai/deepseek-harness)（dsh，MIT）——agent 能力、工具、沙箱直接复用，不改它的源码。

@@ -1,9 +1,33 @@
 # 部署说明（一页版）
 
-> 目标环境：Windows 11 + WSL2（Ubuntu，systemd）。全部服务跑在 WSL 里，Windows 只做"开机拉起 + 端口转发"。
+> 两种部署方式：**方式一 Docker（推荐，任何 Linux 服务器，一条命令）**；方式二 Windows 11 + WSL2（本页后半部分）。两者数据互不相通，任选其一。
 > 日常运维速查在文末；已知问题见 [`KNOWN-ISSUES.md`](KNOWN-ISSUES.md)。
 
-## 前置
+## 方式一：Docker（推荐，Linux 服务器通用）
+
+```bash
+git clone https://github.com/bugbyc0922/DSH-ANYWORK.git && cd DSH-ANYWORK
+cp .env.example .env    # 填两个必填项：ANYWORK_HOST（你的访问地址，如 192.168.1.50:8080）与 DEEPSEEK_API_KEY
+docker compose up -d --build
+```
+
+- 打开 `http://<ANYWORK_HOST>/`，用 `.env` 里的管理员账号登录；密码留空则首次启动自动生成并打印一次（也可在卷内 `.desk/admin-password` 查看）。
+- **组成**：单容器 = 门户(:8080) + 模型网关(:8100，仅容器内) + 每个成员一个 dsh 实例；数据全部在卷 `anywork_anywork-data`。
+- **记账**：成员的模型请求都经容器内网关转发入账（真实 key 只留在容器内，成员拿不到）；用量在「设置 → 用量」按人查看。
+- **首次启动**：自动建管理员号、发虚拟钥匙、配实例、装团队插件（需外网；装失败的插件重启容器会自动重试）。
+- **加成员**：`.env` 里改 `ANYWORK_MEMBERS=alice,bob` 后 `docker compose up -d`（自动建号；初始密码在卷内 `.desk/accounts.txt`，转告本人后建议删除）；也可用 设置 →「成员管理」在线建。
+- **升级**：`git pull && docker compose up -d --build`；换 dsh 版本改 `deploy/docker/Dockerfile` 里的 `DSH_REF`。
+- **备份**：`docker run --rm -v anywork_anywork-data:/data -v "$PWD":/out alpine tar czf /out/anywork-backup-$(date +%F).tar.gz -C /data .`
+- **排查**：
+  - 页面打不开：确认端口（默认 8080，可改 `ANYWORK_PORT`）未被占用、防火墙放行；
+  - 登录后立刻 401/白屏：核对 `ANYWORK_HOST` 与浏览器地址**完全一致**（含端口）——信任围栏按它校验；
+  - 拉基础镜像慢：给 Docker 配国内镜像加速（daemon `registry-mirrors`）。
+
+---
+
+## 方式二：Windows 11 + WSL2 部署
+
+### 前置
 
 - Windows 11 + WSL2 发行版（已启用 systemd；`wsl -l -v` 可见）
 - Node 24（部署路径约定 `~/opt/node-v24.19.0-linux-x64/`，或 PATH 中任意 24+）
