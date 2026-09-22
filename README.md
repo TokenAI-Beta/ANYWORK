@@ -11,7 +11,7 @@ Each member signs in with their own account and works in their own isolated work
 ## What this is
 
 - **Engine**: the official [DeepSeek Harness](https://github.com/deepseek-ai/deepseek-harness) (`dsh`, MIT) — agent capabilities, tools, and the sandbox are reused as-is. This project does not modify dsh's source.
-- **Shell (this repo)**: accounts and login, one isolated dsh instance and workspace per member, a model gateway that never exposes the real API key (per-person accounting and budget limits), and a portal to tie it together.
+- **Shell (this repo)**: accounts and login, one isolated dsh instance and workspace per member, a model gateway that never exposes the real API key (per-person accounting and budget limits), and a portal to tie it together. Team modules inside the workbench: task board, knowledge base, shared drive, notifications, announcements — and **session deletion with admin approval** (members request, admins approve).
 - In one line: **dsh does the work; DSH-ANYWORK decides who gets to use it, where, and at what cost.**
 
 ## Architecture (target)
