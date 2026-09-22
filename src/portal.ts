@@ -20,7 +20,47 @@ import { addNotifyRoute, addReminder, dispatchNotify, listNotifyLog, listNotifyR
 import { defaultDataDir } from './db.ts'
 import { collectConnectors, collectPresets, collectSkills, readSkill } from './panel.ts'
 import { collectOps } from './ops.ts'
-import { createReadStream, existsSync, statSync } from 'node:fs'
+import { createReadStream, existsSync, readFileSync, statSync, writeFileSync } from 'node:fs'
+import { join } from 'node:path'
+import { homedir } from 'node:os'
+
+// —— 团队共用上游（默认 DeepSeek 真 key；写入 ~/.desk/keys.env，改后需重启进程）——
+function upstreamKeysPath(): string {
+  return join(homedir(), '.desk', 'keys.env')
+}
+
+function readUpstreamKeyRaw(): string {
+  if (process.env.DESK_REAL_KEY) return process.env.DESK_REAL_KEY
+  const f = upstreamKeysPath()
+  try {
+    if (existsSync(f)) {
+      for (const line of readFileSync(f, 'utf8').split('\n')) {
+        const m = /^(?:DEEPSEEK_API_KEY|DESK_REAL_KEY)\s*=\s*(.+)$/.exec(line.trim())
+        if (m) return m[1].trim()
+      }
+    }
+  } catch {
+    // 读失败按未配置
+  }
+  return ''
+}
+
+function maskKey(k: string): string {
+  if (!k) return ''
+  if (k.length <= 10) return k.slice(0, 2) + '****'
+  return k.slice(0, 5) + '****' + k.slice(-4)
+}
+
+function readUpstreamInfo(): { upstream: string; keySet: boolean; keyMasked: string; source: string; writable: boolean } {
+  const raw = readUpstreamKeyRaw()
+  return {
+    upstream: process.env.DESK_UPSTREAM ?? 'https://api.deepseek.com',
+    keySet: raw !== '',
+    keyMasked: maskKey(raw),
+    source: process.env.DESK_REAL_KEY ? 'env:DESK_REAL_KEY' : raw ? 'file:~/.desk/keys.env' : '未配置',
+    writable: !process.env.DESK_REAL_KEY,
+  }
+}
 
 export interface PortalOptions {
   db: DatabaseSync
@@ -1103,6 +1143,28 @@ export function startPortal(opts: PortalOptions) {
           if (cur) setChannelEnabled(db, name, cur.enabled !== 1)
           res.writeHead(200, { 'content-type': 'application/json; charset=utf-8' })
           return res.end(JSON.stringify({ name, enabled: cur ? cur.enabled !== 1 : false }))
+        }
+        if (req.method === 'GET' && path === '/portal/api/admin/upstream') {
+          res.writeHead(200, { 'content-type': 'application/json; charset=utf-8' })
+          return res.end(JSON.stringify({ ok: true, ...readUpstreamInfo() }))
+        }
+        if (req.method === 'POST' && path === '/portal/api/admin/upstream-set') {
+          const body = await readJsonBody()
+          const raw = String(body.api_key ?? '').trim()
+          const info = readUpstreamInfo()
+          const reply = (obj: Record<string, unknown>): void => {
+            res.writeHead(200, { 'content-type': 'application/json; charset=utf-8' })
+            res.end(JSON.stringify(obj))
+          }
+          if (!info.writable) return reply({ error: '当前 key 来自环境变量 DESK_REAL_KEY，需在服务环境里修改' })
+          if (!/^[\x21-\x7e]{16,200}$/.test(raw)) return reply({ error: '格式不合法：应为 sk- 开头、16-200 位可打印字符' })
+          const cur = readUpstreamKeyRaw()
+          if (cur === raw) return reply({ ok: true, unchanged: true, keyMasked: maskKey(raw) })
+          writeFileSync(upstreamKeysPath(), `DEEPSEEK_API_KEY=${raw}\n`, { mode: 0o600 })
+          reply({ ok: true, restarted: true, keyMasked: maskKey(raw) })
+          // 先回响应，再退出进程让 systemd（Restart=always）拉起新进程加载新 key
+          setTimeout(() => process.exit(0), 800)
+          return
         }
         if (req.method === 'GET' && path === '/portal/api/admin/notify') {
           res.writeHead(200, { 'content-type': 'application/json; charset=utf-8' })

@@ -100,5 +100,6 @@ python3? 不需要——零依赖
 - 虚拟钥匙存 `~/desk-test/uN/.credentials.yaml`（0600，YAML：`DEEPSEEK_API_KEY: sk-desk-…`）。
 - **别再 export `DEEPSEEK_API_KEY`**——环境层只读且压过存储层，会把 Models 页的密钥输入框锁死（`writable:false`）。
 - 播种/修复：`bash scripts/seed-credentials.sh [user …] [--force]`（默认只补缺；用户自定义值保留）。
+- 团队共用真 key（默认上游）：成员管理 →「团队共用上游」查看打码值 / 更换（写 `~/.desk/keys.env` 后自动退出进程由 systemd 拉起，5~10 秒）；也可直接编辑该文件后 `kill -9` desk-server 的 MainPID。
 - 排障一句：`curl -s -X POST http://127.0.0.1:33xx/api/credentials.describe -H 'content-type: application/json' -d '{"type":"client-request","rpcId":"x","method":"credentials.describe","payload":{"refs":["DEEPSEEK_API_KEY"]}}'` → 期望 `source:"file", writable:true`。改钥匙免重启（watch 热加载 + 每请求解析）。
 

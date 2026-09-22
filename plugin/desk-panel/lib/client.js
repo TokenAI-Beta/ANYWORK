@@ -790,9 +790,17 @@ window.__ModuleLoader__.load({
       var chModelsRef = React.useRef(null);
       var chPricesRef = React.useRef(null);
       var chNoteRef = React.useRef(null);
+      var upPair = React.useState({ phase: "loading", upstream: "", keySet: false, keyMasked: "", source: "", writable: true });
+      var up = upPair[0];
+      var setUp = upPair[1];
+      var upKeyRef = React.useRef(null);
 
       function load(quiet) {
         if (!quiet) setData({ phase: "loading", members: [], channels: [], message: "" });
+        fetch("/portal/api/admin/upstream", { headers: { accept: "application/json" } })
+          .then(function (r) { return r.ok ? r.json() : {}; })
+          .then(function (d) { setUp({ phase: "ready", upstream: d.upstream || "", keySet: !!d.keySet, keyMasked: d.keyMasked || "", source: d.source || "", writable: d.writable !== false }); })
+          .catch(function () { setUp({ phase: "error", upstream: "", keySet: false, keyMasked: "", source: "", writable: true }); });
         fetch("/portal/api/admin/overview", { headers: { accept: "application/json" } })
           .then(function (r) {
             if (r.status === 403) throw new Error("NOPERM");
@@ -831,6 +839,36 @@ window.__ModuleLoader__.load({
           .catch(function (e) {
             setMsg({ kind: "err", text: String((e && e.message) || e) });
             return null;
+          });
+      }
+
+      function saveUpstream(raw) {
+        if (!raw) {
+          setMsg({ kind: "err", text: "请先粘贴新 key" });
+          return;
+        }
+        setMsg({ kind: "info", text: "保存中…" });
+        fetch("/portal/api/admin/upstream-set", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ api_key: raw }) })
+          .then(function (r) {
+            return r.json().then(function (d) {
+              return { status: r.status, d: d };
+            });
+          })
+          .then(function (res) {
+            if (res.status !== 200 || (res.d && res.d.error)) {
+              setMsg({ kind: "err", text: (res.d && res.d.error) || "HTTP " + res.status });
+              return;
+            }
+            if (res.d && res.d.unchanged) {
+              setMsg({ kind: "ok", text: "与当前 key 相同，无需更换。" });
+              return;
+            }
+            if (upKeyRef.current) upKeyRef.current.value = "";
+            setMsg({ kind: "ok", text: "已更新（" + ((res.d && res.d.keyMasked) || "") + "），网关重启中——约 5~10 秒后自动刷新。" });
+            setTimeout(function () { load(true); }, 12000);
+          })
+          .catch(function (e) {
+            setMsg({ kind: "err", text: String((e && e.message) || e) });
           });
       }
 
@@ -985,6 +1023,50 @@ window.__ModuleLoader__.load({
           { key: "trend" },
           h("div", { style: { fontWeight: 600 } }, "近 7 天团队用量 · 合计 " + fmt(total7)),
           h("div", { style: { display: "flex", gap: 6, alignItems: "flex-end" } }, barNodes)
+        )
+      );
+      kids.push(
+        h(
+          "div",
+          { key: "up" },
+          h("div", { style: { fontSize: 15, fontWeight: 700 } }, "团队共用上游（默认）"),
+          h(
+            "div",
+            { style: Object.assign({ fontSize: 12, marginTop: 2 }, muted) },
+            "所有成员默认经这里出网；外部通道按模型名分流（见下方「模型通道」）。Key 只存服务器，成员不可见。"
+          ),
+          h(
+            "div",
+            { style: { marginTop: 6 } },
+            "🌐 " + (up.upstream || "-") + "　",
+            h(
+              "span",
+              { style: Object.assign({ fontSize: 12 }, muted) },
+              up.keySet ? "Key " + up.keyMasked + "（来源 " + up.source + "）" : "Key 未配置"
+            )
+          ),
+          up.writable
+            ? h(
+                "div",
+                { style: { display: "flex", gap: 6, marginTop: 6, flexWrap: "wrap" } },
+                h("input", { ref: upKeyRef, type: "password", placeholder: "sk-…（粘贴新的 DeepSeek API Key；保存后网关自动重启约 5~10 秒）", style: field }),
+                h(
+                  "button",
+                  {
+                    style: btnDark,
+                    onClick: function () {
+                      saveUpstream(upKeyRef.current ? upKeyRef.current.value.trim() : "");
+                    },
+                  },
+                  "更新 Key"
+                )
+              )
+            : h("div", { style: Object.assign({ fontSize: 12, marginTop: 6 }, muted) }, "当前 Key 来自服务环境变量（DESK_REAL_KEY），请在服务环境里修改。"),
+          h(
+            "div",
+            { style: Object.assign({ fontSize: 12, marginTop: 6 }, muted) },
+            "换 Key 只影响默认上游；给特定模型接别的上游 / Key 用下方「模型通道」。"
+          )
         )
       );
       kids.push(h("div", { key: "t1", style: { fontSize: 15, fontWeight: 700 } }, "成员（" + data.members.length + "）"));
