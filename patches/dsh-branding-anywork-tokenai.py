@@ -3,7 +3,8 @@
 #   1. locale zh/en: brand.localBuild -> "ANYWORK-ToKenAI"
 #   2. ui-conversation locales: hero.headline -> "ANYWORK-ToKenAI"（zh/en）；删除 hero.preview
 #   3. EmptyHero.tsx: 删除「预览版」徽章 span
-# 幂等：已含 ANYWORK-ToKenAI / 已无 hero.preview 的项自动跳过。
+#   4. SidebarRoot.tsx: 删除侧栏品牌名旁的版本号小字（buildVersion span）
+# 幂等：已含 ANYWORK-ToKenAI / 已无对应元素的项自动跳过。
 import io, os
 
 ROOT = os.environ.get("DSH_SRC", os.path.expanduser("~/deepseek-harness"))
@@ -52,6 +53,19 @@ else:
     n = s.count(old)
     assert n == 1, (rel, "count=", n)
     save(rel, s.replace(old, "            <span>{t('hero.headline')}</span>"))
+    print("ok:", rel)
+
+# SidebarRoot：删除版本号小字（幂等判定 = 已无 css.buildVersion）
+rel = "packages/client/ui-sidebar/src/client/SidebarRoot.tsx"
+s = load(rel)
+if "css.buildVersion" not in s:
+    print("skip（已打）:", rel)
+else:
+    old = ("                        <span className={css.localBuildTitle}>{t('brand.localBuild')}</span>\n"
+           "                        <span className={css.buildVersion}>{buildVersion}</span>")
+    n = s.count(old)
+    assert n == 1, (rel, "count=", n)
+    save(rel, s.replace(old, "                        <span className={css.localBuildTitle}>{t('brand.localBuild')}</span>"))
     print("ok:", rel)
 
 print("品牌补丁完成")
