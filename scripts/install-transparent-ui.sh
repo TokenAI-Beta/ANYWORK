@@ -23,3 +23,7 @@ for u in "${users[@]}"; do
   fi
 done
 echo "重启实例生效：kill -9 各 desk-agent-<user> 的 MainPID"
+
+# ⚠️ 2026-09-22：本脚本装的是适配 dsh 0.1.0-rc.5 的 1.3.1；引擎已升级到 0.1.5-rc.2，该版本
+# 不兼容（client bundle 解析失败会卡死整棵插件树）。0.1.5 请使用对应 fork（如 Zagadka-3906/dsh015），
+# 先按 github-repo-vetting 审查再安装；本脚本保留给 rc.5 回滚场景。

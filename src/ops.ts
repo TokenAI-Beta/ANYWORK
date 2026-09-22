@@ -17,7 +17,8 @@ async function probe(url: string): Promise<number | string> {
     const t = setTimeout(() => ctrl.abort(), 3000)
     const r = await fetch(url, { signal: ctrl.signal, redirect: 'manual' })
     clearTimeout(t)
-    return r.status
+    // dsh 0.1.5+ 引擎对未认证请求回 401（浏览器会话门禁）——对探活而言「有响应」即正常
+    return r.status === 401 ? 200 : r.status
   } catch {
     return '×'
   }

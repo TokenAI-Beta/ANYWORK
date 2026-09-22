@@ -20,7 +20,8 @@ import { addNotifyRoute, addReminder, dispatchNotify, listNotifyLog, listNotifyR
 import { defaultDataDir } from './db.ts'
 import { collectConnectors, collectPresets, collectSkills, readSkill } from './panel.ts'
 import { collectOps } from './ops.ts'
-import { deleteSession, listUserSessions } from './session-mgr.ts'
+import { deleteSession, listUserSessions, userHome } from './session-mgr.ts'
+import { instanceAuthCookie, requestAuthorityOf } from './instance-auth.ts'
 import { createReadStream, existsSync, readFileSync, statSync, writeFileSync } from 'node:fs'
 import { join } from 'node:path'
 import { homedir } from 'node:os'
@@ -232,10 +233,15 @@ function html(res: ServerResponse, code: number, body: string): void {
 }
 
 /** 反代：HTTP 请求 → 该成员实例（Host/Origin 原样透传，实例用 --trusted-host 信任门户 authority） */
-function proxyHttp(req: IncomingMessage, res: ServerResponse, port: number): void {
+function proxyHttp(req: IncomingMessage, res: ServerResponse, port: number, authCookie?: string): void {
   const headers: Record<string, unknown> = { ...req.headers }
   for (const h of ['connection', 'keep-alive', 'proxy-authenticate', 'proxy-authorization', 'te', 'trailers', 'transfer-encoding', 'upgrade', 'accept-encoding']) {
     delete headers[h]
+  }
+  // dsh 0.1.5+：实例对页面/API 要求浏览器会话 cookie（browser-auth）——门户服务端注入，成员无感知
+  if (authCookie !== undefined) {
+    const existing = typeof headers['cookie'] === 'string' ? (headers['cookie'] as string) : ''
+    headers['cookie'] = existing.length > 0 ? `${existing}; ${authCookie}` : authCookie
   }
   const upstream = httpRequest(
     { host: '127.0.0.1', port, method: req.method, path: req.url, headers },
@@ -1471,7 +1477,10 @@ export function startPortal(opts: PortalOptions) {
           ),
         )
       }
-      proxyHttp(req, res, port)
+      const authAuthority = requestAuthorityOf(req.headers.host)
+      const authCookie =
+        authAuthority === undefined ? undefined : instanceAuthCookie(userHome(user.username), authAuthority)
+      proxyHttp(req, res, port, authCookie)
     } catch (err) {
       console.log(`[portal] unhandled: ${String(err)}`)
       try {
@@ -1503,11 +1512,17 @@ export function startPortal(opts: PortalOptions) {
         socket.destroy()
         return
       }
+      const upAuthority = requestAuthorityOf(req.headers.host)
+      const upCookie = upAuthority === undefined ? undefined : instanceAuthCookie(userHome(user.username), upAuthority)
       const target = netConnect(port, '127.0.0.1')
       target.on('connect', () => {
         const lines = [`GET ${req.url} HTTP/1.1`]
         for (const [k, v] of Object.entries(req.headers)) {
           if (v === undefined) continue
+          if (k.toLowerCase() === 'cookie' && upCookie !== undefined) {
+            lines.push(`${k}: ${String(v)}; ${upCookie}`)
+            continue
+          }
           if (Array.isArray(v)) {
             for (const vv of v) lines.push(`${k}: ${vv}`)
           } else {

@@ -2355,16 +2355,37 @@ window.__ModuleLoader__.load({
         return base + " · " + String((s && s.sessionId) || "").slice(8, 16) + " · " + when + (s && s.blank ? " · 未开始" : "");
       }
 
+      function listItemsOf(d) {
+        var items = d && d.result && d.result.value && d.result.value.items;
+        return Array.isArray(items) ? items : null;
+      }
+
       function loadOwn() {
-        fetch("/api/session.list", {
+        // dsh 0.1.5+：两段式端点 + {args} 载荷；失败自动回退旧协议（session.list + 空载荷）
+        fetch("/api/session/list", {
           method: "POST",
           headers: { "content-type": "application/json" },
-          body: JSON.stringify({ type: "client-request", rpcId: "panel-" + Date.now(), method: "session.list", payload: {} }),
+          body: JSON.stringify({
+            type: "client-request",
+            rpcId: "panel-" + Date.now(),
+            method: "session/list",
+            payload: { args: { _request: {} } },
+          }),
         })
-          .then(function (r) { return r.json(); })
+          .then(function (r) { return r.json().catch(function () { return null; }); })
           .then(function (d) {
-            var items = d && d.result && d.result.value && d.result.value.items;
-            setOwn({ phase: "ready", items: Array.isArray(items) ? items : [] });
+            var items = listItemsOf(d);
+            if (items) {
+              setOwn({ phase: "ready", items: items });
+              return null;
+            }
+            return fetch("/api/session.list", {
+              method: "POST",
+              headers: { "content-type": "application/json" },
+              body: JSON.stringify({ type: "client-request", rpcId: "panel-" + Date.now(), method: "session.list", payload: {} }),
+            })
+              .then(function (r2) { return r2.json(); })
+              .then(function (d2) { setOwn({ phase: "ready", items: listItemsOf(d2) || [] }); });
           })
           .catch(function () { setOwn({ phase: "error", items: [] }); });
       }
@@ -2443,7 +2464,7 @@ window.__ModuleLoader__.load({
         h(
           "div",
           { key: "sub", style: Object.assign({ fontSize: 12 }, muted) },
-          "删除需管理员确认：成员提交申请 → 管理员批准后执行；管理员可直接删除。执行删除时，对应实例会短暂重启（约 5~10 秒）。"
+          "删除需管理员确认：成员提交申请 → 管理员批准后执行；管理员可直接删除。执行删除时，对应实例会短暂重启（约 10~30 秒）。"
         )
       );
 
@@ -2465,7 +2486,7 @@ window.__ModuleLoader__.load({
                   style: btnDanger,
                   onClick: function () {
                     if (!window.confirm("直接删除该会话？（管理员直删，实例将短暂重启）")) return;
-                    post("/portal/api/admin/session-mgr/delete", { user: adm.me, session_id: s.sessionId }, "已删除，实例重启中（约 5~10 秒）", function () {
+                    post("/portal/api/admin/session-mgr/delete", { user: adm.me, session_id: s.sessionId }, "已删除，实例重启中（约 10~30 秒）", function () {
                       setTimeout(loadOwn, 11000);
                     });
                   },
@@ -2581,7 +2602,7 @@ window.__ModuleLoader__.load({
                       style: btnDark,
                       onClick: function () {
                         if (!window.confirm("批准并删除 " + q.username + " 的该会话？（对方实例将短暂重启）")) return;
-                        post("/portal/api/admin/session-mgr/decide", { id: q.id, action: "approve" }, "已批准并执行删除（实例约 5~10 秒后自动重启）", function () {
+                        post("/portal/api/admin/session-mgr/decide", { id: q.id, action: "approve" }, "已批准并执行删除（实例约 10~30 秒后自动重启）", function () {
                           loadMine();
                           loadAdmin();
                         });
@@ -2663,7 +2684,7 @@ window.__ModuleLoader__.load({
                       style: btnDanger,
                       onClick: function () {
                         if (!window.confirm("直接删除 " + sel.user + " 的该会话？")) return;
-                        post("/portal/api/admin/session-mgr/delete", { user: sel.user, session_id: s.sessionId }, "已删除，实例重启中（约 5~10 秒）", function () {
+                        post("/portal/api/admin/session-mgr/delete", { user: sel.user, session_id: s.sessionId }, "已删除，实例重启中（约 10~30 秒）", function () {
                           setTimeout(function () {
                             loadMember(sel.user);
                           }, 11000);

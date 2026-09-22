@@ -21,11 +21,18 @@ export DEEPSEEK_BASE_URL="$gateway"
 
 # 虚拟钥匙：写入可写凭据存储 $DSH_HOME/.credentials.yaml（不再走启动环境变量——
 # 环境层只读且永远压过存储层，会让 Models 设置页的 API Key 输入框被锁死 writable:false）
+# dsh 0.1.5 起凭据文档为 version:1 + refs:/records: 结构（旧扁平格式引擎会自动迁移）；
+# 补种必须同时兼容两种形态（迁移后键带缩进），否则会在文末追加重复的扁平行 → 启动失败。
 doc="$home/.credentials.yaml"
+key_value="$(tr -d '\n' < "$key_file")"
 if [ ! -f "$doc" ]; then
-  printf '# DSH-ANYWORK 虚拟钥匙（agent-run.sh 首次播种；Models 设置页可改，改动即时生效）\nDEEPSEEK_API_KEY: %s\n' "$(tr -d '\n' < "$key_file")" > "$doc"
-elif ! grep -q '^DEEPSEEK_API_KEY:' "$doc"; then
-  printf 'DEEPSEEK_API_KEY: %s\n' "$(tr -d '\n' < "$key_file")" >> "$doc"
+  printf 'version: 1\nrefs:\n  DEEPSEEK_API_KEY: %s\n' "$key_value" > "$doc"
+elif ! grep -qE '^[[:space:]]*DEEPSEEK_API_KEY:' "$doc"; then
+  if grep -q '^refs:' "$doc"; then
+    awk -v k="$key_value" '{ print } /^refs:[[:space:]]*$/ && !done { print "  DEEPSEEK_API_KEY: " k; done = 1 }' "$doc" > "$doc.tmp" && mv "$doc.tmp" "$doc"
+  else
+    printf 'DEEPSEEK_API_KEY: %s\n' "$key_value" >> "$doc"
+  fi
 fi
 chmod 600 "$doc"
 

@@ -7,6 +7,7 @@ import { existsSync, readdirSync, readFileSync, renameSync, rmSync, writeFileSyn
 import { join } from 'node:path'
 import { homedir } from 'node:os'
 import type { DatabaseSync } from 'node:sqlite'
+import { instanceAuthCookie } from './instance-auth.ts'
 
 export interface SessionSummaryLite {
   sessionId: string
@@ -22,7 +23,12 @@ export interface SessionSummaryLite {
 const SESSION_ID_RE = /^session-[0-9a-fA-F-]{8,64}$/
 
 /** 实例家目录：优先从 systemd 单元推导（ExecStart 末尾的 desk-test/uN），兜底 desk-test/<用户名> */
+const homeCache = new Map<string, string>()
+
 export function userHome(username: string): string {
+  const cached = homeCache.get(username)
+  if (cached !== undefined) return cached
+  let resolved = join(homedir(), 'desk-test', username)
   try {
     const out = execFileSync('systemctl', ['show', `desk-agent-${username}`, '-p', 'ExecStart', '--value'], {
       encoding: 'utf8',
@@ -32,11 +38,12 @@ export function userHome(username: string): string {
       .split(/\s+/)
       .filter((t) => /\/desk-test\/[A-Za-z0-9_-]+$/.test(t))
       .pop()
-    if (hit) return hit
+    if (hit) resolved = hit
   } catch {
     // 兜底
   }
-  return join(homedir(), 'desk-test', username)
+  homeCache.set(username, resolved)
+  return resolved
 }
 
 export function userPort(db: DatabaseSync, username: string): number | null {
@@ -44,25 +51,60 @@ export function userPort(db: DatabaseSync, username: string): number | null {
   return r?.agent_port ?? null
 }
 
-/** 经实例 RPC 读取该成员的会话列表（经 loopback，受信任围栏放行） */
+/** 调一次实例 RPC（loopback；0.1.5+ 引擎需带实例会话 cookie，旧引擎忽略之） */
+async function callInstanceRpc(
+  port: number,
+  authCookie: string | undefined,
+  method: string,
+  payload: unknown,
+): Promise<{ status: number; body: unknown }> {
+  const headers: Record<string, string> = { 'content-type': 'application/json' }
+  if (authCookie !== undefined) headers['cookie'] = authCookie
+  const ctrl = new AbortController()
+  const t = setTimeout(() => ctrl.abort(), 8000)
+  try {
+    const r = await fetch(`http://127.0.0.1:${port}/api/${method}`, {
+      method: 'POST',
+      headers,
+      body: JSON.stringify({ type: 'client-request', rpcId: 'smgr-' + String(Date.now()), method, payload }),
+      signal: ctrl.signal,
+    })
+    const text = await r.text()
+    let body: unknown
+    try {
+      body = JSON.parse(text)
+    } catch {
+      body = text
+    }
+    return { status: r.status, body }
+  } finally {
+    clearTimeout(t)
+  }
+}
+
+function itemsOf(body: unknown): SessionSummaryLite[] | undefined {
+  const j = body as { result?: { ok?: boolean; value?: { items?: SessionSummaryLite[] } } } | undefined
+  const items = j?.result?.value?.items
+  return Array.isArray(items) ? items : undefined
+}
+
+/** 经实例 RPC 读取该成员的会话列表（0.1.5+：两段式端点 + {args} 载荷 + 会话 cookie；旧引擎自动回退旧协议） */
 export async function listUserSessions(
   db: DatabaseSync,
   username: string,
 ): Promise<{ ok: true; sessions: SessionSummaryLite[] } | { error: string }> {
   const port = userPort(db, username)
   if (!port) return { error: `成员 ${username} 未分配实例` }
-  const ctrl = new AbortController()
-  const t = setTimeout(() => ctrl.abort(), 8000)
   try {
-    const r = await fetch(`http://127.0.0.1:${port}/api/session.list`, {
-      method: 'POST',
-      headers: { 'content-type': 'application/json' },
-      body: JSON.stringify({ type: 'client-request', rpcId: 'smgr', method: 'session.list', payload: {} }),
-      signal: ctrl.signal,
-    })
-    const j = (await r.json()) as { result?: { ok?: boolean; value?: { items?: SessionSummaryLite[] } } }
-    const items = j?.result?.value?.items
-    if (!Array.isArray(items)) return { error: '实例返回异常（session.list）' }
+    const authCookie = instanceAuthCookie(userHome(username), `127.0.0.1:${port}`)
+    const modern = await callInstanceRpc(port, authCookie, 'session/list', { args: { _request: {} } })
+    let items = itemsOf(modern.body)
+    if (items === undefined) {
+      // 旧协议回退（0.1.0-rc.x：session.list + 空载荷）
+      const legacy = await callInstanceRpc(port, authCookie, 'session.list', {})
+      items = itemsOf(legacy.body)
+    }
+    if (items === undefined) return { error: '实例返回异常（session/list）' }
     const sessions = items.map((s) => ({
       sessionId: s.sessionId,
       updatedAt: s.updatedAt,
@@ -76,8 +118,6 @@ export async function listUserSessions(
     return { ok: true, sessions }
   } catch (e) {
     return { error: `读取会话失败：${String((e as Error)?.message || e).slice(0, 120)}` }
-  } finally {
-    clearTimeout(t)
   }
 }
 
