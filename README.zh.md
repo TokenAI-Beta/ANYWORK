@@ -6,7 +6,7 @@
 
 成员各自登录、各自独立工作区；模型的钥匙集中保管、按人计量。大家一起用 agent 干活，产出、账目、方法都留在自己的机器上。
 
-> **状态：建设中（公开开发）。** P0–P3 均已完成并在局域网实机验证。P4（交付化）主体就绪——`setup/backup/restore/logs` 脚本、一页[部署说明](docs/DEPLOY.md)、真实的端到端[验收记录](docs/ACCEPTANCE.md)；从零重装待第二台机器实测。路线图与任务清单见 [`docs/PLAN.md`](docs/PLAN.md)，验证记录见 [`docs/BASELINE.md`](docs/BASELINE.md)，每日进展见 [`docs/devlog/`](docs/devlog/)。
+> **状态：建设中（公开开发）。** P0–P3 均已完成并在局域网实机验证。P4（交付化）主体就绪——`setup/backup/restore/logs` 脚本、一页[部署说明](docs/DEPLOY.md)、真实的端到端[验收记录](docs/ACCEPTANCE.md)；从零重装待第二台机器实测。路线图与任务清单见 [`docs/PLAN.md`](docs/PLAN.md)，验证记录见 [`docs/BASELINE.md`](docs/BASELINE.md)，每日进展见 [`docs/devlog/`](docs/devlog/)；**功能使用说明见 [`docs/GUIDE.md`](docs/GUIDE.md)**。
 
 ## 这是什么
 

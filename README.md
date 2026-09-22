@@ -6,7 +6,7 @@
 
 Each member signs in with their own account and works in their own isolated workspace. The model API key stays on the server, and usage is metered per person — so a team can share one agent setup without sharing keys, files, or bills.
 
-> **Status: building in public, early stage.** P0–P3 are done and verified on the LAN. P4 (delivery) is largely in place — `setup/backup/restore/logs` scripts, a one-page [deployment guide](docs/DEPLOY.md), and a green end-to-end [acceptance walk](docs/ACCEPTANCE.md); a from-scratch dry-run on a second machine is pending. Roadmap and 22-task plan in [`docs/PLAN.md`](docs/PLAN.md); verified findings in [`docs/BASELINE.md`](docs/BASELINE.md); daily progress in [`docs/devlog/`](docs/devlog/).
+> **Status: building in public, early stage.** P0–P3 are done and verified on the LAN. P4 (delivery) is largely in place — `setup/backup/restore/logs` scripts, a one-page [deployment guide](docs/DEPLOY.md), and a green end-to-end [acceptance walk](docs/ACCEPTANCE.md); a from-scratch dry-run on a second machine is pending. Roadmap and 22-task plan in [`docs/PLAN.md`](docs/PLAN.md); verified findings in [`docs/BASELINE.md`](docs/BASELINE.md); daily progress in [`docs/devlog/`](docs/devlog/). Feature-by-feature usage guide (Chinese): [`docs/GUIDE.md`](docs/GUIDE.md).
 
 ## What this is
 
