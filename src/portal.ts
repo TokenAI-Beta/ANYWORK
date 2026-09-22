@@ -20,6 +20,34 @@ import { addNotifyRoute, addReminder, dispatchNotify, listNotifyLog, listNotifyR
 import { defaultDataDir } from './db.ts'
 import { collectConnectors, collectPresets, collectSkills, readSkill } from './panel.ts'
 import { collectOps } from './ops.ts'
+
+/** 请求语言：?lang=en 时为英文（由工作台客户端带过来），默认中文 */
+const langOf = (req: { url?: string }): string => {
+  try {
+    return new URL(req.url ?? '/', 'http://local').searchParams.get('lang') === 'en' ? 'en' : 'zh'
+  } catch {
+    return 'zh'
+  }
+}
+
+const L = (lang: string, zh: string, en: string): string => (lang === 'en' ? en : zh)
+
+/** 门户页面语言：cookie desk_lang > 该成员实例 settings.yaml 的 locale.preference > 浏览器语言 > 中文 */
+const pageLang = (req: IncomingMessage, username?: string): string => {
+  const ck = /(?:^|;\s*)desk_lang=(zh|en)/.exec(String(req.headers.cookie ?? ''))
+  if (ck) return ck[1]
+  if (username) {
+    try {
+      const m = /preference:\s*(zh|en)/.exec(readFileSync(join(userHome(username), 'settings.yaml'), 'utf8'))
+      if (m) return m[1]
+    } catch {
+      /* 无实例或无设置文件 */
+    }
+  }
+  const al = String(req.headers['accept-language'] ?? '')
+  if (/^\s*zh/i.test(al)) return 'zh'
+  return al.includes('en') ? 'en' : 'zh'
+}
 import { deleteSession, listUserSessions, userHome } from './session-mgr.ts'
 import { instanceAuthCookie, requestAuthorityOf } from './instance-auth.ts'
 import { createReadStream, existsSync, readFileSync, statSync, writeFileSync } from 'node:fs'
@@ -169,17 +197,17 @@ footer { font-size: 12.5px; color: #9aa0a6; padding: 28px 0 36px; }
 .login-wrap h1 { margin-bottom: 4px; font-size: 20px; }
 `
 
-function page(title: string, user: SessionUser | null, body: string): string {
+function page(title: string, user: SessionUser | null, body: string, lang: string = 'zh'): string {
   const nav = user
-    ? `<nav><a href="/">工作台</a><a href="/portal/me">我的用量</a><form method="post" action="/logout" class="inline"><button>退出</button></form></nav><span class="who">${esc(user.username)}</span>`
+    ? `<nav><a href="/">${L(lang, '工作台', 'Workbench')}</a><a href="/portal/me">${L(lang, '我的用量', 'My usage')}</a><a href="/portal/lang?set=${lang === 'en' ? 'zh' : 'en'}&back=/portal/me">${lang === 'en' ? '中文' : 'EN'}</a><form method="post" action="/logout" class="inline"><button>${L(lang, '退出', 'Sign out')}</button></form></nav><span class="who">${esc(user.username)}</span>`
     : ''
   return `<!doctype html>
-<html lang="zh-CN">
+<html lang="${lang === 'en' ? 'en' : 'zh-CN'}">
 <head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><link rel="manifest" href="/portal.webmanifest"><link rel="icon" type="image/svg+xml" href="/portal-icon.svg"><meta name="theme-color" content="#1c1e21"><title>${esc(title)} · DSH-ANYWORK</title><style>${STYLE}</style></head>
 <body>
-<header><span class="brand">DSH-ANYWORK</span><span class="muted">团队工作台</span>${nav}</header>
+<header><span class="brand">DSH-ANYWORK</span><span class="muted">${L(lang, '团队工作台', 'Team workbench')}</span>${nav}</header>
 <main>${body}</main>
-<footer>DSH-ANYWORK · 自托管团队工作台 · 数据留在本机</footer>
+<footer>DSH-ANYWORK · ${L(lang, '自托管团队工作台 · 数据留在本机', 'Self-hosted team workbench · your data stays on this machine')}</footer>
 </body></html>`
 }
 
@@ -204,8 +232,12 @@ function aggregate(rows: UsageRow[]): Agg {
   return a
 }
 
-function aggLine(a: Agg): string {
-  return `请求 ${a.events} 次 · 命中 ${a.hit} / 未命中 ${a.miss} / 输出 ${a.out} tokens`
+function aggLine(a: Agg, lang: string = 'zh'): string {
+  return L(
+    lang,
+    `请求 ${a.events} 次 · 命中 ${a.hit} / 未命中 ${a.miss} / 输出 ${a.out} tokens`,
+    `${a.events} requests · cache-hit ${a.hit} / miss ${a.miss} / output ${a.out} tokens`,
+  )
 }
 
 // —— 登录尝试限速（内存） ——
@@ -233,7 +265,7 @@ function html(res: ServerResponse, code: number, body: string): void {
 }
 
 /** 反代：HTTP 请求 → 该成员实例（Host/Origin 原样透传，实例用 --trusted-host 信任门户 authority） */
-function proxyHttp(req: IncomingMessage, res: ServerResponse, port: number, authCookie?: string): void {
+function proxyHttp(req: IncomingMessage, res: ServerResponse, port: number, authCookie?: string, lang: string = 'zh'): void {
   const headers: Record<string, unknown> = { ...req.headers }
   for (const h of ['connection', 'keep-alive', 'proxy-authenticate', 'proxy-authorization', 'te', 'trailers', 'transfer-encoding', 'upgrade', 'accept-encoding']) {
     delete headers[h]
@@ -252,7 +284,7 @@ function proxyHttp(req: IncomingMessage, res: ServerResponse, port: number, auth
         const chunks: Buffer[] = []
         up.on('data', (c) => chunks.push(Buffer.from(c)))
         up.on('end', () => {
-          const body = injectUsageWidget(Buffer.concat(chunks).toString('utf8'))
+          const body = injectUsageWidget(Buffer.concat(chunks).toString('utf8'), lang)
           const outHeaders = { ...up.headers }
           delete outHeaders['content-encoding']
           delete outHeaders['content-length']
@@ -275,7 +307,7 @@ function proxyHttp(req: IncomingMessage, res: ServerResponse, port: number, auth
   )
   upstream.on('error', () => {
     if (!res.headersSent) {
-      html(res, 502, page('502', null, '<div class="card"><h1>502</h1><div class="muted">工作台实例未响应（可能未启动）。稍后再试或联系管理员。</div></div>'))
+      html(res, 502, page('502', null, `<div class="card"><h1>502</h1><div class="muted">${L(lang, '工作台实例未响应（可能未启动）。稍后再试或联系管理员。', 'The workbench instance is not responding (it may be down). Try again later or contact your admin.')}</div></div>`, lang))
     } else {
       res.destroy()
     }
@@ -283,8 +315,8 @@ function proxyHttp(req: IncomingMessage, res: ServerResponse, port: number, auth
   req.pipe(upstream)
 }
 
-const USAGE_WIDGET_TAG =
-  '<link rel="manifest" href="/portal.webmanifest"><link rel="icon" type="image/svg+xml" href="/portal-icon.svg"><meta name="theme-color" content="#1c1e21"><script src="/portal/static/desk-usage.js" defer></script>'
+const usageWidgetTag = (lang: string): string =>
+  `<script>window.__DSH_HOST_PERSISTENCE__=true;window.__DESK_LANG=${lang === 'en' ? "'en'" : "'zh'"}</script><link rel="manifest" href="/portal.webmanifest"><link rel="icon" type="image/svg+xml" href="/portal-icon.svg"><meta name="theme-color" content="#1c1e21"><script src="/portal/static/desk-usage.js" defer></script>`
 
 /** PWA / 桌面端图标（SVG；浏览器「安装应用」与标签页图标共用） */
 const PORTAL_ICON_SVG = [
@@ -296,17 +328,20 @@ const PORTAL_ICON_SVG = [
 ].join('')
 
 /** 往 dsh 工作台的 HTML 里注入"用量"悬浮小组件（不改 dsh 源码） */
-function injectUsageWidget(body: string): string {
-  if (body.includes(USAGE_WIDGET_TAG)) return body
+function injectUsageWidget(body: string, lang: string = 'zh'): string {
+  const tag = usageWidgetTag(lang)
+  if (body.includes('desk-usage.js')) return body
   const idx = body.lastIndexOf('</body>')
-  if (idx === -1) return body + USAGE_WIDGET_TAG
-  return body.slice(0, idx) + USAGE_WIDGET_TAG + body.slice(idx)
+  if (idx === -1) return body + tag
+  return body.slice(0, idx) + tag + body.slice(idx)
 }
 
 /** 工作台内的"用量"小组件脚本（纯 JS；避免反引号与模板占位符，方便内嵌） */
 const DESK_USAGE_JS = `
 (function () {
   if (document.getElementById('desk-usage-fab')) return
+  var LANG = (window.__DESK_LANG === 'en') ? 'en' : 'zh'
+  function T(zh, en) { return LANG === 'en' ? en : zh }
   var css = document.createElement('style')
   css.textContent =
     '#desk-usage-fab{position:fixed;right:18px;bottom:18px;z-index:2147483000;border:1px solid #e4e6eb;border-radius:999px;padding:10px 16px;background:#ffffff;color:#1c1e21;font-size:13.5px;cursor:pointer;box-shadow:0 6px 20px rgba(16,24,40,.12);font-family:system-ui,"Microsoft YaHei",sans-serif;transition:box-shadow .15s ease}'
@@ -325,7 +360,7 @@ const DESK_USAGE_JS = `
   document.head.appendChild(css)
   var fab = document.createElement('button')
   fab.id = 'desk-usage-fab'
-  fab.textContent = '📊 用量'
+  fab.textContent = T('📊 用量', '📊 Usage')
   document.body.appendChild(fab)
   var panel = document.createElement('div')
   panel.id = 'desk-usage-panel'
@@ -334,23 +369,23 @@ const DESK_USAGE_JS = `
   function esc(s) { return String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;') }
   function fmt(n) { return '¥' + Number(n).toFixed(4) }
   function render(d) {
-    var h = '<h3>我的用量</h3>'
+    var h = '<h3>' + T('我的用量', 'My usage') + '</h3>'
     h += '<div class="big">' + fmt(d.month.cost) + '</div>'
-    h += '<div class="muted">本月 · 请求 ' + d.month.events + ' 次 · 未命中 ' + d.month.miss + ' / 输出 ' + d.month.out + ' tokens</div>'
+    h += '<div class="muted">' + T('本月 · 请求 ', 'This month · requests ') + d.month.events + T(' 次 · 未命中 ', ' · missed ') + d.month.miss + T(' / 输出 ', ' / output ') + d.month.out + ' tokens</div>'
     if (d.budget != null) {
       var pct = Math.min(100, (d.month.cost / d.budget) * 100)
-      h += '<div class="muted" style="margin-top:8px">预算 ¥' + d.budget + (d.month.cost >= d.budget ? '（已超限）' : '') + '</div>'
+      h += '<div class="muted" style="margin-top:8px">' + T('预算 ¥', 'Budget ¥') + d.budget + (d.month.cost >= d.budget ? T('（已超限）', ' (over limit)') : '') + '</div>'
       h += '<div class="bar"><i style="width:' + pct.toFixed(1) + '%"></i></div>'
     }
-    h += '<div class="row"><span class="muted">今日</span><span>' + fmt(d.day.cost) + ' · ' + d.day.events + ' 次</span></div>'
+    h += '<div class="row"><span class="muted">' + T('今日', 'Today') + '</span><span>' + fmt(d.day.cost) + ' · ' + d.day.events + T(' 次', ' requests') + '</span></div>'
     h += '<table>'
     for (var i = 0; i < d.recent.length; i++) {
       h += '<tr><td class="muted">' + esc(d.recent[i].time) + '</td><td>' + esc(d.recent[i].model) + (d.recent[i].channel ? ' <span class="muted">@' + esc(d.recent[i].channel) + '</span>' : '') + '</td><td style="text-align:right">' + fmt(d.recent[i].cost) + '</td></tr>'
     }
-    if (!d.recent.length) h += '<tr><td class="muted">暂无记录</td></tr>'
+    if (!d.recent.length) h += '<tr><td class="muted">' + T('暂无记录', 'No records yet') + '</td></tr>'
     h += '</table>'
-    h += '<div class="pnl-foot"><a href="/portal/me" target="_blank">详细 / 管理</a>'
-    h += '<form method="post" action="/logout" style="margin:0"><button style="border:0;background:none;color:#c0392b;cursor:pointer;font-size:12px;padding:0">退出登录</button></form></div>'
+    h += '<div class="pnl-foot"><a href="/portal/me" target="_blank">' + T('详细 / 管理', 'Details / manage') + '</a>'
+    h += '<form method="post" action="/logout" style="margin:0"><button style="border:0;background:none;color:#c0392b;cursor:pointer;font-size:12px;padding:0">' + T('退出登录', 'Sign out') + '</button></form></div>'
     panel.innerHTML = h
   }
   function load() {
@@ -358,7 +393,7 @@ const DESK_USAGE_JS = `
       .then(function (r) { if (!r.ok) throw new Error('HTTP ' + r.status); return r.json() })
       .then(function (d) { loadedAt = Date.now(); render(d) })
       .catch(function (e) {
-        panel.innerHTML = '<h3>我的用量</h3><div class="muted">加载失败（' + esc(e.message) + '）· <a href="/portal/me" target="_blank">打开完整页</a></div>'
+        panel.innerHTML = '<h3>' + T('我的用量', 'My usage') + '</h3><div class="muted">' + T('加载失败（', 'Failed to load (') + esc(e.message) + T('）· ', '). ') + '<a href="/portal/me" target="_blank">' + T('打开完整页', 'open the full page') + '</a></div>'
       })
   }
   fab.addEventListener('click', function () {
@@ -379,7 +414,7 @@ export function startPortal(opts: PortalOptions) {
     return row?.port ?? null
   }
 
-  const renderMe = (user: SessionUser): string => {
+  const renderMe = (user: SessionUser, lang: string): string => {
     const urow = db
       .prepare(`SELECT created_at, monthly_budget_cny AS budget FROM users WHERE id = ?`)
       .get(user.id) as { created_at: string; budget: number | null }
@@ -403,11 +438,11 @@ export function startPortal(opts: PortalOptions) {
     const month = aggregate(monthRows)
     const day = aggregate(dayRows)
 
-    let budgetHtml = '<span class="muted">预算：不限</span>'
+    let budgetHtml = '<span class="muted">' + L(lang, '预算：不限', 'Budget: unlimited') + '</span>'
     if (urow.budget != null) {
       const pct = Math.min(100, (month.cost / urow.budget) * 100)
       const over = month.cost >= urow.budget
-      budgetHtml = `<div class="muted">预算 ¥${urow.budget} · 已用 ¥${month.cost.toFixed(4)}${over ? '（⚠️ 已超限，请求将被拒）' : ` · 剩余 ¥${(urow.budget - month.cost).toFixed(4)}`}</div>
+      budgetHtml = `<div class="muted">${L(lang, '预算 ¥', 'Budget ¥')}${urow.budget}${L(lang, ' · 已用 ¥', ' · used ¥')}${month.cost.toFixed(4)}${over ? L(lang, '（⚠️ 已超限，请求将被拒）', ' (⚠️ over limit — requests will be rejected)') : L(lang, ' · 剩余 ¥', ' · remaining ¥') + `${(urow.budget - month.cost).toFixed(4)}`}</div>
         <div class="bar"><i style="width:${pct.toFixed(1)}%"></i></div>`
     }
 
@@ -420,38 +455,38 @@ export function startPortal(opts: PortalOptions) {
 
     const agentPort = agentPortOf(user.id)
     const workstationCard = agentPort
-      ? `<div>实例运行中（127.0.0.1:${agentPort}） · <a href="/">进入我的工作台 →</a></div>`
-      : '<div class="muted">尚未分配工作台实例（P3 提供自动管理；当前请联系管理员）。</div>'
+      ? L(lang, `<div>实例运行中（127.0.0.1:${agentPort}） · <a href="/">进入我的工作台 →</a></div>`, `<div>Instance running (127.0.0.1:${agentPort}) · <a href="/">Open my workbench →</a></div>`)
+      : L(lang, '<div class="muted">尚未分配工作台实例（P3 提供自动管理；当前请联系管理员）。</div>', '<div class="muted">No workbench instance assigned yet (ask your admin).</div>')
 
     const body = `
-<h1>我的用量</h1>
+<h1>${L(lang, '我的用量', 'My usage')}</h1>
 <div class="card">
-  <div>账户：<strong>${esc(user.username)}</strong>（${esc(user.role)}） · 创建于 ${esc(urow.created_at)}（UTC）</div>
-  <div class="muted">虚拟钥匙：${keyCount.n} 把（${keyPrefix ? esc(keyPrefix.prefix) + '…' : '无'}） · 密钥仅存哈希，如需重发请在服务器上用 CLI 轮换</div>
+  <div>${L(lang, '账户：', 'Account: ')}<strong>${esc(user.username)}</strong>（${esc(user.role)}）${L(lang, ' · 创建于 ', ' · created ')}${esc(urow.created_at)}${L(lang, '（UTC）', ' (UTC)')}</div>
+  <div class="muted">${L(lang, `虚拟钥匙：${keyCount.n} 把（${keyPrefix ? esc(keyPrefix.prefix) + '…' : '无'}） · 密钥仅存哈希，如需重发请在服务器上用 CLI 轮换`, `Virtual keys: ${keyCount.n} (${keyPrefix ? esc(keyPrefix.prefix) + '…' : 'none'}) · keys are stored hashed — rotate via CLI on the server to reissue`)}</div>
 </div>
 <div class="card">
-  <h2>我的工作台</h2>
+  <h2>${L(lang, '我的工作台', 'My workbench')}</h2>
   ${workstationCard}
 </div>
 <div class="grid">
   <div class="card">
-    <h2>本月（估算）</h2>
+    <h2>${L(lang, '本月（估算）', 'This month (est.)')}</h2>
     <div class="big">¥${month.cost.toFixed(4)}</div>
-    <div class="muted">${aggLine(month)}</div>
+    <div class="muted">${aggLine(month, lang)}</div>
     <div style="margin-top:10px">${budgetHtml}</div>
   </div>
   <div class="card">
-    <h2>今日（北京时间）</h2>
+    <h2>${L(lang, '今日（北京时间）', 'Today (Beijing time)')}</h2>
     <div class="big">¥${day.cost.toFixed(4)}</div>
-    <div class="muted">${aggLine(day)}</div>
+    <div class="muted">${aggLine(day, lang)}</div>
   </div>
 </div>
 <div class="card">
-  <h2>最近请求</h2>
-  <table><thead><tr><th>时间（北京）</th><th>模型</th><th>命中/未命中/输出</th><th>估算</th></tr></thead><tbody>${rows || '<tr><td colspan="4" class="muted">暂无记录</td></tr>'}</tbody></table>
+  <h2>${L(lang, '最近请求', 'Recent requests')}</h2>
+  <table><thead><tr><th>${L(lang, '时间（北京）', 'Time (Beijing)')}</th><th>${L(lang, '模型', 'Model')}</th><th>${L(lang, '命中/未命中/输出', 'hit/miss/output')}</th><th>${L(lang, '估算', 'Est.')}</th></tr></thead><tbody>${rows || `<tr><td colspan="4" class="muted">${L(lang, '暂无记录', 'No records yet')}</td></tr>`}</tbody></table>
 </div>
-<div class="muted">口径：费用按请求发生时刻的峰谷价估算（价格表快照 ${esc(prices.captured_at)}）；本月按 UTC 月初计。</div>`
-    return page('我的用量', user, body)
+<div class="muted">${L(lang, `口径：费用按请求发生时刻的峰谷价估算（价格表快照 ${esc(prices.captured_at)}）；本月按 UTC 月初计。`, `Notes: cost is estimated with peak/off-peak prices at request time (price snapshot ${esc(prices.captured_at)}); the month follows UTC.`)}</div>`
+    return page(L(lang, '我的用量', 'My usage'), user, body, lang)
   }
 
   const server = createServer(async (req, res) => {
@@ -525,7 +560,7 @@ export function startPortal(opts: PortalOptions) {
           return res.end(JSON.stringify({ error: 'login required' }))
         }
         const r = readKbNote(url.searchParams.get('name') ?? '')
-        res.writeHead('ok' in r ? 200 : /不存在/.test(r.error) ? 404 : 400, { 'content-type': 'application/json; charset=utf-8' })
+        res.writeHead('ok' in r ? 200 : /不存在|not found/.test(r.error) ? 404 : 400, { 'content-type': 'application/json; charset=utf-8' })
         return res.end(JSON.stringify(r))
       }
       if (path === '/portal/api/kb/save' && req.method === 'POST') {
@@ -658,7 +693,7 @@ export function startPortal(opts: PortalOptions) {
         const text = String(body.text ?? '').trim()
         if (!text) {
           res.writeHead(400, { 'content-type': 'application/json; charset=utf-8' })
-          return res.end(JSON.stringify({ error: 'text 不能为空' }))
+          return res.end(JSON.stringify({ error: L(langOf(req), 'text 不能为空', 'text cannot be empty') }))
         }
         const results = await dispatchNotify(db, { title: String(body.title ?? '').trim(), text, source: String(body.source ?? 'agent') })
         res.writeHead(200, { 'content-type': 'application/json; charset=utf-8' })
@@ -735,7 +770,7 @@ export function startPortal(opts: PortalOptions) {
         const bodyText = String(abody.body ?? '').trim().slice(0, 2000)
         if (!bodyText) {
           res.writeHead(400, { 'content-type': 'application/json; charset=utf-8' })
-          return res.end(JSON.stringify({ error: '公告内容不能为空' }))
+          return res.end(JSON.stringify({ error: L(langOf(req), '公告内容不能为空', 'Announcement content cannot be empty') }))
         }
         const info = db.prepare(`INSERT INTO announcements (title, body, created_by) VALUES (?, ?, ?)`).run(title || null, bodyText, user.username)
         res.writeHead(200, { 'content-type': 'application/json; charset=utf-8' })
@@ -776,7 +811,7 @@ export function startPortal(opts: PortalOptions) {
         const ftext = String(fbody.text ?? '').trim().slice(0, 1000)
         if (!ftext) {
           res.writeHead(400, { 'content-type': 'application/json; charset=utf-8' })
-          return res.end(JSON.stringify({ error: '反馈内容不能为空' }))
+          return res.end(JSON.stringify({ error: L(langOf(req), '反馈内容不能为空', 'Feedback content cannot be empty') }))
         }
         db.prepare(`INSERT INTO feedback (user_id, username, text) VALUES (?, ?, ?)`).run(user.id, user.username, ftext)
         res.writeHead(200, { 'content-type': 'application/json; charset=utf-8' })
@@ -826,7 +861,7 @@ export function startPortal(opts: PortalOptions) {
           return res.end(JSON.stringify({ error: 'login required' }))
         }
         res.writeHead(200, { 'content-type': 'application/json; charset=utf-8' })
-        return res.end(JSON.stringify(readSkill(url.searchParams.get('name') ?? '')))
+        return res.end(JSON.stringify(readSkill(url.searchParams.get('name') ?? '', langOf(req))))
       }
       if (req.method === 'GET' && path === '/portal/api/panel/connectors') {
         if (!user) {
@@ -834,7 +869,7 @@ export function startPortal(opts: PortalOptions) {
           return res.end(JSON.stringify({ error: 'login required' }))
         }
         res.writeHead(200, { 'content-type': 'application/json; charset=utf-8' })
-        return res.end(JSON.stringify({ ok: true, items: collectConnectors(db) }))
+        return res.end(JSON.stringify({ ok: true, items: collectConnectors(db, langOf(req)) }))
       }
       if (req.method === 'GET' && path === '/portal/api/panel/auto') {
         if (!user) {
@@ -874,11 +909,11 @@ export function startPortal(opts: PortalOptions) {
           res.writeHead(200, { 'content-type': 'application/json; charset=utf-8' })
           res.end(JSON.stringify(obj))
         }
-        if (!/^session-[0-9a-fA-F-]{8,64}$/.test(sessionId)) return reply({ error: '会话 ID 不合法' })
+        if (!/^session-[0-9a-fA-F-]{8,64}$/.test(sessionId)) return reply({ error: L(langOf(req), '会话 ID 不合法', 'Invalid session ID') })
         const dup = db
           .prepare(`SELECT id FROM session_del_requests WHERE user_id = ? AND session_id = ? AND status = 'pending'`)
           .get(user.id, sessionId)
-        if (dup) return reply({ error: '该会话已有一条待审批的申请' })
+        if (dup) return reply({ error: L(langOf(req), '该会话已有一条待审批的申请', 'This session already has a pending request') })
         db.prepare(`INSERT INTO session_del_requests (user_id, username, session_id, title) VALUES (?, ?, ?, ?)`).run(
           user.id,
           user.username,
@@ -943,13 +978,13 @@ export function startPortal(opts: PortalOptions) {
         const assignee = String(cbody.assignee ?? '').trim().slice(0, 64)
         if (!title) {
           res.writeHead(400, { 'content-type': 'application/json; charset=utf-8' })
-          return res.end(JSON.stringify({ error: '任务标题不能为空' }))
+          return res.end(JSON.stringify({ error: L(langOf(req), '任务标题不能为空', 'Task title cannot be empty') }))
         }
         if (assignee) {
           const known = db.prepare(`SELECT username FROM users WHERE username = ?`).get(assignee)
           if (!known) {
             res.writeHead(400, { 'content-type': 'application/json; charset=utf-8' })
-            return res.end(JSON.stringify({ error: '指派对象不存在' }))
+            return res.end(JSON.stringify({ error: L(langOf(req), '指派对象不存在', 'Assignee does not exist') }))
           }
         }
         const info = db.prepare(`INSERT INTO tasks (title, note, status, assignee, created_by) VALUES (?, ?, 'todo', ?, ?)`).run(title, note || null, assignee || null, user.username)
@@ -974,7 +1009,7 @@ export function startPortal(opts: PortalOptions) {
           | undefined
         if (!task) {
           res.writeHead(404, { 'content-type': 'application/json; charset=utf-8' })
-          return res.end(JSON.stringify({ error: '任务不存在' }))
+          return res.end(JSON.stringify({ error: L(langOf(req), '任务不存在', 'Task not found') }))
         }
         const newStatus = typeof ubody.status === 'string' ? String(ubody.status) : ''
         const hasAssignee = Object.prototype.hasOwnProperty.call(ubody, 'assignee')
@@ -996,7 +1031,7 @@ export function startPortal(opts: PortalOptions) {
             const known = db.prepare(`SELECT username FROM users WHERE username = ?`).get(newAssignee)
             if (!known) {
               res.writeHead(400, { 'content-type': 'application/json; charset=utf-8' })
-              return res.end(JSON.stringify({ error: '指派对象不存在' }))
+              return res.end(JSON.stringify({ error: L(langOf(req), '指派对象不存在', 'Assignee does not exist') }))
             }
             sets.push('assignee = ?')
             vals.push(newAssignee)
@@ -1014,7 +1049,7 @@ export function startPortal(opts: PortalOptions) {
         }
         if (!sets.length) {
           res.writeHead(400, { 'content-type': 'application/json; charset=utf-8' })
-          return res.end(JSON.stringify({ error: '没有可更新的字段' }))
+          return res.end(JSON.stringify({ error: L(langOf(req), '没有可更新的字段', 'No fields to update') }))
         }
         sets.push(`updated_at = datetime('now')`)
         db.prepare(`UPDATE tasks SET ${sets.join(', ')} WHERE id = ?`).run(...vals, tid)
@@ -1042,7 +1077,7 @@ export function startPortal(opts: PortalOptions) {
           | undefined
         if (!task) {
           res.writeHead(404, { 'content-type': 'application/json; charset=utf-8' })
-          return res.end(JSON.stringify({ error: '任务不存在' }))
+          return res.end(JSON.stringify({ error: L(langOf(req), '任务不存在', 'Task not found') }))
         }
         const allowed = user.role === 'admin' || task.assignee === user.username || task.created_by === user.username
         if (!allowed) {
@@ -1051,7 +1086,7 @@ export function startPortal(opts: PortalOptions) {
         }
         if (task.review_state === 'submitted') {
           res.writeHead(400, { 'content-type': 'application/json; charset=utf-8' })
-          return res.end(JSON.stringify({ error: '已有待验收的提交（可先撤回）' }))
+          return res.end(JSON.stringify({ error: L(langOf(req), '已有待验收的提交（可先撤回）', 'A submission is already awaiting review (withdraw it first)') }))
         }
         const submitNote = typeof sbody.note === 'string' ? String(sbody.note).trim().slice(0, 500) : ''
         const commitRefs = typeof sbody.commits === 'string' ? String(sbody.commits).trim().slice(0, 2000) : ''
@@ -1095,11 +1130,11 @@ export function startPortal(opts: PortalOptions) {
           | undefined
         if (!task) {
           res.writeHead(404, { 'content-type': 'application/json; charset=utf-8' })
-          return res.end(JSON.stringify({ error: '任务不存在' }))
+          return res.end(JSON.stringify({ error: L(langOf(req), '任务不存在', 'Task not found') }))
         }
         if (task.review_state !== 'submitted') {
           res.writeHead(400, { 'content-type': 'application/json; charset=utf-8' })
-          return res.end(JSON.stringify({ error: '当前没有待验收的提交' }))
+          return res.end(JSON.stringify({ error: L(langOf(req), '当前没有待验收的提交', 'No submission is awaiting review') }))
         }
         const note = typeof rbody.note === 'string' ? String(rbody.note).trim().slice(0, 500) : ''
         if (action === 'accept' || action === 'reject') {
@@ -1110,7 +1145,7 @@ export function startPortal(opts: PortalOptions) {
           }
           if (action === 'reject' && !note) {
             res.writeHead(400, { 'content-type': 'application/json; charset=utf-8' })
-            return res.end(JSON.stringify({ error: '打回必须填写理由' }))
+            return res.end(JSON.stringify({ error: L(langOf(req), '打回必须填写理由', 'A return reason is required') }))
           }
           if (action === 'accept') {
             db.prepare(
@@ -1136,7 +1171,7 @@ export function startPortal(opts: PortalOptions) {
         } else if (action === 'cancel') {
           if (task.submitted_by !== user.username) {
             res.writeHead(403, { 'content-type': 'application/json; charset=utf-8' })
-            return res.end(JSON.stringify({ error: '只有提交人可以撤回' }))
+            return res.end(JSON.stringify({ error: L(langOf(req), '只有提交人可以撤回', 'Only the submitter can withdraw') }))
           }
           db.prepare(
             `UPDATE tasks SET review_state = 'none', submitted_by = NULL, submitted_at = NULL, submit_note = NULL,
@@ -1145,7 +1180,7 @@ export function startPortal(opts: PortalOptions) {
           ).run(rid)
         } else {
           res.writeHead(400, { 'content-type': 'application/json; charset=utf-8' })
-          return res.end(JSON.stringify({ error: 'action 仅支持 accept / reject / cancel' }))
+          return res.end(JSON.stringify({ error: L(langOf(req), 'action 仅支持 accept / reject / cancel', 'action must be accept / reject / cancel') }))
         }
         res.writeHead(200, { 'content-type': 'application/json; charset=utf-8' })
         return res.end(JSON.stringify({ ok: true }))
@@ -1166,7 +1201,7 @@ export function startPortal(opts: PortalOptions) {
         const task = db.prepare(`SELECT id, created_by FROM tasks WHERE id = ?`).get(did) as { id: number; created_by: string | null } | undefined
         if (!task) {
           res.writeHead(404, { 'content-type': 'application/json; charset=utf-8' })
-          return res.end(JSON.stringify({ error: '任务不存在' }))
+          return res.end(JSON.stringify({ error: L(langOf(req), '任务不存在', 'Task not found') }))
         }
         if (user.role !== 'admin' && task.created_by !== user.username) {
           res.writeHead(403, { 'content-type': 'application/json; charset=utf-8' })
@@ -1264,15 +1299,15 @@ export function startPortal(opts: PortalOptions) {
             res.writeHead(code, { 'content-type': 'application/json; charset=utf-8' })
             return res.end(JSON.stringify({ error: message }))
           }
-          if (!/^[a-z0-9][a-z0-9_-]{1,31}$/.test(username)) return jerr(400, '用户名格式不对（小写字母数字，2-32 位）')
-          if (password.length < 6) return jerr(400, '密码至少 6 位')
+          if (!/^[a-z0-9][a-z0-9_-]{1,31}$/.test(username)) return jerr(400, L(langOf(req), '用户名格式不对（小写字母数字，2-32 位）', 'Invalid username format (lowercase letters/digits, 2-32)'))
+          if (password.length < 6) return jerr(400, L(langOf(req), '密码至少 6 位', 'Password must be at least 6 characters'))
           let budget: number | null = null
           if (budgetRaw) {
             const n = Number(budgetRaw)
-            if (!Number.isFinite(n) || n <= 0) return jerr(400, '预算需为正数或留空')
+            if (!Number.isFinite(n) || n <= 0) return jerr(400, L(langOf(req), '预算需为正数或留空', 'Budget must be a positive number or empty'))
             budget = n
           }
-          if (db.prepare(`SELECT id FROM users WHERE username = ?`).get(username)) return jerr(409, '用户名已存在')
+          if (db.prepare(`SELECT id FROM users WHERE username = ?`).get(username)) return jerr(409, L(langOf(req), '用户名已存在', 'Username already exists'))
           const info = db
             .prepare(`INSERT INTO users (username, role, status, password_hash, monthly_budget_cny) VALUES (?, 'member', 'active', ?, ?)`)
             .run(username, hashPassword(password), budget)
@@ -1288,13 +1323,13 @@ export function startPortal(opts: PortalOptions) {
           const target = db.prepare(`SELECT id, role FROM users WHERE username = ?`).get(username) as { id: number; role: string } | undefined
           if (!target) {
             res.writeHead(404, { 'content-type': 'application/json; charset=utf-8' })
-            return res.end(JSON.stringify({ error: '找不到该成员' }))
+            return res.end(JSON.stringify({ error: L(langOf(req), '找不到该成员', 'Member not found') }))
           }
           if (target.role === 'admin') {
             const other = db.prepare(`SELECT COUNT(*) AS n FROM users WHERE role = 'admin' AND id != ?`).get(target.id) as { n: number }
             if (other.n === 0) {
               res.writeHead(400, { 'content-type': 'application/json; charset=utf-8' })
-              return res.end(JSON.stringify({ error: '不能删除唯一的管理员账户' }))
+              return res.end(JSON.stringify({ error: L(langOf(req), '不能删除唯一的管理员账户', 'Cannot delete the sole administrator account') }))
             }
           }
           // usage_events 保留作历史（孤儿行在报表里自然隐藏）；FK 开关包住清删
@@ -1366,11 +1401,11 @@ export function startPortal(opts: PortalOptions) {
             res.writeHead(200, { 'content-type': 'application/json; charset=utf-8' })
             res.end(JSON.stringify(obj))
           }
-          if (action !== 'approve' && action !== 'reject') return reply({ error: 'action 仅支持 approve / reject' })
+          if (action !== 'approve' && action !== 'reject') return reply({ error: L(langOf(req), 'action 仅支持 approve / reject', 'action must be approve / reject') })
           const row = db.prepare(`SELECT * FROM session_del_requests WHERE id = ? AND status = 'pending'`).get(id) as
             | { username: string; session_id: string }
             | undefined
-          if (!row) return reply({ error: '申请不存在或已处理' })
+          if (!row) return reply({ error: L(langOf(req), '申请不存在或已处理', 'Request not found or already handled') })
           if (action === 'approve') {
             const r = deleteSession(row.username, row.session_id)
             if ('error' in r) return reply({ error: r.error })
@@ -1386,7 +1421,7 @@ export function startPortal(opts: PortalOptions) {
             res.writeHead(200, { 'content-type': 'application/json; charset=utf-8' })
             res.end(JSON.stringify(obj))
           }
-          if (!/^[a-z0-9_-]{1,32}$/.test(target)) return reply({ error: '用户名不合法' })
+          if (!/^[a-z0-9_-]{1,32}$/.test(target)) return reply({ error: L(langOf(req), '用户名不合法', 'Invalid username') })
           const r = await listUserSessions(db, target)
           if ('error' in r) return reply({ error: r.error })
           return reply({ ok: true, sessions: r.sessions })
@@ -1400,14 +1435,16 @@ export function startPortal(opts: PortalOptions) {
             res.end(JSON.stringify(obj))
           }
           const exists = db.prepare(`SELECT username FROM users WHERE username = ?`).get(target)
-          if (!exists) return reply({ error: '成员不存在' })
+          if (!exists) return reply({ error: L(langOf(req), '成员不存在', 'Member not found') })
           const r = deleteSession(target, sessionId)
           if ('error' in r) return reply({ error: r.error })
           return reply({ ok: true, killed: r.killed })
         }
         if (req.method === 'GET' && path === '/portal/api/admin/upstream') {
           res.writeHead(200, { 'content-type': 'application/json; charset=utf-8' })
-          return res.end(JSON.stringify({ ok: true, ...readUpstreamInfo() }))
+          const info = readUpstreamInfo()
+          if (info.source === '未配置') info.source = L(langOf(req), '未配置', 'Not configured')
+          return res.end(JSON.stringify({ ok: true, ...info }))
         }
         if (req.method === 'POST' && path === '/portal/api/admin/upstream-set') {
           const body = await readJsonBody()
@@ -1417,8 +1454,8 @@ export function startPortal(opts: PortalOptions) {
             res.writeHead(200, { 'content-type': 'application/json; charset=utf-8' })
             res.end(JSON.stringify(obj))
           }
-          if (!info.writable) return reply({ error: '当前 key 来自环境变量 DESK_REAL_KEY，需在服务环境里修改' })
-          if (!/^[\x21-\x7e]{16,200}$/.test(raw)) return reply({ error: '格式不合法：应为 sk- 开头、16-200 位可打印字符' })
+          if (!info.writable) return reply({ error: L(langOf(req), '当前 key 来自环境变量 DESK_REAL_KEY，需在服务环境里修改', 'The current key comes from the DESK_REAL_KEY environment variable; change it in the service environment') })
+          if (!/^[\x21-\x7e]{16,200}$/.test(raw)) return reply({ error: L(langOf(req), '格式不合法：应为 sk- 开头、16-200 位可打印字符', 'Invalid format: must start with sk- and be 16-200 printable characters') })
           const cur = readUpstreamKeyRaw()
           if (cur === raw) return reply({ ok: true, unchanged: true, keyMasked: maskKey(raw) })
           writeFileSync(upstreamKeysPath(), `DEEPSEEK_API_KEY=${raw}\n`, { mode: 0o600 })
@@ -1485,7 +1522,7 @@ export function startPortal(opts: PortalOptions) {
           return res.end(JSON.stringify({ ok: true }))
         }
         if (req.method === 'GET' && path === '/portal/api/admin/ops') {
-          const body = await collectOps(db, defaultDataDir())
+          const body = await collectOps(db, defaultDataDir(), langOf(req))
           res.writeHead(200, { 'content-type': 'application/json; charset=utf-8' })
           return res.end(JSON.stringify(body))
         }
@@ -1500,9 +1537,9 @@ export function startPortal(opts: PortalOptions) {
         res.writeHead(200, { 'content-type': 'application/manifest+json; charset=utf-8', 'cache-control': 'no-cache' })
         return res.end(
           JSON.stringify({
-            name: 'DSH 团队工作台',
-            short_name: 'DSH 工作台',
-            description: 'DSH-ANYWORK · 自托管团队工作台',
+            name: L(pageLang(req), 'DSH 团队工作台', 'DSH-ANYWORK Team Workbench'),
+            short_name: L(pageLang(req), 'DSH 工作台', 'DSH-ANYWORK'),
+            description: L(pageLang(req), 'DSH-ANYWORK · 自托管团队工作台', 'DSH-ANYWORK · self-hosted team workbench'),
             start_url: '/',
             scope: '/',
             display: 'standalone',
@@ -1517,24 +1554,33 @@ export function startPortal(opts: PortalOptions) {
         return res.end(PORTAL_ICON_SVG)
       }
 
+      // —— 语言切换（写 cookie 后跳回） ——
+      if (req.method === 'GET' && path === '/portal/lang') {
+        const set = url.searchParams.get('set') === 'en' ? 'en' : 'zh'
+        const back = String(url.searchParams.get('back') ?? '/')
+        return redirect(res, back.startsWith('/') ? back : '/', `desk_lang=${set}; Path=/; Max-Age=31536000; SameSite=Lax`)
+      }
+
       // —— 登录 ——
       if (req.method === 'GET' && path === '/login') {
         if (user) return redirect(res, '/')
+        const lang = pageLang(req)
         const err = url.searchParams.get('err')
-        const msg = err === '1' ? '<div class="err">用户名或密码错误</div>' : err === '2' ? '<div class="err">尝试次数过多，请稍后再试</div>' : ''
+        const msg = err === '1' ? `<div class="err">${L(lang, '用户名或密码错误', 'Wrong username or password')}</div>` : err === '2' ? `<div class="err">${L(lang, '尝试次数过多，请稍后再试', 'Too many attempts — try again later')}</div>` : ''
         return html(
           res,
           200,
           page(
-            '登录',
+            L(lang, '登录', 'Sign in'),
             null,
             `<div class="login-wrap"><div class="card"><img src="/portal-icon.svg" width="42" height="42" alt="DSH" style="border-radius:10px;display:block;margin:0 0 12px">
-<h1>登录 DSH-ANYWORK</h1>${msg}
+<h1>${L(lang, '登录 DSH-ANYWORK', 'Sign in to DSH-ANYWORK')}</h1>${msg}
 <form method="post" action="/login">
-<label>用户名</label><input name="username" required autofocus>
-<label>密码</label><input name="password" type="password" required>
-<div style="margin-top:14px"><button style="width:100%">登录</button></div>
-</form></div></div>`,
+<label>${L(lang, '用户名', 'Username')}</label><input name="username" required autofocus>
+<label>${L(lang, '密码', 'Password')}</label><input name="password" type="password" required>
+<div style="margin-top:14px"><button style="width:100%">${L(lang, '登录', 'Sign in')}</button></div>
+</form><div style="margin-top:12px;font-size:12px"><a href="/portal/lang?set=${lang === 'en' ? 'zh' : 'en'}&back=/login">${lang === 'en' ? '中文' : 'English'}</a></div></div></div>`,
+            lang,
           ),
         )
       }
@@ -1579,7 +1625,7 @@ export function startPortal(opts: PortalOptions) {
 
       if (req.method === 'GET' && path === '/portal/me') {
         if (!user) return redirect(res, '/login')
-        return html(res, 200, renderMe(user))
+        return html(res, 200, renderMe(user, pageLang(req, user.username)))
       }
 
       if (req.method === 'GET' && path === '/portal/admin') {
@@ -1602,20 +1648,21 @@ export function startPortal(opts: PortalOptions) {
           res,
           200,
           page(
-            '工作台未分配',
+            L(pageLang(req, user.username), '工作台未分配', 'Workbench not assigned'),
             user,
-            '<div class="card"><h1>你的工作台还没有分配实例</h1><div class="muted">当前由管理员在服务器上分配（P3 起提供自动管理）。<br>可以先去 <a href="/portal/me">我的用量</a> 看看账本。</div></div>',
+            L(pageLang(req, user.username), '<div class="card"><h1>你的工作台还没有分配实例</h1><div class="muted">当前由管理员在服务器上分配（P3 起提供自动管理）。<br>可以先去 <a href="/portal/me">我的用量</a> 看看账本。</div></div>', '<div class="card"><h1>Your workbench has no instance yet</h1><div class="muted">Your admin assigns instances on the server.<br>Meanwhile you can check <a href="/portal/me">My usage</a>.</div></div>'),
+            pageLang(req, user.username),
           ),
         )
       }
       const authAuthority = requestAuthorityOf(req.headers.host)
       const authCookie =
         authAuthority === undefined ? undefined : instanceAuthCookie(userHome(user.username), authAuthority)
-      proxyHttp(req, res, port, authCookie)
+      proxyHttp(req, res, port, authCookie, pageLang(req, user.username))
     } catch (err) {
       console.log(`[portal] unhandled: ${String(err)}`)
       try {
-        html(res, 500, page('500', null, '<div class="card"><h1>500</h1><div class="muted">服务器内部错误。</div></div>'))
+        html(res, 500, page('500', null, `<div class="card"><h1>500</h1><div class="muted">${L(pageLang(req), '服务器内部错误。', 'Internal server error.')}</div></div>`, pageLang(req)))
       } catch {
         // 响应已开始
       }

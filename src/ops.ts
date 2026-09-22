@@ -6,6 +6,8 @@ import { freemem, homedir, loadavg, totalmem, uptime as osUptime } from 'node:os
 import { join } from 'node:path'
 import type { DatabaseSync } from 'node:sqlite'
 
+const L = (lang: string, zh: string, en: string): string => (lang === 'en' ? en : zh)
+
 function run(cmd: string, args: string[]): Promise<string> {
   return new Promise((resolve) => {
     execFile(cmd, args, { timeout: 5000 }, (err, stdout) => resolve(err ? '' : String(stdout).trim()))
@@ -25,7 +27,7 @@ async function probe(url: string): Promise<number | string> {
   }
 }
 
-export async function collectOps(db: DatabaseSync, dataDir: string): Promise<Record<string, unknown>> {
+export async function collectOps(db: DatabaseSync, dataDir: string, lang: string = 'zh'): Promise<Record<string, unknown>> {
   // —— 服务（systemd）+ 该成员实例端口 ——
   const users = db.prepare(`SELECT username, agent_port AS port FROM users WHERE agent_port IS NOT NULL ORDER BY id`).all() as unknown as {
     username: string
@@ -70,8 +72,8 @@ export async function collectOps(db: DatabaseSync, dataDir: string): Promise<Rec
 
   // —— 端口探活 ——
   const http: Record<string, number | string> = {
-    '门户 :8080': await probe('http://127.0.0.1:8080/healthz'),
-    '网关 :8100': await probe('http://127.0.0.1:8100/healthz'),
+    [L(lang, '门户 :8080', 'Portal :8080')]: await probe('http://127.0.0.1:8080/healthz'),
+    [L(lang, '网关 :8100', 'Gateway :8100')]: await probe('http://127.0.0.1:8100/healthz'),
   }
   for (const u of users) http[`${u.username} :${u.port}`] = await probe(`http://127.0.0.1:${u.port}/`)
 

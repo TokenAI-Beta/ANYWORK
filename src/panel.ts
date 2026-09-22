@@ -6,6 +6,8 @@ import { homedir } from 'node:os'
 import type { DatabaseSync } from 'node:sqlite'
 import { defaultDataDir } from './db.ts'
 
+const L = (lang: string, zh: string, en: string): string => (lang === 'en' ? en : zh)
+
 const PRESETS_DIR = join(defaultDataDir(), 'presets')
 const SKILLS_DIR = join(defaultDataDir(), 'skills')
 
@@ -100,10 +102,10 @@ export function collectSkills(): SkillInfo[] {
   return out
 }
 
-export function readSkill(id: string): { ok: true; id: string; content: string } | { error: string } {
-  if (!/^[a-z0-9][a-z0-9._-]{0,63}$/i.test(id) || id.includes('..')) return { error: '名称不合法' }
+export function readSkill(id: string, lang: string = 'zh'): { ok: true; id: string; content: string } | { error: string } {
+  if (!/^[a-z0-9][a-z0-9._-]{0,63}$/i.test(id) || id.includes('..')) return { error: L(lang, '名称不合法', 'Invalid name') }
   const p = join(SKILLS_DIR, id, 'SKILL.md')
-  if (!existsSync(p)) return { error: '技能不存在' }
+  if (!existsSync(p)) return { error: L(lang, '技能不存在', 'Skill not found') }
   return { ok: true, id, content: readText(p).slice(0, 80000) }
 }
 
@@ -114,20 +116,20 @@ export interface ConnectorInfo {
 }
 
 /** 连接器状态（只读探测）：模型网关 / 通知 / Codex / GitHub / 共享区 */
-export function collectConnectors(db: DatabaseSync): ConnectorInfo[] {
+export function collectConnectors(db: DatabaseSync, lang: string = 'zh'): ConnectorInfo[] {
   const items: ConnectorInfo[] = []
 
   let chNames: string[] = []
   try {
     const rows = db.prepare(`SELECT name, enabled FROM channels ORDER BY id`).all() as unknown as { name: string; enabled: number }[]
-    chNames = rows.map((r) => r.name + (r.enabled ? '' : '（停用）'))
+    chNames = rows.map((r) => r.name + (r.enabled ? '' : L(lang, '（停用）', ' (disabled)')))
   } catch {
     // 表缺失按空处理
   }
   items.push({
-    name: '模型网关',
+    name: L(lang, '模型网关', 'Model gateway'),
     ok: true,
-    detail: '默认 DeepSeek 网关在岗' + (chNames.length ? `；外部通道 ${chNames.length} 个：${chNames.join('、')}` : '；当前无外部通道'),
+    detail: L(lang, '默认 DeepSeek 网关在岗', 'Default DeepSeek gateway is up') + (chNames.length ? L(lang, `；外部通道 ${chNames.length} 个：${chNames.join('、')}`, `; ${chNames.length} external channel(s): ${chNames.join(', ')}`) : L(lang, '；当前无外部通道', '; no external channels yet')),
   })
 
   let routes: { name: string; kind: string; enabled: number }[] = []
@@ -138,26 +140,26 @@ export function collectConnectors(db: DatabaseSync): ConnectorInfo[] {
   }
   const en = routes.filter((r) => r.enabled)
   items.push({
-    name: '通知（微信 / Webhook）',
+    name: L(lang, '通知（微信 / Webhook）', 'Notifications (WeChat / Webhook)'),
     ok: en.length > 0,
-    detail: routes.length ? `路由 ${routes.length} 条，启用 ${en.length} 条` + (en.length ? '：' + en.map((r) => r.name).join('、') : '') : '未配置通知路由',
+    detail: routes.length ? L(lang, `路由 ${routes.length} 条，启用 ${en.length} 条`, `${routes.length} route${routes.length === 1 ? '' : 's'}, ${en.length} enabled`) + (en.length ? L(lang, '：', ': ') + en.map((r) => r.name).join(lang === 'en' ? ', ' : '、') : '') : L(lang, '未配置通知路由', 'No notification routes configured'),
   })
 
   const tg = routes.filter((r) => r.kind === 'telegram')
   items.push({
-    name: 'Telegram（连接器）',
+    name: L(lang, 'Telegram（连接器）', 'Telegram (connector)'),
     ok: tg.length ? tg.some((r) => r.enabled === 1) : null,
     detail: tg.length
-      ? `Bot API · 路由 ${tg.length} 条（启用 ${tg.filter((r) => r.enabled === 1).length}）：${tg.map((r) => r.name).join('、')}`
-      : '未配置 —— 设置 → 通知 添加：bot_token|chat_id（@BotFather 建机器人；直连不通可加 |api_base）',
+      ? L(lang, `Bot API · 路由 ${tg.length} 条（启用 ${tg.filter((r) => r.enabled === 1).length}）：${tg.map((r) => r.name).join('、')}`, `Bot API · ${tg.length} route(s) (${tg.filter((r) => r.enabled === 1).length} enabled): ${tg.map((r) => r.name).join(', ')}`)
+      : L(lang, '未配置 —— 设置 → 通知 添加：bot_token|chat_id（@BotFather 建机器人；直连不通可加 |api_base）', 'Not configured — add one in Settings → Notifications: bot_token|chat_id (create a bot via @BotFather; append |api_base when a direct connection fails)'),
   })
   const wa = routes.filter((r) => r.kind === 'whatsapp')
   items.push({
-    name: 'WhatsApp（连接器）',
+    name: L(lang, 'WhatsApp（连接器）', 'WhatsApp (connector)'),
     ok: wa.length ? wa.some((r) => r.enabled === 1) : null,
     detail: wa.length
-      ? `路由 ${wa.length} 条（启用 ${wa.filter((r) => r.enabled === 1).length}）：${wa.map((r) => r.name).join('、')}`
-      : '未配置 —— 支持 CallMeBot（免费个人）/ green-api / UltraMsg 任一网关',
+      ? L(lang, `路由 ${wa.length} 条（启用 ${wa.filter((r) => r.enabled === 1).length}）：${wa.map((r) => r.name).join('、')}`, `${wa.length} route(s) (${wa.filter((r) => r.enabled === 1).length} enabled): ${wa.map((r) => r.name).join(', ')}`)
+      : L(lang, '未配置 —— 支持 CallMeBot（免费个人）/ green-api / UltraMsg 任一网关', 'Not configured — supports CallMeBot (free, personal) / green-api / UltraMsg'),
   })
 
   const codexCandidates = [
@@ -167,31 +169,31 @@ export function collectConnectors(db: DatabaseSync): ConnectorInfo[] {
   const codexBin = codexCandidates.find((p) => existsSync(p)) || ''
   const codexAuth = existsSync(join(homedir(), '.codex', 'auth.json'))
   items.push({
-    name: 'Codex（并行 / 子代理引擎）',
+    name: L(lang, 'Codex（并行 / 子代理引擎）', 'Codex (parallel / subagent engine)'),
     ok: codexBin ? codexAuth : null,
     detail: codexBin
       ? codexAuth
-        ? '已接入：可派子代理与 worktree 并行（消耗你的 Codex 账号额度）'
-        : '已安装，但登录态缺失（需 codex login）'
-      : '未安装（可选）',
+        ? L(lang, '已接入：可派子代理与 worktree 并行（消耗你的 Codex 账号额度）', 'Connected: dispatch subagents and run worktree parallelism (bills your Codex account)')
+        : L(lang, '已安装，但登录态缺失（需 codex login）', 'Installed, but not signed in (run codex login)')
+      : L(lang, '未安装（可选）', 'Not installed (optional)'),
   })
 
   const ghHosts = readText(join(homedir(), '.config', 'gh', 'hosts.yml'))
   const ghUser = /user:\s*(\S+)/.exec(ghHosts)?.[1] ?? ''
-  items.push({ name: 'GitHub CLI', ok: ghUser ? true : null, detail: ghUser ? `已登录：${ghUser}` : '未登录（可选）' })
+  items.push({ name: 'GitHub CLI', ok: ghUser ? true : null, detail: ghUser ? L(lang, `已登录：${ghUser}`, `Signed in: ${ghUser}`) : L(lang, '未登录（可选）', 'Not signed in (optional)') })
 
   const kbOk = existsSync(join(defaultDataDir(), 'kb'))
   const driveOk = existsSync(join(defaultDataDir(), 'drive'))
   items.push({
-    name: '知识库 / 公司盘',
+    name: L(lang, '知识库 / 公司盘', 'Knowledge base / Company drive'),
     ok: kbOk && driveOk,
-    detail: `知识库 ${kbOk ? '✓' : '✗'} · 公司盘 ${driveOk ? '✓' : '✗'}（共享区，每实例软链）`,
+    detail: L(lang, `知识库 ${kbOk ? '✓' : '✗'} · 公司盘 ${driveOk ? '✓' : '✗'}（共享区，每实例软链）`, `Knowledge base ${kbOk ? '✓' : '✗'} · Company drive ${driveOk ? '✓' : '✗'} (shared area, symlinked into every instance)`),
   })
 
   items.push({
-    name: '技能库 / Agent 预设',
+    name: L(lang, '技能库 / Agent 预设', 'Skills / Agent presets'),
     ok: true,
-    detail: `共享技能 ${collectSkills().length} 个 · 预设 ${collectPresets().length} 个（改动即生效）`,
+    detail: L(lang, `共享技能 ${collectSkills().length} 个 · 预设 ${collectPresets().length} 个（改动即生效）`, `${collectSkills().length} shared skills · ${collectPresets().length} presets (changes apply immediately)`),
   })
 
   return items

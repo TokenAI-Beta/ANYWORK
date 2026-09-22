@@ -6,7 +6,7 @@
 
 Each member signs in with their own account and works in their own isolated workspace. The model API key stays on the server, and usage is metered per person — so a team can share one agent setup without sharing keys, files, or bills.
 
-> **Status: building in public, early stage.** P0–P3 are done and verified on the LAN. P4 (delivery) is largely in place — `setup/backup/restore/logs` scripts, a one-page [deployment guide](docs/DEPLOY.md), and a green end-to-end [acceptance walk](docs/ACCEPTANCE.md); a from-scratch dry-run on a second machine is pending (the one-command Docker deploy completed a full from-scratch empty-volume run on this machine). Roadmap and 22-task plan in [`docs/PLAN.md`](docs/PLAN.md); verified findings in [`docs/BASELINE.md`](docs/BASELINE.md); daily progress in [`docs/devlog/`](docs/devlog/). 📖 **User manual** (Chinese): [`docs/GUIDE.md`](docs/GUIDE.md).
+> **Status: building in public, early stage.** P0–P3 are done and verified on the LAN. P4 (delivery) is largely in place — `setup/backup/restore/logs` scripts, a one-page [deployment guide](docs/DEPLOY.md), and a green end-to-end [acceptance walk](docs/ACCEPTANCE.md); a from-scratch dry-run on a second machine is pending (the one-command Docker deploy completed a full from-scratch empty-volume run on this machine). The workbench UI is **bilingual (中文 / English)** — switch in Settings → General → Language. Roadmap and 22-task plan in [`docs/PLAN.md`](docs/PLAN.md); verified findings in [`docs/BASELINE.md`](docs/BASELINE.md); daily progress in [`docs/devlog/`](docs/devlog/). 📖 **User manual** (Chinese): [`docs/GUIDE.md`](docs/GUIDE.md).
 
 ## Quick start (Docker · any Linux server)
 
@@ -110,7 +110,7 @@ DSH_HOME=<instance home> node <dsh checkout>/apps/cli/lib/bin.js plugin --profil
   file:<this repo>/plugin/desk-panel
 ```
 
-Data comes from the portal's `/portal/api/usage` — open the workbench through the portal to see it.
+Data comes from the portal's `/portal/api/usage` — open the workbench through the portal to see it. All surfaces (settings pages, sidebar panels, portal pages, the usage widget) follow the workbench language (中文 / English).
 
 ## License
 

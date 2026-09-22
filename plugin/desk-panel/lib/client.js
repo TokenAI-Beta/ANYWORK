@@ -10,6 +10,676 @@ window.__ModuleLoader__.load({
     let React = require("react");
 
     var h = React.createElement;
+    // —— i18n：接入官方 locale 服务（设置 → 语言 中英实时切换；缺服务时退回中文）—— //
+    var DESK_NS = "desk-panel";
+    var LOC_ZH = {
+      "usage.loading": "读取用量中…",
+      "usage.failOpen": "暂时读不到用量数据（",
+      "usage.portalHint": "本面板通过门户读取账本：请从门户地址打开工作台（例如 http://192.168.0.171:8080）再查看；直连实例端口时不可用。",
+      "usage.monthPrefix": "本月 · 请求 ",
+      "usage.mid": " 次 · 未命中 ",
+      "usage.outMid": " / 输出 ",
+      "usage.todayPrefix": "今日 ",
+      "usage.reqSuffix": " 次",
+      "usage.budgetPrefix": "预算 ¥",
+      "usage.overLimit": "已超限",
+      "usage.remainingPrefix": "剩余 ¥",
+      "usage.openPortal": "打开完整门户页（用量明细）→",
+      "common.required": "内容不能为空",
+      "common.saving": "保存中…",
+      "kb.savedTo": "已沉淀：notes/",
+      "common.loading": "读取中…",
+      "common.loadFailed": "读取失败",
+      "kb.delNote": "删除笔记：",
+      "common.deletedColon": "已删除：",
+      "kb.newNote": "沉淀一条新笔记（写入共享知识库）",
+      "kb.titlePh": "标题（如：铬矿报价速算口径）",
+      "common.tagsOpt": "标签（可选）",
+      "kb.bodyPh": "正文（Markdown）——建议写结论 / 口径 / 方法，方便后来人复用",
+      "kb.saveBtn": "沉淀入库",
+      "kb.recentOpen": "最近沉淀（",
+      "kb.recentFailOpen": "读不到沉淀列表（",
+      "common.collapse": "收起",
+      "common.view": "查看",
+      "common.delete": "删除",
+      "kb.empty": "还没有沉淀笔记。",
+      "kb.searchPh": "要查什么？（关键词）",
+      "common.query": "查询",
+      "kb.failOpen": "读不到知识库（",
+      "kb.portalHint2": "）。本面板需从门户打开（经登录会话访问服务器知识库）。",
+      "kb.hitsPrefix": "命中 ",
+      "kb.hitsSuffix": " 条",
+      "kb.truncated": "（已截断）",
+      "kb.noHits": "没有命中。试试更短的关键词。",
+      "kb.statsPrefix": "知识库：",
+      "kb.statsMid": " 个文件 · ",
+      "kb.statsUpdated": "最后更新 ",
+      "kb.statsEmpty": "空（把文档放进 kb 目录即可）",
+      "kb.statsHint": "把文档放进服务器 ~/desk-data/kb（目录内有 README）；会话里的 agent 也能直接读它。",
+      "drive.uploading": "上传中：",
+      "drive.uploadFail": "上传失败：",
+      "sec.drive": "公司盘",
+      "common.refresh": "刷新",
+      "drive.uploadBtn": "上传文件",
+      "drive.failOpen": "读不到公司盘（",
+      "drive.portalHint2": "）。本面板需从门户打开（经登录会话访问服务器文件区）。",
+      "drive.emptyHint": "（空文件夹：点「上传文件」，或把文件放进服务器 ~/desk-data/drive）",
+      "drive.pathHint": "服务器路径 ~/desk-data/drive（Windows：\\\\\\\\wsl.localhost\\\\Ubuntu\\\\home\\\\yangc\\\\desk-data\\\\drive）；单文件上限 50MB。",
+      "common.processing": "处理中…",
+      "admin.pasteKey": "请先粘贴新 key",
+      "admin.sameKey": "与当前 key 相同，无需更换。",
+      "admin.updatedOpen": "已更新（",
+      "admin.restartSuffix": "），网关重启中——约 5~10 秒后自动刷新。",
+      "admin.loadingMembers": "读取成员与通道中…",
+      "admin.adminOnly": "本页仅管理员可用。",
+      "admin.adminOnlySub": "用管理员账号从门户登录后，在工作台设置里管理成员与模型通道。",
+      "admin.loadFailOpen": "读不到管理数据（",
+      "admin.portalHint": "请从门户地址打开工作台（经登录会话）再试；直连实例端口时不可用。",
+      "admin.soleAdmin": "唯一管理员",
+      "admin.delMember": "删除成员 ",
+      "admin.delMemberWarn": "？\\n将吊销其虚拟钥匙并清除登录会话（不可撤销；历史用量保留在账本）。",
+      "admin.delMemberDone": "已删除成员：",
+      "admin.rowInstance": " · 实例 ",
+      "admin.rowBudget": " · 预算 ",
+      "admin.unlimited": "不限",
+      "admin.rowCreated": " · 建 ",
+      "admin.rowMonth": "本月 ",
+      "admin.rowMonthMid": " 次 · 近 7 天 ",
+      "admin.activeSess": "● 活跃会话",
+      "admin.noSess": "○ 无会话",
+      "admin.lastLogin": " · 最后登录 ",
+      "admin.never": "从未",
+      "common.enable": "启用",
+      "common.disable": "停用",
+      "admin.channelToggled": "通道已",
+      "admin.delChannel": "删除通道 ",
+      "admin.channelDeleted": "通道已删除：",
+      "admin.teamUsage7d": "近 7 天团队用量 · 合计 ",
+      "admin.upstreamTitle": "团队共用上游（默认）",
+      "admin.upstreamDesc": "所有成员默认经这里出网；外部通道按模型名分流（见下方「模型通道」）。Key 只存服务器，成员不可见。",
+      "admin.upstreamSrc": "（来源 ",
+      "admin.keyMissing": "Key 未配置",
+      "admin.keyPh": "sk-…（粘贴新的 DeepSeek API Key；保存后网关自动重启约 5~10 秒）",
+      "admin.updateKey": "更新 Key",
+      "admin.keyEnvLocked": "当前 Key 来自服务环境变量（DESK_REAL_KEY），请在服务环境里修改。",
+      "admin.keyScopeNote": "换 Key 只影响默认上游；给特定模型接别的上游 / Key 用下方「模型通道」。",
+      "admin.membersCount": "成员（",
+      "admin.newMember": "新建成员",
+      "admin.phUsername": "用户名（小写字母数字，2-32 位）",
+      "admin.phPassword": "初始密码（至少 6 位）",
+      "admin.phBudget": "月预算 CNY（可留空 = 不限）",
+      "admin.memberCreated": "成员已创建：",
+      "admin.createMember": "创建成员",
+      "admin.newKeyShown": "新成员虚拟钥匙（只显示这一次，请立即复制交给 ",
+      "admin.copied": "已复制到剪贴板",
+      "common.copyFail": "复制失败，请手动选中复制",
+      "common.copy": "复制",
+      "common.keyDone": "已交给成员，清除显示",
+      "admin.channelsCount": "模型通道（",
+      "admin.noChannels": "暂无外部通道（默认走 DeepSeek 官方）",
+      "admin.addChannel": "加入通道",
+      "admin.phChannelName": "名称（英文小写，如 kimi）",
+      "admin.phBaseUrl": "Base URL（OpenAI 兼容，含 /v1）",
+      "admin.phModels": "模型名（英文逗号分隔）",
+      "admin.phPrices": "价目表 JSON（可选，¥/百万 tokens）",
+      "common.phNote": "备注（可选）",
+      "admin.badPrices": "价目表 JSON 解析失败",
+      "admin.channelAdded": "通道已加入：",
+      "admin.dangerNote": "删除成员不可撤销；其历史用量保留在账本。成员预算到 80% / 100% 时会经「通知」通道自动提醒管理员。若该成员配了实例服务，可在服务器用 scripts/desk.sh 停掉。通道 Key 只存在服务器数据库。",
+      "notify.loading": "读取通知通道中…",
+      "notify.adminHint": "用管理员账号从门户登录后配置通知通道。",
+      "notify.loadFailOpen": "读不到通知配置（",
+      "notify.portalHint": "请从门户地址打开工作台（经登录会话）再试。",
+      "notify.enabledSuffix": " · 启用",
+      "notify.disabledSuffix": " · 停用",
+      "notify.toggled": "已切换：",
+      "notify.delChannel": "删除通知通道 ",
+      "notify.channelsCount": "通知通道（",
+      "notify.empty": "还没有通知通道——加一个，工作台就能往外推消息（提醒 / 告警 / 任务完成）。",
+      "notify.addChannel": "添加通道",
+      "notify.kindWebhook": "webhook —— 企业微信 / 钉钉 / 任意 HTTP 端点",
+      "notify.kindHermes": "hermes —— 经 通知平台（weixin 微信等）",
+      "notify.kindTelegram": "telegram —— Bot API（BotFather 机器人，直连/反代）",
+      "notify.kindWhatsapp": "whatsapp —— CallMeBot（免费个人）/ green-api / UltraMsg",
+      "notify.phName": "名称（英文小写，如 wecom-group / wechat-me）",
+      "notify.phTelegram": "bot_token|chat_id（可选 |api_base 反代）",
+      "notify.phWhatsapp": "callmebot|apikey|手机号 或 greenapi|id|token|chatId 或 ultramsg|id|token|to",
+      "notify.tgHint": "向 @BotFather 要 bot_token；chat_id 用 @频道名或数字 ID；直连失败时追加 |api_base 指向反代。",
+      "notify.waHint": "CallMeBot：给 +34 644 51 95 23 发消息索取 apikey（免费、个人通知）；green-api / UltraMsg 为商业网关（实例 ID + 令牌 + 收件人）。",
+      "notify.added": "通道已添加：",
+      "notify.testSend": "发送测试通知",
+      "notify.testSendHint": "会发往所有启用通道（含手机）",
+      "notify.removed": "已删除提醒 #",
+      "notify.remindersCount": "定时提醒（",
+      "notify.noReminders": "没有待发提醒。设置：让 agent 跑 ~/desk-data/bin/desk-remind \"10:00\" \"内容\"",
+      "notify.recentSent": "最近发送",
+      "notify.noSent": "还没有发送记录",
+      "notify.help": "agent 侧：desk-notify \\\"标题\\\" \\\"正文\\\" 立即发；desk-remind \\\"10:00\\\" \\\"内容\\\" 定时发（到点自动推，支持 +30m / 明天 09:00）。企业微信群机器人：群设置 → 群机器人 → 复制 Webhook 地址，粘进上面的通道即可。",
+      "relTime.days": " 天 ",
+      "relTime.hours": " 小时",
+      "relTime.hoursMid": " 小时 ",
+      "relTime.mins": " 分",
+      "relTime.minutes": " 分钟",
+      "ops.loading": "读取运维状态中…",
+      "ops.adminHint": "用管理员账号从门户登录后查看。",
+      "ops.loadFailOpen": "读不到运维数据（",
+      "ops.portalHint": "请从门户地址打开工作台再试。",
+      "ops.services": "服务（systemd）",
+      "ops.ports": "端口探活",
+      "ops.backups": "备份（",
+      "ops.backupMid": " 份 · 合计 ",
+      "ops.backupLast": "最后：",
+      "ops.noBackups": "（还没有备份产物；定时器每日 03:40 跑）",
+      "ops.disk": "磁盘 / 数据",
+      "ops.free": "空闲 ",
+      "ops.ofTotal": " / 共 ",
+      "ops.kbSize": "知识库 ",
+      "ops.driveSize": " · 公司盘 ",
+      "ops.host": "主机 / 进程",
+      "ops.uptime": "WSL 已运行 ",
+      "ops.mem": " · 内存 ",
+      "ops.procs": "工作台进程 ",
+      "ann.title": "团队公告与意见反馈",
+      "ann.tab": "公告",
+      "ann.failHint": "读不到公告（需从门户地址打开且已登录）。",
+      "ann.publish": "发布公告",
+      "ann.phTitle": "公告标题（可选）",
+      "ann.phBody": "公告内容…",
+      "ann.posted": "公告已发布",
+      "ann.untitled": "(无标题)",
+      "ann.delConfirm": "删除该公告？",
+      "common.deleted": "已删除",
+      "ann.empty": "暂无公告",
+      "ann.feedbackTab": "意见反馈",
+      "ann.everyone": "（全员）",
+      "ann.phFeedback": "给管理员提意见 / 报问题…",
+      "ann.feedbackThanks": "反馈已提交，谢谢！",
+      "ann.submitFeedback": "提交反馈",
+      "common.noFeedback": "暂无反馈",
+      "common.noFeedbackMine": "你还没有提过反馈",
+      "ann.titleShort": "团队公告",
+      "ann.footerLabel": "公告与意见反馈",
+      "asst.title": "团队助理：Agent 预设一览（专家模式）",
+      "asst.tab": "助理",
+      "asst.failHint": "读不到预设（请从门户地址打开且已登录）。",
+      "asst.empty": "共享区还没有预设。",
+      "asst.codex": "Codex 并行",
+      "asst.available": "可用助理",
+      "asst.note": "助理 = 预设人格与工具组合。默认用哪个：设置 → Agent 预设；共享区 presets/ 下可自行增减，新会话生效。",
+      "asst.team": "团队助理",
+      "asst.panelTitle": "Agent 预设（专家模式）",
+      "skl.title": "专家技能库 + 连接器状态",
+      "skl.tab": "技能·连接器",
+      "skl.skills": "技能",
+      "skl.connectors": "连接器",
+      "common.failHint": "读不到（请从门户地址打开且已登录）。",
+      "common.back": "← 返回",
+      "skl.empty": "共享技能库空空如也。",
+      "skl.trigger": "触发：",
+      "skl.hint": "点击任意技能查看全文；新增 = 往共享区 skills/ 放一个文件夹，各实例自动分发。",
+      "skl.noConn": "暂无连接信息。",
+      "skl.legend": "状态为只读探测：绿 = 已接通，灰 = 未配置（可选），红 = 异常。",
+      "skl.titleShort": "专家技能 · 连接器",
+      "skl.panelTitle": "技能库全文 + 连接器状态",
+      "auto.phTime": "时间格式：10:00 / 明天 09:00 / 09-22 10:00 / +30m",
+      "auto.added": "已添加：到点会推送提醒（微信/Webhook 通道）",
+      "auto.title": "自动化：定时提醒与团队自动化",
+      "auto.tab": "自动化",
+      "auto.pending": "待发送提醒（",
+      "auto.emptyPending": "还没有待发送的提醒。",
+      "auto.phTime2": "10:00 / +30m / 明天 09:00",
+      "auto.phText": "提醒内容",
+      "common.add": "添加",
+      "auto.hintAdmin": "到点由通知桥推送微信。也可以直接对助理说：提醒我 明天 09:00 开会。",
+      "auto.hintMember": "成员可见提醒列表；新增 / 删除请找管理员，或直接对助理说：提醒我 明天 09:00 开会。",
+      "auto.recent": "最近已发送",
+      "auto.panelTitle": "定时提醒与团队自动化",
+      "sess.tab": "会话",
+      "sess.notStarted": " · 未开始",
+      "sess.pending": "⏳ 待审批",
+      "sess.approved": "✅ 已批准",
+      "sess.rejected": "❌ 已驳回",
+      "sess.cancelled": "已撤销",
+      "sec.sessions": "会话管理",
+      "sess.intro": "删除需管理员确认：成员提交申请 → 管理员批准后执行；管理员可直接删除。执行删除时，对应实例会短暂重启（约 10~30 秒）。",
+      "sess.mine": "我的会话（",
+      "sess.loadHint": "读不到会话列表（需从工作台页面打开）。",
+      "sess.empty": "暂无会话。",
+      "sess.delDirect": "直接删除该会话？（管理员直删，实例将短暂重启）",
+      "sess.deletedRestarting": "已删除，实例重启中（约 10~30 秒）",
+      "sess.requestCancelled": "已撤销申请",
+      "common.withdraw": "撤销",
+      "sess.waitingAdmin": "⏳ 待管理员确认",
+      "sess.requested": "已提交，等待管理员确认",
+      "sess.requestDelete": "申请删除",
+      "sess.running": " · ● 进行中",
+      "sess.child": " · 子会话",
+      "sess.preset": " · 预设 ",
+      "sess.myRequests": "我的申请",
+      "sess.requestedAt": " · 申请于 ",
+      "sess.noRequests": "暂无申请记录。",
+      "sess.pendingCount": "待审批（",
+      "sess.approveDelete": "批准并删除 ",
+      "sess.approveDeleteQ": " 的该会话？（对方实例将短暂重启）",
+      "sess.approvedDone": "已批准并执行删除（实例约 10~30 秒后自动重启）",
+      "sess.approveBtn": "批准删除",
+      "sess.rejectedToast": "已驳回",
+      "sess.rejectBtn": "驳回",
+      "sess.noPending": "没有待审批的申请。",
+      "sess.memberSessions": "成员会话",
+      "sess.pickMember": "选择成员…",
+      "sess.noInstance": "（无实例）",
+      "sess.pickFirst": "先选择成员",
+      "sess.loadBtn": "加载会话",
+      "sess.delOther": "直接删除 ",
+      "sess.delOtherQ": " 的该会话？",
+      "sess.delDirectBtn": "直接删除",
+      "sess.memberNone": "该成员暂无会话。",
+      "sess.recent": "最近处理",
+      "task.loading": "读取任务板…",
+      "task.failHint": "读不到任务板（需从门户地址打开且已登录）。",
+      "task.todo": "待办",
+      "task.doing": "进行中",
+      "task.done": "已完成",
+      "task.start": "开始",
+      "task.finish": "完成",
+      "task.reopen": "重开",
+      "task.unassigned": "未指派",
+      "task.titlePh": "任务标题",
+      "task.created": "任务已创建",
+      "task.new": "新建任务",
+      "task.inReview": "待验收",
+      "task.accepted": "已验收",
+      "task.returned": "已打回",
+      "task.filterAll": "全部 ",
+      "task.filterTodo": "待办 ",
+      "task.filterDoing": "进行中 ",
+      "task.filterReview": "待验收 ",
+      "task.filterDone": "已完成 ",
+      "task.filterMine": "我的 ",
+      "task.updated": "已更新",
+      "task.advance": "推进",
+      "task.submitReview": "提交验收",
+      "task.withdrawQ": "撤回对「",
+      "task.withdrawQ2": "」的提交？",
+      "task.withdrawDone": "已撤回提交",
+      "task.withdrawBtn": "撤回",
+      "task.acceptedToast": "已验收通过",
+      "task.approveBtn": "通过",
+      "task.returnPrompt": "打回理由（必填）：",
+      "task.returnBtn": "打回",
+      "task.claimed": "已接领",
+      "task.claimBtn": "接领",
+      "task.delTask": "删除任务：",
+      "task.assign": "指派：",
+      "task.submittedBy": " · 提交：",
+      "task.note": "说明：",
+      "task.linkedSess": "关联会话：",
+      "task.returnReason": "打回理由：",
+      "task.reviewNote": "评审意见：",
+      "task.phCommits": "提交内容（每行一条：commit 链接 / sha + 说明；可空）",
+      "task.phSubmitNote": "提交说明（一句话，可空）",
+      "task.loadingSess": "读取会话中…",
+      "task.pickSess": "关联会话（可选）",
+      "task.noSess": "关联会话（暂无可选）",
+      "task.submittedToast": "已提交，等待验收",
+      "task.submitBtn": "提交",
+      "common.cancel": "取消",
+      "task.empty": "暂无任务，先在上面建一条。",
+      "task.emptyFilter": "此筛选下暂无任务",
+      "sec.usage": "工作台用量",
+      "sec.kb": "知识库",
+      "sec.members": "成员管理",
+      "sec.notify": "通知",
+      "sec.ops": "运维",
+      "sec.tasks": "任务板",
+    };
+    var LOC_EN = {
+      "usage.loading": "Loading usage…",
+      "usage.failOpen": "Usage data is temporarily unavailable (",
+      "usage.portalHint": "This panel reads the ledger through the portal — open the workbench from the portal address (e.g. http://192.168.0.171:8080). Not available over the raw instance port.",
+      "usage.monthPrefix": "This month · ",
+      "usage.mid": " requests · missed ",
+      "usage.outMid": " / output ",
+      "usage.todayPrefix": "Today ",
+      "usage.reqSuffix": " requests",
+      "usage.budgetPrefix": "Budget ¥",
+      "usage.overLimit": " over limit",
+      "usage.remainingPrefix": "Remaining ¥",
+      "usage.openPortal": "Open the full portal page (usage details) →",
+      "common.required": "Content cannot be empty",
+      "common.saving": "Saving…",
+      "kb.savedTo": "Saved: notes/",
+      "common.loading": "Loading…",
+      "common.loadFailed": "Failed to load",
+      "kb.delNote": "Delete note: ",
+      "common.deletedColon": "Deleted: ",
+      "kb.newNote": "Save a new note (into the shared knowledge base)",
+      "kb.titlePh": "Title (e.g. pricing quick-calc conventions)",
+      "common.tagsOpt": "Tags (optional)",
+      "kb.bodyPh": "Body (Markdown) — write down conclusions / conventions / methods so teammates can reuse them",
+      "kb.saveBtn": "Save to knowledge base",
+      "kb.recentOpen": "Recent notes (",
+      "kb.recentFailOpen": "Cannot read the notes list (",
+      "common.collapse": "Collapse",
+      "common.view": "View",
+      "common.delete": "Delete",
+      "kb.empty": "No notes yet.",
+      "kb.searchPh": "Search (keywords)",
+      "common.query": "Search",
+      "kb.failOpen": "Knowledge base unavailable (",
+      "kb.portalHint2": "). Open this panel from the portal (a logged-in session is required to reach the server knowledge base).",
+      "kb.hitsPrefix": "Hits: ",
+      "kb.hitsSuffix": " items",
+      "kb.truncated": "(truncated)",
+      "kb.noHits": "No matches. Try shorter keywords.",
+      "kb.statsPrefix": "Knowledge base: ",
+      "kb.statsMid": " files · ",
+      "kb.statsUpdated": "updated ",
+      "kb.statsEmpty": "empty (drop documents into the kb directory)",
+      "kb.statsHint": "Put documents into ~/desk-data/kb on the server (a README lives there); agents in chat can read them too.",
+      "drive.uploading": "Uploading: ",
+      "drive.uploadFail": "Upload failed: ",
+      "sec.drive": "Company drive",
+      "common.refresh": "Refresh",
+      "drive.uploadBtn": "Upload file",
+      "drive.failOpen": "Company drive unavailable (",
+      "drive.portalHint2": "). Open this panel from the portal (a logged-in session is required to reach the server drive).",
+      "drive.emptyHint": "(Empty folder — click “Upload file”, or drop files into ~/desk-data/drive on the server)",
+      "drive.pathHint": "Server path ~/desk-data/drive (Windows: \\\\wsl.localhost\\Ubuntu\\home\\yangc\\desk-data\\drive); 50 MB per file.",
+      "common.processing": "Working…",
+      "admin.pasteKey": "Paste the new key first",
+      "admin.sameKey": "Same as the current key — nothing to change.",
+      "admin.updatedOpen": "Updated (",
+      "admin.restartSuffix": "), gateway restarting — the page refreshes in about 5–10 s.",
+      "admin.loadingMembers": "Loading members and channels…",
+      "admin.adminOnly": "This page is for administrators.",
+      "admin.adminOnlySub": "Sign in from the portal with an admin account to manage members and model channels in the workbench settings.",
+      "admin.loadFailOpen": "Cannot load admin data (",
+      "admin.portalHint": "Open the workbench from the portal address (logged-in session); not available over the raw instance port.",
+      "admin.soleAdmin": "sole administrator",
+      "admin.delMember": "Delete member ",
+      "admin.delMemberWarn": "?\nTheir virtual key will be revoked and login sessions cleared (irreversible; historical usage stays in the ledger).",
+      "admin.delMemberDone": "Member deleted: ",
+      "admin.rowInstance": " · instance ",
+      "admin.rowBudget": " · budget ",
+      "admin.unlimited": "unlimited",
+      "admin.rowCreated": " · created ",
+      "admin.rowMonth": "This month ",
+      "admin.rowMonthMid": " requests · last 7 days ",
+      "admin.activeSess": "● active",
+      "admin.noSess": "○ no sessions",
+      "admin.lastLogin": " · last login ",
+      "admin.never": "never",
+      "common.enable": "Enable",
+      "common.disable": "Disable",
+      "admin.channelToggled": "Channel now ",
+      "admin.delChannel": "Delete channel ",
+      "admin.channelDeleted": "Channel deleted: ",
+      "admin.teamUsage7d": "Team usage, last 7 days · total ",
+      "admin.upstreamTitle": "Team upstream (default)",
+      "admin.upstreamDesc": "All members go upstream through here by default; external channels route by model name (see “Model channels” below). The key stays on the server — members never see it.",
+      "admin.upstreamSrc": " (source ",
+      "admin.keyMissing": "Key not configured",
+      "admin.keyPh": "sk-… (paste a new DeepSeek API key; saving restarts the gateway in ~5–10 s)",
+      "admin.updateKey": "Update key",
+      "admin.keyEnvLocked": "The current key comes from the service environment (DESK_REAL_KEY); change it there.",
+      "admin.keyScopeNote": "Changing the key only affects the default upstream; route specific models to other upstreams/keys with “Model channels” below.",
+      "admin.membersCount": "Members (",
+      "admin.newMember": "New member",
+      "admin.phUsername": "Username (lowercase letters/digits, 2–32)",
+      "admin.phPassword": "Initial password (min 6 chars)",
+      "admin.phBudget": "Monthly budget CNY (leave empty = unlimited)",
+      "admin.memberCreated": "Member created: ",
+      "admin.createMember": "Create member",
+      "admin.newKeyShown": "New member virtual key (shown once — copy it now for ",
+      "admin.copied": "Copied to clipboard",
+      "common.copyFail": "Copy failed — select and copy manually",
+      "common.copy": "Copy",
+      "common.keyDone": "Handed over — clear it",
+      "admin.channelsCount": "Model channels (",
+      "admin.noChannels": "No external channels yet (models go to DeepSeek official by default)",
+      "admin.addChannel": "Add channel",
+      "admin.phChannelName": "Name (lowercase, e.g. kimi)",
+      "admin.phBaseUrl": "Base URL (OpenAI-compatible, include /v1)",
+      "admin.phModels": "Model names (comma-separated)",
+      "admin.phPrices": "Price table JSON (optional, ¥ per million tokens)",
+      "common.phNote": "Note (optional)",
+      "admin.badPrices": "Price table JSON parse failed",
+      "admin.channelAdded": "Channel added: ",
+      "admin.dangerNote": "Deleting a member is irreversible; historical usage stays in the ledger. When a member reaches 80% / 100% of budget the admins get an automatic notice through the notification channels. If the member has an instance service, stop it on the server with scripts/desk.sh. Channel keys live only in the server database.",
+      "notify.loading": "Loading notification channels…",
+      "notify.adminHint": "Sign in from the portal with an admin account to configure notification channels.",
+      "notify.loadFailOpen": "Cannot read notification config (",
+      "notify.portalHint": "Open the workbench from the portal address (logged-in session) and try again.",
+      "notify.enabledSuffix": " · enabled",
+      "notify.disabledSuffix": " · disabled",
+      "notify.toggled": "Toggled: ",
+      "notify.delChannel": "Delete notification channel ",
+      "notify.channelsCount": "Notification channels (",
+      "notify.empty": "No notification channels yet — add one and the workbench can push messages out (reminders / alerts / task updates).",
+      "notify.addChannel": "Add channel",
+      "notify.kindWebhook": "webhook — WeCom / DingTalk / any HTTP endpoint",
+      "notify.kindHermes": "hermes — via the Hermes platform (WeChat etc.)",
+      "notify.kindTelegram": "telegram — Bot API (BotFather bot; direct or proxied)",
+      "notify.kindWhatsapp": "whatsapp — CallMeBot (free, personal) / green-api / UltraMsg",
+      "notify.phName": "Name (lowercase, e.g. wecom-group / wechat-me)",
+      "notify.phTelegram": "bot_token|chat_id (optional |api_base proxy)",
+      "notify.phWhatsapp": "callmebot|apikey|phone or greenapi|id|token|chatId or ultramsg|id|token|to",
+      "notify.tgHint": "Get a bot_token from @BotFather; chat_id is @channelname or a numeric ID; append |api_base to point at a reverse proxy when direct access fails.",
+      "notify.waHint": "CallMeBot: message +34 644 51 95 23 to request an apikey (free, personal). green-api / UltraMsg are commercial gateways (instance ID + token + recipient).",
+      "notify.added": "Channel added: ",
+      "notify.testSend": "Send test notification",
+      "notify.testSendHint": "Goes to every enabled channel (including phones)",
+      "notify.removed": "Reminder deleted #",
+      "notify.remindersCount": "Scheduled reminders (",
+      "notify.noReminders": "No pending reminders. To add one: have an agent run ~/desk-data/bin/desk-remind \"10:00\" \"text\"",
+      "notify.recentSent": "Recently sent",
+      "notify.noSent": "Nothing sent yet",
+      "notify.help": "Agent side: desk-notify \"title\" \"body\" sends immediately; desk-remind \"10:00\" \"text\" schedules one (auto-pushed at the time; supports +30m / tomorrow 09:00). WeCom group bot: group settings → group bot → copy the webhook URL into a channel above.",
+      "relTime.days": "d ",
+      "relTime.hours": "h",
+      "relTime.hoursMid": "h ",
+      "relTime.mins": "m",
+      "relTime.minutes": "m",
+      "ops.loading": "Loading ops status…",
+      "ops.adminHint": "Sign in from the portal with an admin account to view this.",
+      "ops.loadFailOpen": "Cannot read ops data (",
+      "ops.portalHint": "Open the workbench from the portal address and try again.",
+      "ops.services": "Services (systemd)",
+      "ops.ports": "Port probes",
+      "ops.backups": "Backups (",
+      "ops.backupMid": " sets · total ",
+      "ops.backupLast": "latest: ",
+      "ops.noBackups": "(no backup artifacts yet; the timer runs daily at 03:40)",
+      "ops.disk": "Disk / data",
+      "ops.free": "Free ",
+      "ops.ofTotal": " / of ",
+      "ops.kbSize": "knowledge base ",
+      "ops.driveSize": " · drive ",
+      "ops.host": "Host / processes",
+      "ops.uptime": "WSL up ",
+      "ops.mem": " · memory ",
+      "ops.procs": "workbench processes ",
+      "ann.title": "Team announcements & feedback",
+      "ann.tab": "Announcements",
+      "ann.failHint": "Cannot load announcements (open from the portal and sign in).",
+      "ann.publish": "Post announcement",
+      "ann.phTitle": "Title (optional)",
+      "ann.phBody": "Announcement…",
+      "ann.posted": "Announcement posted",
+      "ann.untitled": "(untitled)",
+      "ann.delConfirm": "Delete this announcement?",
+      "common.deleted": "Deleted",
+      "ann.empty": "No announcements",
+      "ann.feedbackTab": "Feedback",
+      "ann.everyone": "(everyone)",
+      "ann.phFeedback": "Send feedback or report an issue to the admins…",
+      "ann.feedbackThanks": "Feedback submitted — thanks!",
+      "ann.submitFeedback": "Submit feedback",
+      "common.noFeedback": "No feedback yet",
+      "common.noFeedbackMine": "You haven't submitted feedback yet",
+      "ann.titleShort": "Team announcements",
+      "ann.footerLabel": "Announcements & feedback",
+      "asst.title": "Team assistants: agent preset gallery (expert mode)",
+      "asst.tab": "Assistants",
+      "asst.failHint": "Cannot load presets (open from the portal and sign in).",
+      "asst.empty": "No presets in the shared area yet.",
+      "asst.codex": "Codex parallel",
+      "asst.available": "Available assistants",
+      "asst.note": "An assistant = a preset persona + tool set. Default choice: Settings → Agent presets; add or remove directories under presets/ in the shared area — applies to new sessions.",
+      "asst.team": "Team assistant",
+      "asst.panelTitle": "Agent presets (expert mode)",
+      "skl.title": "Skill library + connector status",
+      "skl.tab": "Skills & connectors",
+      "skl.skills": "Skills",
+      "skl.connectors": "Connectors",
+      "common.failHint": "Cannot load (open from the portal and sign in).",
+      "common.back": "← Back",
+      "skl.empty": "The shared skill library is empty.",
+      "skl.trigger": "Trigger: ",
+      "skl.hint": "Click a skill to read it in full; to add one, drop a folder into skills/ in the shared area — every instance gets it automatically.",
+      "skl.noConn": "No connector info.",
+      "skl.legend": "Status is read-only probing: green = connected, grey = not configured (optional), red = error.",
+      "skl.titleShort": "Expert skills · connectors",
+      "skl.panelTitle": "Skill library full text + connector status",
+      "auto.phTime": "Time format: 10:00 / tomorrow 09:00 / 09-22 10:00 / +30m",
+      "auto.added": "Added — the reminder is pushed at the set time (WeChat/Webhook channels)",
+      "auto.title": "Automation: reminders & team automation",
+      "auto.tab": "Automation",
+      "auto.pending": "Pending reminders (",
+      "auto.emptyPending": "No pending reminders.",
+      "auto.phTime2": "10:00 / +30m / tomorrow 09:00",
+      "auto.phText": "Reminder text",
+      "common.add": "Add",
+      "auto.hintAdmin": "Pushed through the notification bridge at the set time. You can also just tell an assistant: remind me tomorrow 09:00 meeting.",
+      "auto.hintMember": "Members can view the reminder list; ask an admin to add / remove, or tell an assistant: remind me tomorrow 09:00 meeting.",
+      "auto.recent": "Recently sent",
+      "auto.panelTitle": "Reminders & team automation",
+      "sess.tab": "Sessions",
+      "sess.notStarted": " · not started",
+      "sess.pending": "⏳ Pending approval",
+      "sess.approved": "✅ Approved",
+      "sess.rejected": "❌ Rejected",
+      "sess.cancelled": "Cancelled",
+      "sec.sessions": "Sessions",
+      "sess.intro": "Deletion needs admin confirmation: members submit a request → an admin approves and it runs; admins can delete directly. Deleting briefly restarts the affected instance (about 10–30 s).",
+      "sess.mine": "My sessions (",
+      "sess.loadHint": "Cannot load sessions (open from the workbench page).",
+      "sess.empty": "No sessions.",
+      "sess.delDirect": "Delete this session directly? (Admin delete; the instance will restart briefly)",
+      "sess.deletedRestarting": "Deleted — instance restarting (about 10–30 s)",
+      "sess.requestCancelled": "Request withdrawn",
+      "common.withdraw": "Withdraw",
+      "sess.waitingAdmin": "⏳ Waiting for admin approval",
+      "sess.requested": "Submitted — waiting for admin approval",
+      "sess.requestDelete": "Request deletion",
+      "sess.running": " · ● running",
+      "sess.child": " · child session",
+      "sess.preset": " · preset ",
+      "sess.myRequests": "My requests",
+      "sess.requestedAt": " · requested at ",
+      "sess.noRequests": "No requests yet.",
+      "sess.pendingCount": "Pending approval (",
+      "sess.approveDelete": "Approve & delete ",
+      "sess.approveDeleteQ": " session for this user? (their instance will restart briefly)",
+      "sess.approvedDone": "Approved and deleted (the instance restarts automatically in ~10–30 s)",
+      "sess.approveBtn": "Approve deletion",
+      "sess.rejectedToast": "Rejected",
+      "sess.rejectBtn": "Reject",
+      "sess.noPending": "No pending requests.",
+      "sess.memberSessions": "Member sessions",
+      "sess.pickMember": "Choose a member…",
+      "sess.noInstance": "(no instance)",
+      "sess.pickFirst": "Choose a member first",
+      "sess.loadBtn": "Load sessions",
+      "sess.delOther": "Delete ",
+      "sess.delOtherQ": " session for this user?",
+      "sess.delDirectBtn": "Delete now",
+      "sess.memberNone": "This member has no sessions.",
+      "sess.recent": "Recently handled",
+      "task.loading": "Loading task board…",
+      "task.failHint": "Cannot load the task board (open from the portal and sign in).",
+      "task.todo": "To-do",
+      "task.doing": "In progress",
+      "task.done": "Done",
+      "task.start": "Start",
+      "task.finish": "Finish",
+      "task.reopen": "Reopen",
+      "task.unassigned": "Unassigned",
+      "task.titlePh": "Task title",
+      "task.created": "Task created",
+      "task.new": "New task",
+      "task.inReview": "In review",
+      "task.accepted": "Accepted",
+      "task.returned": "Returned",
+      "task.filterAll": "All ",
+      "task.filterTodo": "To-do ",
+      "task.filterDoing": "In progress ",
+      "task.filterReview": "In review ",
+      "task.filterDone": "Done ",
+      "task.filterMine": "Mine ",
+      "task.updated": "Updated",
+      "task.advance": "Advance",
+      "task.submitReview": "Submit for review",
+      "task.withdrawQ": "Withdraw the submission for “",
+      "task.withdrawQ2": "”?",
+      "task.withdrawDone": "Submission withdrawn",
+      "task.withdrawBtn": "Withdraw",
+      "task.acceptedToast": "Accepted",
+      "task.approveBtn": "Approve",
+      "task.returnPrompt": "Return reason (required):",
+      "task.returnBtn": "Return",
+      "task.claimed": "Claimed",
+      "task.claimBtn": "Claim",
+      "task.delTask": "Delete task: ",
+      "task.assign": "Assign: ",
+      "task.submittedBy": " · submitted: ",
+      "task.note": "Note: ",
+      "task.linkedSess": "Linked sessions: ",
+      "task.returnReason": "Return reason: ",
+      "task.reviewNote": "Review note: ",
+      "task.phCommits": "Submitted content (one per line: commit link / sha + note; can be empty)",
+      "task.phSubmitNote": "Submission note (one sentence, optional)",
+      "task.loadingSess": "Loading sessions…",
+      "task.pickSess": "Linked session (optional)",
+      "task.noSess": "Linked session (none available)",
+      "task.submittedToast": "Submitted — awaiting review",
+      "task.submitBtn": "Submit",
+      "common.cancel": "Cancel",
+      "task.empty": "No tasks yet — create one above.",
+      "task.emptyFilter": "No tasks under this filter",
+      "sec.usage": "Usage",
+      "sec.kb": "Knowledge base",
+      "sec.members": "Members",
+      "sec.notify": "Notifications",
+      "sec.ops": "Ops",
+      "sec.tasks": "Task board",
+    };
+    var DESK_CTX = null;
+    var DESK_T = null;
+    function tr(key) {
+      if (DESK_T) { try { var v = DESK_T(key); if (v) return v; } catch (e) { /* fallthrough */ } }
+      return LOC_ZH[key] || key;
+    }
+    function deskLang() {
+      try { return (DESK_CTX && DESK_CTX.locale && DESK_CTX.locale.getLocale().active === "en") ? "en" : "zh"; } catch (e) { return "zh"; }
+    }
+    /** 语言信号：宿主接管/用户切换语言后 +1；组件用它重取"服务端按语言生成"的文案 */
+    function useLocaleSignal() {
+      var pair = React.useState(0);
+      React.useEffect(function () {
+        try {
+          if (!DESK_CTX || !DESK_CTX.locale) return undefined;
+          return DESK_CTX.locale.subscribe(function () {
+            pair[1](function (x) { return x + 1; });
+          });
+        } catch (e) {
+          return undefined;
+        }
+      }, []);
+      return pair[0];
+    }
     var DESK_CSS = `
 .ddb { display:flex; align-items:center; gap:10px; width:100%; padding:7px 10px; border:0; border-radius:10px; background:transparent; color:inherit; cursor:pointer; font-size:13px; text-align:left; transition:background .13s ease; }
 .ddb:hover { background:var(--dsw-alias-interactive-bg-hover-default, rgba(127,127,127,.12)); }
@@ -262,17 +932,17 @@ window.__ModuleLoader__.load({
         };
       }, []);
 
-      if (state.phase === "loading") return h("div", { style: wrap }, "读取用量中…");
+      if (state.phase === "loading") return h("div", { style: wrap }, tr("usage.loading"));
 
       if (state.phase === "error") {
         return h(
           "div",
           { style: wrap },
-          h("div", null, "暂时读不到用量数据（" + state.message + "）。"),
+          h("div", null, tr("usage.failOpen") + state.message + "）。"),
           h(
             "div",
             { style: muted },
-            "本面板通过门户读取账本：请从门户地址打开工作台（例如 http://192.168.0.171:8080）再查看；直连实例端口时不可用。"
+            tr("usage.portalHint")
           )
         );
       }
@@ -287,17 +957,17 @@ window.__ModuleLoader__.load({
           h(
             "div",
             { style: muted },
-            "本月 · 请求 " + d.month.events + " 次 · 未命中 " + d.month.miss + " / 输出 " + d.month.out + " tokens"
+            tr("usage.monthPrefix") + d.month.events + tr("usage.mid") + d.month.miss + tr("usage.outMid") + d.month.out + " tokens"
           )
         )
       );
-      kids.push(h("div", { key: "today", style: muted }, "今日 " + fmt(d.day.cost) + " · " + d.day.events + " 次"));
+      kids.push(h("div", { key: "today", style: muted }, tr("usage.todayPrefix") + fmt(d.day.cost) + " · " + d.day.events + tr("usage.reqSuffix")));
       if (d.budget != null) {
         kids.push(
           h(
             "div",
             { key: "budget", style: muted },
-            "预算 ¥" + d.budget + "（" + (d.month.cost >= d.budget ? "已超限" : "剩余 ¥" + (d.budget - d.month.cost).toFixed(4)) + "）"
+            tr("usage.budgetPrefix") + d.budget + "(" + (d.month.cost >= d.budget ? tr("usage.overLimit") : tr("usage.remainingPrefix") + (d.budget - d.month.cost).toFixed(4)) + ")"
           )
         );
       }
@@ -318,7 +988,7 @@ window.__ModuleLoader__.load({
           h(
             "a",
             { href: "/portal/me", target: "_blank", rel: "noreferrer", style: crumb },
-            "打开完整门户页（用量明细）→"
+            tr("usage.openPortal")
           )
         )
       );
@@ -372,11 +1042,11 @@ window.__ModuleLoader__.load({
         var tags = gRef.current ? gRef.current.value : "";
         var content = cRef.current ? cRef.current.value : "";
         if (!String(content).trim()) {
-          setMsg("内容不能为空");
+          setMsg(tr("common.required"));
           return;
         }
-        setMsg("保存中…");
-        fetch("/portal/api/kb/save", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ title: title, tags: tags, content: content }) })
+        setMsg(tr("common.saving"));
+        fetch("/portal/api/kb/save?lang=" + deskLang(), { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ title: title, tags: tags, content: content }) })
           .then(function (r) {
             return r.json().then(function (d) {
               return { status: r.status, d: d };
@@ -390,7 +1060,7 @@ window.__ModuleLoader__.load({
             if (tRef.current) tRef.current.value = "";
             if (gRef.current) gRef.current.value = "";
             if (cRef.current) cRef.current.value = "";
-            reload("已沉淀：notes/" + res.d.name);
+            reload(tr("kb.savedTo") + res.d.name);
           })
           .catch(function (e) {
             setMsg(String((e && e.message) || e));
@@ -409,7 +1079,7 @@ window.__ModuleLoader__.load({
         var n2 = {};
         for (var k2 in st) n2[k2] = st[k2];
         n2.expanded = name;
-        n2.expandedContent = "读取中…";
+        n2.expandedContent = tr("common.loading");
         setSt(n2);
         fetch("/portal/api/kb/note?name=" + encodeURIComponent(name), { headers: { accept: "application/json" } })
           .then(function (r) {
@@ -419,7 +1089,7 @@ window.__ModuleLoader__.load({
             var n3 = {};
             for (var k3 in st) n3[k3] = st[k3];
             n3.expanded = name;
-            n3.expandedContent = d.ok ? d.content : d.error || "读取失败";
+            n3.expandedContent = d.ok ? d.content : d.error || tr("common.loadFailed");
             setSt(n3);
           })
           .catch(function (e) {
@@ -432,15 +1102,15 @@ window.__ModuleLoader__.load({
       }
 
       function del(name) {
-        if (!window.confirm("删除笔记：" + name + "？")) return;
-        fetch("/portal/api/kb/rm", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ name: name }) })
+        if (!window.confirm(tr("kb.delNote") + name + "?")) return;
+        fetch("/portal/api/kb/rm?lang=" + deskLang(), { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ name: name }) })
           .then(function (r) {
             return r.json().then(function (d) {
               return { status: r.status, d: d };
             });
           })
           .then(function (res) {
-            reload(res.status === 200 ? "已删除：" + name : (res.d && res.d.error) || "HTTP " + res.status);
+            reload(res.status === 200 ? tr("common.deletedColon") + name : (res.d && res.d.error) || "HTTP " + res.status);
           })
           .catch(function (e) {
             setMsg(String((e && e.message) || e));
@@ -448,7 +1118,7 @@ window.__ModuleLoader__.load({
       }
 
       var kids = [];
-      kids.push(h("div", { key: "hd", style: { fontWeight: 600, marginBottom: 6 } }, "沉淀一条新笔记（写入共享知识库）"));
+      kids.push(h("div", { key: "hd", style: { fontWeight: 600, marginBottom: 6 } }, tr("kb.newNote")));
       kids.push(
         h(
           "div",
@@ -456,25 +1126,25 @@ window.__ModuleLoader__.load({
           h(
             "div",
             { style: { display: "flex", gap: 8 } },
-            h("input", { ref: tRef, placeholder: "标题（如：铬矿报价速算口径）", style: Object.assign({}, field, { flex: 1 }) }),
-            h("input", { ref: gRef, placeholder: "标签（可选）", style: Object.assign({}, field, { width: 140 }) })
+            h("input", { ref: tRef, placeholder: tr("kb.titlePh"), style: Object.assign({}, field, { flex: 1 }) }),
+            h("input", { ref: gRef, placeholder: tr("common.tagsOpt"), style: Object.assign({}, field, { width: 140 }) })
           ),
-          h("textarea", { ref: cRef, placeholder: "正文（Markdown）——建议写结论 / 口径 / 方法，方便后来人复用", style: Object.assign({}, textareaStyle, { minHeight: 100 }) }),
-          h("div", null, h("button", { style: btnDark, onClick: save }, "沉淀入库"))
+          h("textarea", { ref: cRef, placeholder: tr("kb.bodyPh"), style: Object.assign({}, textareaStyle, { minHeight: 100 }) }),
+          h("div", null, h("button", { style: btnDark, onClick: save }, tr("kb.saveBtn")))
         )
       );
       if (st.message) kids.push(h("div", { key: "msg", style: Object.assign({ fontSize: 12 }, muted) }, st.message));
-      kids.push(h("div", { key: "rec", style: { fontWeight: 600, margin: "10px 0 4px" } }, "最近沉淀（" + st.notes.length + "）"));
+      kids.push(h("div", { key: "rec", style: { fontWeight: 600, margin: "10px 0 4px" } }, tr("kb.recentOpen") + st.notes.length + ")"));
       if (st.phase === "error") {
-        kids.push(h("div", { key: "err", style: muted }, "读不到沉淀列表（" + st.message + "）。"));
+        kids.push(h("div", { key: "err", style: muted }, tr("kb.recentFailOpen") + st.message + "）。"));
       } else {
         var rows = [];
         for (var i = 0; i < st.notes.length; i++) {
           (function (n) {
             var isOpen = st.expanded === n.name;
-            var actions = [h("button", { key: "v", style: btnSmall, onClick: function () { openNote(n.name); } }, isOpen ? "收起" : "查看")];
+            var actions = [h("button", { key: "v", style: btnSmall, onClick: function () { openNote(n.name); } }, isOpen ? tr("common.collapse") : tr("common.view"))];
             if (st.role === "admin") {
-              actions.push(h("button", { key: "d", style: btnSmall, onClick: function () { del(n.name); } }, "删除"));
+              actions.push(h("button", { key: "d", style: btnSmall, onClick: function () { del(n.name); } }, tr("common.delete")));
             }
             rows.push(
               h(
@@ -492,7 +1162,7 @@ window.__ModuleLoader__.load({
             );
           })(st.notes[i]);
         }
-        kids.push(h("div", { key: "rows" }, rows.length ? rows : h("div", { style: muted }, "还没有沉淀笔记。")));
+        kids.push(h("div", { key: "rows" }, rows.length ? rows : h("div", { style: muted }, tr("kb.empty"))));
       }
       return h("div", { key: "deposit", style: { marginTop: 14, borderTop: "1px solid var(--dsw-alias-border-l2, #ccd0d5)", paddingTop: 10 } }, kids);
     }
@@ -524,7 +1194,7 @@ window.__ModuleLoader__.load({
 
       var input = h("input", {
         ref: inputRef,
-        placeholder: "要查什么？（关键词）",
+        placeholder: tr("kb.searchPh"),
         style: {
           flex: 1,
           padding: "8px 10px",
@@ -552,19 +1222,19 @@ window.__ModuleLoader__.load({
               },
               style: btnDark,
             },
-            "查询"
+            tr("common.query")
           )
         ),
       ];
 
       if (st.phase === "error") {
         kids.push(
-          h("div", { key: "err", style: muted }, "读不到知识库（" + st.message + "）。本面板需从门户打开（经登录会话访问服务器知识库）。")
+          h("div", { key: "err", style: muted }, tr("kb.failOpen") + st.message + tr("kb.portalHint2"))
         );
       }
       if (st.phase === "ready") {
         if (st.q) {
-          kids.push(h("div", { key: "cnt", style: muted }, "命中 " + st.hits.length + " 条" + (st.truncated ? "（已截断）" : "")));
+          kids.push(h("div", { key: "cnt", style: muted }, tr("kb.hitsPrefix") + st.hits.length + tr("kb.hitsSuffix") + (st.truncated ? tr("kb.truncated") : "")));
           var hitNodes = [];
           for (var i = 0; i < st.hits.length; i++) {
             hitNodes.push(
@@ -576,7 +1246,7 @@ window.__ModuleLoader__.load({
               )
             );
           }
-          if (!hitNodes.length) kids.push(h("div", { key: "none", style: muted }, "没有命中。试试更短的关键词。"));
+          if (!hitNodes.length) kids.push(h("div", { key: "none", style: muted }, tr("kb.noHits")));
           kids.push(h("div", { key: "hits" }, hitNodes));
         }
       }
@@ -585,11 +1255,11 @@ window.__ModuleLoader__.load({
           h(
             "div",
             { key: "stats", style: muted },
-            "知识库：" + st.stats.files + " 个文件 · " + (st.stats.updatedAt ? "最后更新 " + st.stats.updatedAt.slice(0, 16).replace("T", " ") + "（UTC）" : "空（把文档放进 kb 目录即可）")
+            tr("kb.statsPrefix") + st.stats.files + tr("kb.statsMid") + (st.stats.updatedAt ? tr("kb.statsUpdated") + st.stats.updatedAt.slice(0, 16).replace("T", " ") + "（UTC）" : tr("kb.statsEmpty"))
           )
         );
       }
-      kids.push(h("div", { key: "tip", style: muted }, "把文档放进服务器 ~/desk-data/kb（目录内有 README）；会话里的 agent 也能直接读它。"));
+      kids.push(h("div", { key: "tip", style: muted }, tr("kb.statsHint")));
       kids.push(h(KbDeposit, { key: "deposit" }));
       return h("div", { style: wrap }, kids);
     }
@@ -622,7 +1292,7 @@ window.__ModuleLoader__.load({
       function upload(files) {
         var f = files && files[0];
         if (!f) return;
-        setSt({ phase: "loading", path: st.path, entries: st.entries, message: "上传中：" + f.name + " …" });
+        setSt({ phase: "loading", path: st.path, entries: st.entries, message: tr("drive.uploading") + f.name + " …" });
         fetch("/portal/api/drive/upload?path=" + encodeURIComponent(st.path) + "&name=" + encodeURIComponent(f.name), {
           method: "POST",
           body: f,
@@ -635,7 +1305,7 @@ window.__ModuleLoader__.load({
             load(st.path);
           })
           .catch(function (e) {
-            setSt({ phase: "ready", path: st.path, entries: st.entries, message: "上传失败：" + String((e && e.message) || e) });
+            setSt({ phase: "ready", path: st.path, entries: st.entries, message: tr("drive.uploadFail") + String((e && e.message) || e) });
           });
       }
 
@@ -654,7 +1324,7 @@ window.__ModuleLoader__.load({
             },
             style: crumb,
           },
-          "公司盘"
+          tr("sec.drive")
         ),
       ];
       var acc = "";
@@ -691,7 +1361,7 @@ window.__ModuleLoader__.load({
             },
             style: btnLight,
           },
-          "刷新"
+          tr("common.refresh")
         ),
         h(
           "button",
@@ -701,7 +1371,7 @@ window.__ModuleLoader__.load({
             },
             style: btnDark,
           },
-          "上传文件"
+          tr("drive.uploadBtn")
         ),
         h("input", {
           ref: fileRef,
@@ -717,7 +1387,7 @@ window.__ModuleLoader__.load({
       var kids = [h("div", { key: "crumbs", style: { fontSize: 12 } }, crumbs), bar];
       if (st.message && st.phase !== "error") kids.push(h("div", { key: "msg", style: muted }, st.message));
       if (st.phase === "error") {
-        kids.push(h("div", { key: "err", style: muted }, "读不到公司盘（" + st.message + "）。本面板需从门户打开（经登录会话访问服务器文件区）。"));
+        kids.push(h("div", { key: "err", style: muted }, tr("drive.failOpen") + st.message + tr("drive.portalHint2")));
       } else if (st.entries.length) {
         var rowNodes = [];
         for (var j = 0; j < st.entries.length; j++) {
@@ -758,13 +1428,13 @@ window.__ModuleLoader__.load({
         }
         kids.push(h("div", { key: "rows" }, rowNodes));
       } else if (st.phase === "ready") {
-        kids.push(h("div", { key: "empty", style: muted }, "（空文件夹：点「上传文件」，或把文件放进服务器 ~/desk-data/drive）"));
+        kids.push(h("div", { key: "empty", style: muted }, tr("drive.emptyHint")));
       }
       kids.push(
         h(
           "div",
           { key: "tip", style: muted },
-          "服务器路径 ~/desk-data/drive（Windows：\\\\wsl.localhost\\Ubuntu\\home\\yangc\\desk-data\\drive）；单文件上限 50MB。"
+          tr("drive.pathHint")
         )
       );
       return h("div", { style: wrap }, kids);
@@ -797,7 +1467,7 @@ window.__ModuleLoader__.load({
 
       function load(quiet) {
         if (!quiet) setData({ phase: "loading", members: [], channels: [], message: "" });
-        fetch("/portal/api/admin/upstream", { headers: { accept: "application/json" } })
+        fetch("/portal/api/admin/upstream?lang=" + deskLang(), { headers: { accept: "application/json" } })
           .then(function (r) { return r.ok ? r.json() : {}; })
           .then(function (d) { setUp({ phase: "ready", upstream: d.upstream || "", keySet: !!d.keySet, keyMasked: d.keyMasked || "", source: d.source || "", writable: d.writable !== false }); })
           .catch(function () { setUp({ phase: "error", upstream: "", keySet: false, keyMasked: "", source: "", writable: true }); });
@@ -820,8 +1490,8 @@ window.__ModuleLoader__.load({
       }, []);
 
       function post(path, body, okText) {
-        setMsg({ kind: "info", text: "处理中…" });
-        return fetch(path, { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify(body) })
+        setMsg({ kind: "info", text: tr("common.processing") });
+        return fetch(path + (path.indexOf("?") >= 0 ? "&" : "?") + "lang=" + deskLang(), { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify(body) })
           .then(function (r) {
             return r.json().then(function (d) {
               return { status: r.status, d: d };
@@ -844,11 +1514,11 @@ window.__ModuleLoader__.load({
 
       function saveUpstream(raw) {
         if (!raw) {
-          setMsg({ kind: "err", text: "请先粘贴新 key" });
+          setMsg({ kind: "err", text: tr("admin.pasteKey") });
           return;
         }
-        setMsg({ kind: "info", text: "保存中…" });
-        fetch("/portal/api/admin/upstream-set", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ api_key: raw }) })
+        setMsg({ kind: "info", text: tr("common.saving") });
+        fetch("/portal/api/admin/upstream-set?lang=" + deskLang(), { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ api_key: raw }) })
           .then(function (r) {
             return r.json().then(function (d) {
               return { status: r.status, d: d };
@@ -860,11 +1530,11 @@ window.__ModuleLoader__.load({
               return;
             }
             if (res.d && res.d.unchanged) {
-              setMsg({ kind: "ok", text: "与当前 key 相同，无需更换。" });
+              setMsg({ kind: "ok", text: tr("admin.sameKey") });
               return;
             }
             if (upKeyRef.current) upKeyRef.current.value = "";
-            setMsg({ kind: "ok", text: "已更新（" + ((res.d && res.d.keyMasked) || "") + "），网关重启中——约 5~10 秒后自动刷新。" });
+            setMsg({ kind: "ok", text: tr("admin.updatedOpen") + ((res.d && res.d.keyMasked) || "") + tr("admin.restartSuffix") });
             setTimeout(function () { load(true); }, 12000);
           })
           .catch(function (e) {
@@ -872,20 +1542,20 @@ window.__ModuleLoader__.load({
           });
       }
 
-      if (data.phase === "loading") return h("div", { style: wrap }, "读取成员与通道中…");
+      if (data.phase === "loading") return h("div", { style: wrap }, tr("admin.loadingMembers"));
       if (data.phase === "error") {
         if (data.message === "NOPERM")
           return h(
             "div",
             { style: wrap },
-            h("div", null, "本页仅管理员可用。"),
-            h("div", { style: muted }, "用管理员账号从门户登录后，在工作台设置里管理成员与模型通道。")
+            h("div", null, tr("admin.adminOnly")),
+            h("div", { style: muted }, tr("admin.adminOnlySub"))
           );
         return h(
           "div",
           { style: wrap },
-          h("div", null, "读不到管理数据（" + data.message + "）。"),
-          h("div", { style: muted }, "请从门户地址打开工作台（经登录会话）再试；直连实例端口时不可用。")
+          h("div", null, tr("admin.loadFailOpen") + data.message + "）。"),
+          h("div", { style: muted }, tr("admin.portalHint"))
         );
       }
 
@@ -897,7 +1567,7 @@ window.__ModuleLoader__.load({
         var u = data.members[m];
         var ops;
         if (u.role === "admin" && adminCount <= 1) {
-          ops = h("span", { style: Object.assign({ fontSize: 12 }, muted) }, "唯一管理员");
+          ops = h("span", { style: Object.assign({ fontSize: 12 }, muted) }, tr("admin.soleAdmin"));
         } else {
           ops = h(
             "button",
@@ -905,12 +1575,12 @@ window.__ModuleLoader__.load({
               style: btnDanger,
               onClick: (function (name) {
                 return function () {
-                  if (!window.confirm("删除成员 " + name + "？\n将吊销其虚拟钥匙并清除登录会话（不可撤销；历史用量保留在账本）。")) return;
-                  post("/portal/api/admin/member-delete", { username: name }, "已删除成员：" + name);
+                  if (!window.confirm(tr("admin.delMember") + name + tr("admin.delMemberWarn"))) return;
+                  post("/portal/api/admin/member-delete", { username: name }, tr("admin.delMemberDone") + name);
                 };
               })(u.username),
             },
-            "删除"
+            tr("common.delete")
           );
         }
         memberRows.push(
@@ -931,12 +1601,12 @@ window.__ModuleLoader__.load({
             h(
               "div",
               { style: Object.assign({ fontSize: 12 }, muted) },
-              "#" + u.id + " · 实例 " + (u.port || "-") + " · 预算 " + (u.budget != null ? "¥" + u.budget : "不限") + " · 建 " + String(u.createdAt || "").slice(0, 10)
+              "#" + u.id + tr("admin.rowInstance") + (u.port || "-") + tr("admin.rowBudget") + (u.budget != null ? "¥" + u.budget : tr("admin.unlimited")) + tr("admin.rowCreated") + String(u.createdAt || "").slice(0, 10)
             ),
             h(
               "div",
               { style: Object.assign({ fontSize: 12 }, muted) },
-              "本月 " + fmt(u.monthCost) + " / " + u.monthEvents + " 次 · 近 7 天 " + fmt(u.week7) + " · " + (u.online ? "● 活跃会话" : "○ 无会话") + " · 最后登录 " + (u.lastLogin ? String(u.lastLogin).slice(5, 16) : "从未")
+              tr("admin.rowMonth") + fmt(u.monthCost) + " / " + u.monthEvents + tr("admin.rowMonthMid") + fmt(u.week7) + " · " + (u.online ? tr("admin.activeSess") : tr("admin.noSess")) + tr("admin.lastLogin") + (u.lastLogin ? String(u.lastLogin).slice(5, 16) : tr("admin.never"))
             )
           )
         );
@@ -952,7 +1622,7 @@ window.__ModuleLoader__.load({
             h(
               "div",
               { style: { display: "flex", justifyContent: "space-between", alignItems: "center", gap: 8 } },
-              h("span", null, ch.name + " ", h("span", { style: Object.assign({ fontSize: 12 }, muted) }, ch.enabled ? "启用" : "停用")),
+              h("span", null, ch.name + " ", h("span", { style: Object.assign({ fontSize: 12 }, muted) }, ch.enabled ? tr("common.enable") : tr("common.disable"))),
               h(
                 "span",
                 { style: { display: "flex", gap: 6 } },
@@ -962,11 +1632,11 @@ window.__ModuleLoader__.load({
                     style: btnSmall,
                     onClick: (function (name, on) {
                       return function () {
-                        post("/portal/api/admin/channel-toggle", { name: name }, "通道已" + (on ? "停用" : "启用") + "：" + name);
+                        post("/portal/api/admin/channel-toggle", { name: name }, tr("admin.channelToggled") + (on ? tr("common.disable") : tr("common.enable")) + ": " + name);
                       };
                     })(ch.name, ch.enabled),
                   },
-                  ch.enabled ? "停用" : "启用"
+                  ch.enabled ? tr("common.disable") : tr("common.enable")
                 ),
                 h(
                   "button",
@@ -974,12 +1644,12 @@ window.__ModuleLoader__.load({
                     style: btnDanger,
                     onClick: (function (name) {
                       return function () {
-                        if (!window.confirm("删除通道 " + name + "？")) return;
-                        post("/portal/api/admin/channel-delete", { name: name }, "通道已删除：" + name);
+                        if (!window.confirm(tr("admin.delChannel") + name + "?")) return;
+                        post("/portal/api/admin/channel-delete", { name: name }, tr("admin.channelDeleted") + name);
                       };
                     })(ch.name),
                   },
-                  "删除"
+                  tr("common.delete")
                 )
               )
             ),
@@ -1021,7 +1691,7 @@ window.__ModuleLoader__.load({
         h(
           "div",
           { key: "trend" },
-          h("div", { style: { fontWeight: 600 } }, "近 7 天团队用量 · 合计 " + fmt(total7)),
+          h("div", { style: { fontWeight: 600 } }, tr("admin.teamUsage7d") + fmt(total7)),
           h("div", { style: { display: "flex", gap: 6, alignItems: "flex-end" } }, barNodes)
         )
       );
@@ -1029,11 +1699,11 @@ window.__ModuleLoader__.load({
         h(
           "div",
           { key: "up" },
-          h("div", { style: { fontSize: 15, fontWeight: 700 } }, "团队共用上游（默认）"),
+          h("div", { style: { fontSize: 15, fontWeight: 700 } }, tr("admin.upstreamTitle")),
           h(
             "div",
             { style: Object.assign({ fontSize: 12, marginTop: 2 }, muted) },
-            "所有成员默认经这里出网；外部通道按模型名分流（见下方「模型通道」）。Key 只存服务器，成员不可见。"
+            tr("admin.upstreamDesc")
           ),
           h(
             "div",
@@ -1042,14 +1712,14 @@ window.__ModuleLoader__.load({
             h(
               "span",
               { style: Object.assign({ fontSize: 12 }, muted) },
-              up.keySet ? "Key " + up.keyMasked + "（来源 " + up.source + "）" : "Key 未配置"
+              up.keySet ? "Key " + up.keyMasked + tr("admin.upstreamSrc") + up.source + ")" : tr("admin.keyMissing")
             )
           ),
           up.writable
             ? h(
                 "div",
                 { style: { display: "flex", gap: 6, marginTop: 6, flexWrap: "wrap" } },
-                h("input", { ref: upKeyRef, type: "password", placeholder: "sk-…（粘贴新的 DeepSeek API Key；保存后网关自动重启约 5~10 秒）", style: field }),
+                h("input", { ref: upKeyRef, type: "password", placeholder: tr("admin.keyPh"), style: field }),
                 h(
                   "button",
                   {
@@ -1058,27 +1728,27 @@ window.__ModuleLoader__.load({
                       saveUpstream(upKeyRef.current ? upKeyRef.current.value.trim() : "");
                     },
                   },
-                  "更新 Key"
+                  tr("admin.updateKey")
                 )
               )
-            : h("div", { style: Object.assign({ fontSize: 12, marginTop: 6 }, muted) }, "当前 Key 来自服务环境变量（DESK_REAL_KEY），请在服务环境里修改。"),
+            : h("div", { style: Object.assign({ fontSize: 12, marginTop: 6 }, muted) }, tr("admin.keyEnvLocked")),
           h(
             "div",
             { style: Object.assign({ fontSize: 12, marginTop: 6 }, muted) },
-            "换 Key 只影响默认上游；给特定模型接别的上游 / Key 用下方「模型通道」。"
+            tr("admin.keyScopeNote")
           )
         )
       );
-      kids.push(h("div", { key: "t1", style: { fontSize: 15, fontWeight: 700 } }, "成员（" + data.members.length + "）"));
+      kids.push(h("div", { key: "t1", style: { fontSize: 15, fontWeight: 700 } }, tr("admin.membersCount") + data.members.length + ")"));
       kids.push(h("div", { key: "mr", style: {} }, memberRows));
       kids.push(
         h(
           "div",
           { key: "mnf", style: { display: "flex", flexDirection: "column", gap: 6, marginTop: 4 } },
-          h("div", { style: { fontWeight: 600 } }, "新建成员"),
-          h("input", { ref: uRef, placeholder: "用户名（小写字母数字，2-32 位）", style: field }),
-          h("input", { ref: pRef, placeholder: "初始密码（至少 6 位）", type: "password", style: field }),
-          h("input", { ref: bRef, placeholder: "月预算 CNY（可留空 = 不限）", style: field }),
+          h("div", { style: { fontWeight: 600 } }, tr("admin.newMember")),
+          h("input", { ref: uRef, placeholder: tr("admin.phUsername"), style: field }),
+          h("input", { ref: pRef, placeholder: tr("admin.phPassword"), type: "password", style: field }),
+          h("input", { ref: bRef, placeholder: tr("admin.phBudget"), style: field }),
           h(
             "button",
             {
@@ -1087,7 +1757,7 @@ window.__ModuleLoader__.load({
                 var username = uRef.current ? uRef.current.value.trim() : "";
                 var password = pRef.current ? pRef.current.value : "";
                 var budget = bRef.current ? bRef.current.value.trim() : "";
-                post("/portal/api/admin/member-create", { username: username, password: password, budget: budget }, "成员已创建：" + username).then(function (d) {
+                post("/portal/api/admin/member-create", { username: username, password: password, budget: budget }, tr("admin.memberCreated") + username).then(function (d) {
                   if (d && d.key) {
                     setKeyInfo({ username: d.username, key: d.key });
                     if (pRef.current) pRef.current.value = "";
@@ -1095,7 +1765,7 @@ window.__ModuleLoader__.load({
                 });
               },
             },
-            "创建成员"
+            tr("admin.createMember")
           )
         )
       );
@@ -1104,7 +1774,7 @@ window.__ModuleLoader__.load({
           h(
             "div",
             { key: "key", style: { border: "1px solid var(--dsw-alias-border-l2, #ccd0d5)", borderRadius: 8, padding: 10, display: "flex", flexDirection: "column", gap: 8 } },
-            h("div", null, "新成员虚拟钥匙（只显示这一次，请立即复制交给 " + keyInfo.username + "）："),
+            h("div", null, tr("admin.newKeyShown") + keyInfo.username + "): "),
             h("div", { style: codeBox }, keyInfo.key),
             h(
               "div",
@@ -1117,18 +1787,18 @@ window.__ModuleLoader__.load({
                     if (navigator.clipboard && navigator.clipboard.writeText) {
                       navigator.clipboard.writeText(keyInfo.key).then(
                         function () {
-                          setMsg({ kind: "ok", text: "已复制到剪贴板" });
+                          setMsg({ kind: "ok", text: tr("admin.copied") });
                         },
                         function () {
-                          setMsg({ kind: "err", text: "复制失败，请手动选中复制" });
+                          setMsg({ kind: "err", text: tr("common.copyFail") });
                         }
                       );
                     } else {
-                      setMsg({ kind: "err", text: "复制失败，请手动选中复制" });
+                      setMsg({ kind: "err", text: tr("common.copyFail") });
                     }
                   },
                 },
-                "复制"
+                tr("common.copy")
               ),
               h(
                 "button",
@@ -1138,25 +1808,25 @@ window.__ModuleLoader__.load({
                     setKeyInfo(null);
                   },
                 },
-                "已交给成员，清除显示"
+                tr("common.keyDone")
               )
             )
           )
         );
       }
-      kids.push(h("div", { key: "t2", style: { fontSize: 15, fontWeight: 700, marginTop: 8 } }, "模型通道（" + data.channels.length + "）"));
-      kids.push(h("div", { key: "cr", style: {} }, chRows.length ? chRows : h("div", { style: muted }, "暂无外部通道（默认走 DeepSeek 官方）")));
+      kids.push(h("div", { key: "t2", style: { fontSize: 15, fontWeight: 700, marginTop: 8 } }, tr("admin.channelsCount") + data.channels.length + ")"));
+      kids.push(h("div", { key: "cr", style: {} }, chRows.length ? chRows : h("div", { style: muted }, tr("admin.noChannels"))));
       kids.push(
         h(
           "div",
           { key: "cnf", style: { display: "flex", flexDirection: "column", gap: 6, marginTop: 4 } },
-          h("div", { style: { fontWeight: 600 } }, "加入通道"),
-          h("input", { ref: chNameRef, placeholder: "名称（英文小写，如 kimi）", style: field }),
-          h("input", { ref: chUrlRef, placeholder: "Base URL（OpenAI 兼容，含 /v1）", style: field }),
+          h("div", { style: { fontWeight: 600 } }, tr("admin.addChannel")),
+          h("input", { ref: chNameRef, placeholder: tr("admin.phChannelName"), style: field }),
+          h("input", { ref: chUrlRef, placeholder: tr("admin.phBaseUrl"), style: field }),
           h("input", { ref: chKeyRef, placeholder: "API Key（sk-...）", type: "password", style: field }),
-          h("input", { ref: chModelsRef, placeholder: "模型名（英文逗号分隔）", style: field }),
-          h("input", { ref: chPricesRef, placeholder: "价目表 JSON（可选，¥/百万 tokens）", style: field }),
-          h("input", { ref: chNoteRef, placeholder: "备注（可选）", style: field }),
+          h("input", { ref: chModelsRef, placeholder: tr("admin.phModels"), style: field }),
+          h("input", { ref: chPricesRef, placeholder: tr("admin.phPrices"), style: field }),
+          h("input", { ref: chNoteRef, placeholder: tr("common.phNote"), style: field }),
           h(
             "button",
             {
@@ -1173,14 +1843,14 @@ window.__ModuleLoader__.load({
                   try {
                     payload.prices = JSON.parse(prices);
                   } catch (e) {
-                    setMsg({ kind: "err", text: "价目表 JSON 解析失败" });
+                    setMsg({ kind: "err", text: tr("admin.badPrices") });
                     return;
                   }
                 }
-                post("/portal/api/admin/channel-create", payload, "通道已加入：" + name);
+                post("/portal/api/admin/channel-create", payload, tr("admin.channelAdded") + name);
               },
             },
-            "加入通道"
+            tr("admin.addChannel")
           )
         )
       );
@@ -1197,7 +1867,7 @@ window.__ModuleLoader__.load({
         h(
           "div",
           { key: "tip", style: muted },
-          "删除成员不可撤销；其历史用量保留在账本。成员预算到 80% / 100% 时会经「通知」通道自动提醒管理员。若该成员配了实例服务，可在服务器用 scripts/desk.sh 停掉。通道 Key 只存在服务器数据库。"
+          tr("admin.dangerNote")
         )
       );
       return h("div", { style: Object.assign({}, wrap, { maxWidth: 640 }) }, kids);
@@ -1239,8 +1909,8 @@ window.__ModuleLoader__.load({
       }, []);
 
       function post(path, body, okText) {
-        setMsg({ kind: "info", text: "处理中…" });
-        return fetch(path, { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify(body) })
+        setMsg({ kind: "info", text: tr("common.processing") });
+        return fetch(path + (path.indexOf("?") >= 0 ? "&" : "?") + "lang=" + deskLang(), { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify(body) })
           .then(function (r) {
             return r.json().then(function (d) {
               return { status: r.status, d: d };
@@ -1261,20 +1931,20 @@ window.__ModuleLoader__.load({
           });
       }
 
-      if (data.phase === "loading") return h("div", { style: wrap }, "读取通知通道中…");
+      if (data.phase === "loading") return h("div", { style: wrap }, tr("notify.loading"));
       if (data.phase === "error") {
         if (data.message === "NOPERM")
           return h(
             "div",
             { style: wrap },
-            h("div", null, "本页仅管理员可用。"),
-            h("div", { style: muted }, "用管理员账号从门户登录后配置通知通道。")
+            h("div", null, tr("admin.adminOnly")),
+            h("div", { style: muted }, tr("notify.adminHint"))
           );
         return h(
           "div",
           { style: wrap },
-          h("div", null, "读不到通知配置（" + data.message + "）。"),
-          h("div", { style: muted }, "请从门户地址打开工作台（经登录会话）再试。")
+          h("div", null, tr("notify.loadFailOpen") + data.message + "）。"),
+          h("div", { style: muted }, tr("notify.portalHint"))
         );
       }
 
@@ -1292,7 +1962,7 @@ window.__ModuleLoader__.load({
                 "span",
                 null,
                 r.name + " ",
-                h("span", { style: Object.assign({ fontSize: 12 }, muted) }, String(r.kind || "-") + (r.enabled === 1 ? " · 启用" : " · 停用"))
+                h("span", { style: Object.assign({ fontSize: 12 }, muted) }, String(r.kind || "-") + (r.enabled === 1 ? tr("notify.enabledSuffix") : tr("notify.disabledSuffix")))
               ),
               h(
                 "span",
@@ -1303,11 +1973,11 @@ window.__ModuleLoader__.load({
                     style: btnSmall,
                     onClick: (function (name) {
                       return function () {
-                        post("/portal/api/admin/notify/route-toggle", { name: name }, "已切换：" + name);
+                        post("/portal/api/admin/notify/route-toggle", { name: name }, tr("notify.toggled") + name);
                       };
                     })(r.name),
                   },
-                  r.enabled === 1 ? "停用" : "启用"
+                  r.enabled === 1 ? tr("common.disable") : tr("common.enable")
                 ),
                 h(
                   "button",
@@ -1315,12 +1985,12 @@ window.__ModuleLoader__.load({
                     style: btnDanger,
                     onClick: (function (name) {
                       return function () {
-                        if (!window.confirm("删除通知通道 " + name + "？")) return;
-                        post("/portal/api/admin/notify/route-delete", { name: name }, "已删除：" + name);
+                        if (!window.confirm(tr("notify.delChannel") + name + "?")) return;
+                        post("/portal/api/admin/notify/route-delete", { name: name }, tr("common.deletedColon") + name);
                       };
                     })(r.name),
                   },
-                  "删除"
+                  tr("common.delete")
                 )
               )
             ),
@@ -1357,13 +2027,13 @@ window.__ModuleLoader__.load({
       }
 
       var kids = [];
-      kids.push(h("div", { key: "t1", style: { fontSize: 15, fontWeight: 700 } }, "通知通道（" + data.routes.length + "）"));
-      kids.push(h("div", { key: "rr", style: {} }, routeRows.length ? routeRows : h("div", { style: muted }, "还没有通知通道——加一个，工作台就能往外推消息（提醒 / 告警 / 任务完成）。")));
+      kids.push(h("div", { key: "t1", style: { fontSize: 15, fontWeight: 700 } }, tr("notify.channelsCount") + data.routes.length + ")"));
+      kids.push(h("div", { key: "rr", style: {} }, routeRows.length ? routeRows : h("div", { style: muted }, tr("notify.empty"))));
       kids.push(
         h(
           "div",
           { key: "nf", style: { display: "flex", flexDirection: "column", gap: 6, marginTop: 4 } },
-          h("div", { style: { fontWeight: 600 } }, "添加通道"),
+          h("div", { style: { fontWeight: 600 } }, tr("notify.addChannel")),
           h(
             "select",
             {
@@ -1373,12 +2043,12 @@ window.__ModuleLoader__.load({
               },
               style: field,
             },
-            h("option", { value: "webhook" }, "webhook —— 企业微信 / 钉钉 / 任意 HTTP 端点"),
-            h("option", { value: "hermes" }, "hermes —— 经 通知平台（weixin 微信等）"),
-            h("option", { value: "telegram" }, "telegram —— Bot API（BotFather 机器人，直连/反代）"),
-            h("option", { value: "whatsapp" }, "whatsapp —— CallMeBot（免费个人）/ green-api / UltraMsg")
+            h("option", { value: "webhook" }, tr("notify.kindWebhook")),
+            h("option", { value: "hermes" }, tr("notify.kindHermes")),
+            h("option", { value: "telegram" }, tr("notify.kindTelegram")),
+            h("option", { value: "whatsapp" }, tr("notify.kindWhatsapp"))
           ),
-          h("input", { ref: nRef, placeholder: "名称（英文小写，如 wecom-group / wechat-me）", style: field }),
+          h("input", { ref: nRef, placeholder: tr("notify.phName"), style: field }),
           h("input", {
             ref: tRef,
             placeholder:
@@ -1387,8 +2057,8 @@ window.__ModuleLoader__.load({
                 : kind === "hermes"
                   ? "weixin"
                   : kind === "telegram"
-                    ? "bot_token|chat_id（可选 |api_base 反代）"
-                    : "callmebot|apikey|手机号 或 greenapi|id|token|chatId 或 ultramsg|id|token|to",
+                    ? tr("notify.phTelegram")
+                    : tr("notify.phWhatsapp"),
             style: field,
           }),
           kind === "telegram" || kind === "whatsapp"
@@ -1396,8 +2066,8 @@ window.__ModuleLoader__.load({
                 "div",
                 { style: Object.assign({ fontSize: 12 }, muted) },
                 kind === "telegram"
-                  ? "向 @BotFather 要 bot_token；chat_id 用 @频道名或数字 ID；直连失败时追加 |api_base 指向反代。"
-                  : "CallMeBot：给 +34 644 51 95 23 发消息索取 apikey（免费、个人通知）；green-api / UltraMsg 为商业网关（实例 ID + 令牌 + 收件人）。"
+                  ? tr("notify.tgHint")
+                  : tr("notify.waHint")
               )
             : null,
           h(
@@ -1407,12 +2077,12 @@ window.__ModuleLoader__.load({
               onClick: function () {
                 var name = nRef.current ? nRef.current.value.trim() : "";
                 var target = tRef.current ? tRef.current.value.trim() : "";
-                post("/portal/api/admin/notify/route-add", { name: name, kind: kind, target: target }, "通道已添加：" + name).then(function (d) {
+                post("/portal/api/admin/notify/route-add", { name: name, kind: kind, target: target }, tr("notify.added") + name).then(function (d) {
                   if (d && tRef.current) tRef.current.value = "";
                 });
               },
             },
-            "添加通道"
+            tr("notify.addChannel")
           )
         )
       );
@@ -1426,7 +2096,7 @@ window.__ModuleLoader__.load({
               style: btnLight,
               onClick: function () {
                 setTestRes({ phase: "loading" });
-                fetch("/portal/api/admin/notify-test", { method: "POST", headers: { "content-type": "application/json" }, body: "{}" })
+                fetch("/portal/api/admin/notify-test?lang=" + deskLang(), { method: "POST", headers: { "content-type": "application/json" }, body: "{}" })
                   .then(function (r) {
                     return r.json();
                   })
@@ -1439,9 +2109,9 @@ window.__ModuleLoader__.load({
                   });
               },
             },
-            "发送测试通知"
+            tr("notify.testSend")
           ),
-          h("span", { style: Object.assign({ fontSize: 12 }, muted) }, "会发往所有启用通道（含手机）")
+          h("span", { style: Object.assign({ fontSize: 12 }, muted) }, tr("notify.testSendHint"))
         )
       );
       if (testRes && testRes.phase === "ready") {
@@ -1452,7 +2122,7 @@ window.__ModuleLoader__.load({
             h(
               "div",
               { key: "tr" + k, style: { fontSize: 12, color: tr.ok ? undefined : "#c0392b" } },
-              (tr.ok ? "✓ " : "✗ ") + tr.route + "：" + tr.info
+              (tr.ok ? "✓ " : "✗ ") + tr.route + ": " + tr.info
             )
           );
         }
@@ -1480,22 +2150,22 @@ window.__ModuleLoader__.load({
                   style: btnSmall,
                   onClick: (function (id) {
                     return function () {
-                      post("/portal/api/admin/reminders/rm", { id: id }, "已删除提醒 #" + id);
+                      post("/portal/api/admin/reminders/rm", { id: id }, tr("notify.removed") + id);
                     };
                   })(rem.id),
                 },
-                "删除"
+                tr("common.delete")
               )
             )
           )
         );
       }
-      kids.push(h("div", { key: "t3", style: { fontSize: 15, fontWeight: 700, marginTop: 8 } }, "定时提醒（" + (data.reminders || []).length + "）"));
+      kids.push(h("div", { key: "t3", style: { fontSize: 15, fontWeight: 700, marginTop: 8 } }, tr("notify.remindersCount") + (data.reminders || []).length + ")"));
       kids.push(
         h(
           "div",
           { key: "rems", style: {} },
-          remRows.length ? remRows : h("div", { style: muted }, '没有待发提醒。设置：让 agent 跑 ~/desk-data/bin/desk-remind "10:00" "内容"')
+          remRows.length ? remRows : h("div", { style: muted }, tr("notify.noReminders"))
         )
       );
       if (msg.kind) {
@@ -1507,13 +2177,13 @@ window.__ModuleLoader__.load({
           )
         );
       }
-      kids.push(h("div", { key: "t2", style: { fontSize: 15, fontWeight: 700, marginTop: 8 } }, "最近发送"));
-      kids.push(h("div", { key: "logs", style: {} }, logRows.length ? logRows : h("div", { style: muted }, "还没有发送记录")));
+      kids.push(h("div", { key: "t2", style: { fontSize: 15, fontWeight: 700, marginTop: 8 } }, tr("notify.recentSent")));
+      kids.push(h("div", { key: "logs", style: {} }, logRows.length ? logRows : h("div", { style: muted }, tr("notify.noSent"))));
       kids.push(
         h(
           "div",
           { key: "tip", style: muted },
-          "agent 侧：desk-notify \"标题\" \"正文\" 立即发；desk-remind \"10:00\" \"内容\" 定时发（到点自动推，支持 +30m / 明天 09:00）。企业微信群机器人：群设置 → 群机器人 → 复制 Webhook 地址，粘进上面的通道即可。"
+          tr("notify.help")
         )
       );
       return h("div", { style: Object.assign({}, wrap, { maxWidth: 640 }) }, kids);
@@ -1523,6 +2193,7 @@ window.__ModuleLoader__.load({
       var pair = React.useState({ phase: "loading", message: "" });
       var st = pair[0];
       var setSt = pair[1];
+      var langTick = useLocaleSignal();
 
       function fmtBytes(n) {
         var v = Number(n || 0);
@@ -1536,13 +2207,13 @@ window.__ModuleLoader__.load({
         var d = Math.floor(sec / 86400);
         var h = Math.floor((sec % 86400) / 3600);
         var mm = Math.floor((sec % 3600) / 60);
-        if (d > 0) return d + " 天 " + h + " 小时";
-        if (h > 0) return h + " 小时 " + mm + " 分";
-        return mm + " 分钟";
+        if (d > 0) return d + tr("relTime.days") + h + tr("relTime.hours");
+        if (h > 0) return h + tr("relTime.hoursMid") + mm + tr("relTime.mins");
+        return mm + tr("relTime.minutes");
       }
       function load() {
         setSt({ phase: "loading", message: "" });
-        fetch("/portal/api/admin/ops", { headers: { accept: "application/json" } })
+        fetch("/portal/api/admin/ops?lang=" + deskLang(), { headers: { accept: "application/json" } })
           .then(function (r) {
             if (r.status === 403) throw new Error("NOPERM");
             if (r.status === 401) throw new Error("NOLOGIN");
@@ -1558,13 +2229,13 @@ window.__ModuleLoader__.load({
       }
       React.useEffect(function () {
         load();
-      }, []);
+      }, [langTick]);
 
-      if (st.phase === "loading") return h("div", { style: wrap }, "读取运维状态中…");
+      if (st.phase === "loading") return h("div", { style: wrap }, tr("ops.loading"));
       if (st.phase === "error") {
         if (st.message === "NOPERM")
-          return h("div", { style: wrap }, h("div", null, "本页仅管理员可用。"), h("div", { style: muted }, "用管理员账号从门户登录后查看。"));
-        return h("div", { style: wrap }, h("div", null, "读不到运维数据（" + st.message + "）。"), h("div", { style: muted }, "请从门户地址打开工作台再试。"));
+          return h("div", { style: wrap }, h("div", null, tr("admin.adminOnly")), h("div", { style: muted }, tr("ops.adminHint")));
+        return h("div", { style: wrap }, h("div", null, tr("ops.loadFailOpen") + st.message + "）。"), h("div", { style: muted }, tr("ops.portalHint")));
       }
 
       var d = st.data;
@@ -1578,7 +2249,7 @@ window.__ModuleLoader__.load({
           h("span", { style: muted }, (s.pid ? "pid " + s.pid + " · " : "") + String(s.since || "").slice(4, 20))
         );
       });
-      kids.push(h("div", { key: "svc" }, h("div", { style: { fontWeight: 600 } }, "服务（systemd）"), svcRows));
+      kids.push(h("div", { key: "svc" }, h("div", { style: { fontWeight: 600 } }, tr("ops.services")), svcRows));
 
       var http = d.http || {};
       var httpNodes = Object.keys(http).map(function (k, i) {
@@ -1586,20 +2257,20 @@ window.__ModuleLoader__.load({
         var ok = v === 200 || v === 302;
         return h("span", { key: "h" + i, style: { marginRight: 12, fontSize: 12, color: ok ? undefined : "#c0392b" } }, k + " → " + v);
       });
-      kids.push(h("div", { key: "http" }, h("div", { style: { fontWeight: 600 } }, "端口探活"), h("div", null, httpNodes)));
+      kids.push(h("div", { key: "http" }, h("div", { style: { fontWeight: 600 } }, tr("ops.ports")), h("div", null, httpNodes)));
 
       var b = d.backup || {};
       kids.push(
         h(
           "div",
           { key: "bk" },
-          h("div", { style: { fontWeight: 600 } }, "备份（" + (b.count || 0) + " 份 · 合计 " + fmtBytes(b.totalBytes) + "）"),
+          h("div", { style: { fontWeight: 600 } }, tr("ops.backups") + (b.count || 0) + tr("ops.backupMid") + fmtBytes(b.totalBytes) + ")"),
           h(
             "div",
             { style: muted },
             b.last
-              ? "最后：" + b.last.name + " · " + fmtBytes(b.last.size) + " · " + (b.last.mtimeLocal || String(b.last.mtime || "").slice(5, 16).replace("T", " "))
-              : "（还没有备份产物；定时器每日 03:40 跑）"
+              ? tr("ops.backupLast") + b.last.name + " · " + fmtBytes(b.last.size) + " · " + (b.last.mtimeLocal || String(b.last.mtime || "").slice(5, 16).replace("T", " "))
+              : tr("ops.noBackups")
           )
         )
       );
@@ -1610,9 +2281,9 @@ window.__ModuleLoader__.load({
         h(
           "div",
           { key: "dk" },
-          h("div", { style: { fontWeight: 600 } }, "磁盘 / 数据"),
-          h("div", { style: muted }, "空闲 " + fmtBytes(dk.free) + " / 共 " + fmtBytes(dk.total) + " · desk.db " + fmtBytes(dd.dbBytes)),
-          h("div", { style: muted }, "知识库 " + fmtBytes(dd.kbBytes) + " · 公司盘 " + fmtBytes(dd.driveBytes))
+          h("div", { style: { fontWeight: 600 } }, tr("ops.disk")),
+          h("div", { style: muted }, tr("ops.free") + fmtBytes(dk.free) + tr("ops.ofTotal") + fmtBytes(dk.total) + " · desk.db " + fmtBytes(dd.dbBytes)),
+          h("div", { style: muted }, tr("ops.kbSize") + fmtBytes(dd.kbBytes) + tr("ops.driveSize") + fmtBytes(dd.driveBytes))
         )
       );
 
@@ -1622,17 +2293,17 @@ window.__ModuleLoader__.load({
         h(
           "div",
           { key: "hst" },
-          h("div", { style: { fontWeight: 600 } }, "主机 / 进程"),
+          h("div", { style: { fontWeight: 600 } }, tr("ops.host")),
           h(
             "div",
             { style: muted },
-            "WSL 已运行 " + fmtDur(hst.uptime) + " · 内存 " + fmtBytes(Number(hst.totalmem || 0) - Number(hst.freemem || 0)) + " / " + fmtBytes(hst.totalmem) + " · load " + Number(hst.load1 || 0).toFixed(2)
+            tr("ops.uptime") + fmtDur(hst.uptime) + tr("ops.mem") + fmtBytes(Number(hst.totalmem || 0) - Number(hst.freemem || 0)) + " / " + fmtBytes(hst.totalmem) + " · load " + Number(hst.load1 || 0).toFixed(2)
           ),
-          h("div", { style: muted }, "工作台进程 " + fmtDur(dsk.uptime) + " · node " + (dsk.node || ""))
+          h("div", { style: muted }, tr("ops.procs") + fmtDur(dsk.uptime) + " · node " + (dsk.node || ""))
         )
       );
 
-      kids.push(h("div", { key: "rf" }, h("button", { style: btnLight, onClick: load }, "刷新")));
+      kids.push(h("div", { key: "rf" }, h("button", { style: btnLight, onClick: load }, tr("common.refresh"))));
       return h("div", { style: Object.assign({}, wrap, { maxWidth: 640 }) }, kids);
     }
 
@@ -1680,7 +2351,7 @@ window.__ModuleLoader__.load({
       }, []);
 
       function post(path, body, okText) {
-        setMsg({ kind: "info", text: "处理中…" });
+        setMsg({ kind: "info", text: tr("common.processing") });
         fetch(path, { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify(body) })
           .then(function (r) {
             return r.json().then(function (d) {
@@ -1711,25 +2382,25 @@ window.__ModuleLoader__.load({
 
       var trigger = h(
         "button",
-        { className: "ddb" + (wide ? "" : " rail"), onClick: toggle, title: "团队公告与意见反馈" },
+        { className: "ddb" + (wide ? "" : " rail"), onClick: toggle, title: tr("ann.title") },
         h("span", { className: "ic" }, "📢"),
-        wide ? h("span", { className: "lbl" }, "公告") : null,
+        wide ? h("span", { className: "lbl" }, tr("ann.tab")) : null,
         wide && unread > 0 ? h("span", { className: "badge" }, unread) : null
       );
       if (!open) return h("div", null, trigger);
 
       var kids = [];
-      if (data.phase === "loading") kids.push(h("div", { key: "ld", className: "empty" }, "读取中…"));
-      if (data.phase === "error") kids.push(h("div", { key: "er", className: "empty" }, "读不到公告（需从门户地址打开且已登录）。"));
+      if (data.phase === "loading") kids.push(h("div", { key: "ld", className: "empty" }, tr("common.loading")));
+      if (data.phase === "error") kids.push(h("div", { key: "er", className: "empty" }, tr("ann.failHint")));
       if (data.phase === "ready") {
         if (data.role === "admin") {
-          kids.push(h("div", { key: "nf-lb", className: "lb" }, "发布公告"));
+          kids.push(h("div", { key: "nf-lb", className: "lb" }, tr("ann.publish")));
           kids.push(
             h(
               "div",
               { key: "nf", className: "fm" },
-              h("input", { ref: tRef, className: "inp", placeholder: "公告标题（可选）" }),
-              h("textarea", { ref: bRef, className: "inp ta", placeholder: "公告内容…" }),
+              h("input", { ref: tRef, className: "inp", placeholder: tr("ann.phTitle") }),
+              h("textarea", { ref: bRef, className: "inp ta", placeholder: tr("ann.phBody") }),
               h(
                 "div",
                 null,
@@ -1738,10 +2409,10 @@ window.__ModuleLoader__.load({
                   {
                     className: "btn",
                     onClick: function () {
-                      post("/portal/api/announcements/post", { title: tRef.current ? tRef.current.value : "", body: bRef.current ? bRef.current.value : "" }, "公告已发布");
+                      post("/portal/api/announcements/post", { title: tRef.current ? tRef.current.value : "", body: bRef.current ? bRef.current.value : "" }, tr("ann.posted"));
                     },
                   },
-                  "发布公告"
+                  tr("ann.publish")
                 )
               )
             )
@@ -1761,7 +2432,7 @@ window.__ModuleLoader__.load({
                 h(
                   "div",
                   { className: "th" },
-                  h("span", { className: "t" }, a.title || "(无标题)"),
+                  h("span", { className: "t" }, a.title || tr("ann.untitled")),
                   data.role === "admin"
                     ? h(
                         "button",
@@ -1769,11 +2440,11 @@ window.__ModuleLoader__.load({
                           className: "mini",
                           onClick: (function (id) {
                             return function () {
-                              if (window.confirm("删除该公告？")) post("/portal/api/announcements/rm", { id: id }, "已删除");
+                              if (window.confirm(tr("ann.delConfirm"))) post("/portal/api/announcements/rm", { id: id }, tr("common.deleted"));
                             };
                           })(a.id),
                         },
-                        "删除"
+                        tr("common.delete")
                       )
                     : null
                 ),
@@ -1783,14 +2454,14 @@ window.__ModuleLoader__.load({
             )
           );
         }
-        kids.push(h("div", { key: "anns", className: "list" }, anns.length ? anns : h("div", { className: "empty" }, "暂无公告")));
-        kids.push(h("div", { key: "fdiv", className: "lb" }, "意见反馈" + (data.role === "admin" ? "（全员）" : "")));
+        kids.push(h("div", { key: "anns", className: "list" }, anns.length ? anns : h("div", { className: "empty" }, tr("ann.empty"))));
+        kids.push(h("div", { key: "fdiv", className: "lb" }, tr("ann.feedbackTab") + (data.role === "admin" ? tr("ann.everyone") : "")));
         if (data.role !== "admin") {
           kids.push(
             h(
               "div",
               { key: "ff", className: "fm" },
-              h("textarea", { ref: fRef, className: "inp ta", placeholder: "给管理员提意见 / 报问题…" }),
+              h("textarea", { ref: fRef, className: "inp ta", placeholder: tr("ann.phFeedback") }),
               h(
                 "div",
                 null,
@@ -1799,10 +2470,10 @@ window.__ModuleLoader__.load({
                   {
                     className: "btn gh",
                     onClick: function () {
-                      post("/portal/api/feedback", { text: fRef.current ? fRef.current.value : "" }, "反馈已提交，谢谢！");
+                      post("/portal/api/feedback", { text: fRef.current ? fRef.current.value : "" }, tr("ann.feedbackThanks"));
                     },
                   },
-                  "提交反馈"
+                  tr("ann.submitFeedback")
                 )
               )
             )
@@ -1830,11 +2501,11 @@ window.__ModuleLoader__.load({
                           className: "mini",
                           onClick: (function (id) {
                             return function () {
-                              post("/portal/api/feedback/rm", { id: id }, "已删除");
+                              post("/portal/api/feedback/rm", { id: id }, tr("common.deleted"));
                             };
                           })(fb.id),
                         },
-                        "删除"
+                        tr("common.delete")
                       )
                     : null
                 ),
@@ -1843,7 +2514,7 @@ window.__ModuleLoader__.load({
             )
           );
         }
-        kids.push(h("div", { key: "fbs", className: "list" }, fbs.length ? fbs : h("div", { className: "empty" }, data.role === "admin" ? "暂无反馈" : "你还没有提过反馈")));
+        kids.push(h("div", { key: "fbs", className: "list" }, fbs.length ? fbs : h("div", { className: "empty" }, data.role === "admin" ? tr("common.noFeedback") : tr("common.noFeedbackMine"))));
       }
       if (msg.kind) {
         kids.push(h("div", { key: "msg", className: "msg" + (msg.kind === "err" ? " err" : msg.kind === "ok" ? " ok" : "") }, msg.text));
@@ -1859,7 +2530,7 @@ window.__ModuleLoader__.load({
             "div",
             { className: "hd" },
             h("span", { className: "ico" }, "📢"),
-            h("div", null, h("div", { className: "t1" }, "团队公告"), h("div", { className: "t2" }, "公告与意见反馈")),
+            h("div", null, h("div", { className: "t1" }, tr("ann.titleShort")), h("div", { className: "t2" }, tr("ann.footerLabel"))),
             h("button", { className: "x", onClick: toggle }, "✕")
           ),
           h("div", { className: "bd" }, kids)
@@ -1901,18 +2572,18 @@ window.__ModuleLoader__.load({
 
       var trigger = h(
         "button",
-        { className: "ddb" + (wide ? "" : " rail"), onClick: toggle, title: "团队助理：Agent 预设一览（专家模式）" },
+        { className: "ddb" + (wide ? "" : " rail"), onClick: toggle, title: tr("asst.title") },
         h("span", { className: "ic" }, "🧑‍💼"),
-        wide ? h("span", { className: "lbl" }, "助理") : null
+        wide ? h("span", { className: "lbl" }, tr("asst.tab")) : null
       );
       if (!open) return h("div", null, trigger);
 
       var kids = [];
-      if (st.phase === "loading") kids.push(h("div", { key: "ld", className: "empty" }, "读取中…"));
-      if (st.phase === "error") kids.push(h("div", { key: "er", className: "empty" }, "读不到预设（请从门户地址打开且已登录）。"));
+      if (st.phase === "loading") kids.push(h("div", { key: "ld", className: "empty" }, tr("common.loading")));
+      if (st.phase === "error") kids.push(h("div", { key: "er", className: "empty" }, tr("asst.failHint")));
       if (st.phase === "ready") {
         if (!st.presets.length) {
-          kids.push(h("div", { key: "none", className: "empty" }, "共享区还没有预设。"));
+          kids.push(h("div", { key: "none", className: "empty" }, tr("asst.empty")));
         } else {
           var rows = [];
           st.presets.forEach(function (p) {
@@ -1924,16 +2595,16 @@ window.__ModuleLoader__.load({
                 h(
                   "div",
                   { className: "gr" },
-                  h("div", { className: "th" }, h("span", { className: "t" }, p.name), p.codex ? h("span", { className: "bdg" }, "Codex 并行") : null),
+                  h("div", { className: "th" }, h("span", { className: "t" }, p.name), p.codex ? h("span", { className: "bdg" }, tr("asst.codex")) : null),
                   h("div", { className: "d" }, p.description || p.id)
                 )
               )
             );
           });
-          kids.push(h("div", { key: "lb", className: "lb" }, "可用助理"));
+          kids.push(h("div", { key: "lb", className: "lb" }, tr("asst.available")));
           kids.push(h("div", { key: "rows", className: "list" }, rows));
         }
-        kids.push(h("div", { key: "tip", className: "ft" }, "助理 = 预设人格与工具组合。默认用哪个：设置 → Agent 预设；共享区 presets/ 下可自行增减，新会话生效。"));
+        kids.push(h("div", { key: "tip", className: "ft" }, tr("asst.note")));
       }
       return h(
         "div",
@@ -1946,7 +2617,7 @@ window.__ModuleLoader__.load({
             "div",
             { className: "hd" },
             h("span", { className: "ico" }, "🧑‍💼"),
-            h("div", null, h("div", { className: "t1" }, "团队助理"), h("div", { className: "t2" }, "Agent 预设（专家模式）")),
+            h("div", null, h("div", { className: "t1" }, tr("asst.team")), h("div", { className: "t2" }, tr("asst.panelTitle"))),
             h("button", { className: "x", onClick: toggle }, "✕")
           ),
           h("div", { className: "bd" }, kids)
@@ -1966,6 +2637,7 @@ window.__ModuleLoader__.load({
       var open = oPair[0];
       var setOpen = oPair[1];
       var dPair = React.useState({ phase: "none", id: "", name: "", content: "" });
+      var langTick = useLocaleSignal();
       var det = dPair[0];
       var setDet = dPair[1];
 
@@ -1975,7 +2647,7 @@ window.__ModuleLoader__.load({
             if (!r.ok) throw new Error("HTTP " + r.status);
             return r.json();
           }),
-          fetch("/portal/api/panel/connectors", { headers: { accept: "application/json" } }).then(function (r) {
+          fetch("/portal/api/panel/connectors?lang=" + deskLang(), { headers: { accept: "application/json" } }).then(function (r) {
             if (!r.ok) throw new Error("HTTP " + r.status);
             return r.json();
           }),
@@ -1989,7 +2661,7 @@ window.__ModuleLoader__.load({
       }
       React.useEffect(function () {
         load();
-      }, []);
+      }, [langTick]);
 
       function toggle() {
         var next = !open;
@@ -1999,7 +2671,7 @@ window.__ModuleLoader__.load({
 
       function viewSkill(sh) {
         setDet({ phase: "loading", id: sh.id, name: sh.name, content: "" });
-        fetch("/portal/api/panel/skill?name=" + encodeURIComponent(sh.id), { headers: { accept: "application/json" } })
+        fetch("/portal/api/panel/skill?name=" + encodeURIComponent(sh.id) + "&lang=" + deskLang(), { headers: { accept: "application/json" } })
           .then(function (r) {
             return r.json();
           })
@@ -2008,15 +2680,15 @@ window.__ModuleLoader__.load({
             else setDet({ phase: "ready", id: sh.id, name: sh.name, content: (d && d.content) || "" });
           })
           .catch(function () {
-            setDet({ phase: "error", id: sh.id, name: sh.name, content: "读取失败" });
+            setDet({ phase: "error", id: sh.id, name: sh.name, content: tr("common.loadFailed") });
           });
       }
 
       var trigger = h(
         "button",
-        { className: "ddb" + (wide ? "" : " rail"), onClick: toggle, title: "专家技能库 + 连接器状态" },
+        { className: "ddb" + (wide ? "" : " rail"), onClick: toggle, title: tr("skl.title") },
         h("span", { className: "ic" }, "🧩"),
-        wide ? h("span", { className: "lbl" }, "技能·连接器") : null
+        wide ? h("span", { className: "lbl" }, tr("skl.tab")) : null
       );
       if (!open) return h("div", null, trigger);
 
@@ -2034,7 +2706,7 @@ window.__ModuleLoader__.load({
                 setDet({ phase: "none", id: "", name: "", content: "" });
               },
             },
-            "技能" + (st.phase === "ready" ? "（" + st.skills.length + "）" : "")
+            tr("skl.skills") + (st.phase === "ready" ? "(" + st.skills.length + ")" : "")
           ),
           h(
             "button",
@@ -2045,12 +2717,12 @@ window.__ModuleLoader__.load({
                 setDet({ phase: "none", id: "", name: "", content: "" });
               },
             },
-            "连接器" + (st.phase === "ready" ? "（" + st.items.length + "）" : "")
+            tr("skl.connectors") + (st.phase === "ready" ? "(" + st.items.length + ")" : "")
           )
         )
       );
-      if (st.phase === "loading") kids.push(h("div", { key: "ld", className: "empty" }, "读取中…"));
-      else if (st.phase === "error") kids.push(h("div", { key: "er", className: "empty" }, "读不到（请从门户地址打开且已登录）。"));
+      if (st.phase === "loading") kids.push(h("div", { key: "ld", className: "empty" }, tr("common.loading")));
+      else if (st.phase === "error") kids.push(h("div", { key: "er", className: "empty" }, tr("common.failHint")));
       else if (tab === "skills") {
         if (det.phase !== "none") {
           kids.push(
@@ -2065,15 +2737,15 @@ window.__ModuleLoader__.load({
                     setDet({ phase: "none", id: "", name: "", content: "" });
                   },
                 },
-                "← 返回"
+                tr("common.back")
               ),
               h("span", { className: "t" }, det.name || det.id)
             )
           );
-          if (det.phase === "loading") kids.push(h("div", { key: "dl", className: "empty" }, "读取中…"));
+          if (det.phase === "loading") kids.push(h("div", { key: "dl", className: "empty" }, tr("common.loading")));
           else kids.push(h("pre", { key: "dc", className: "code" }, det.content));
         } else if (!st.skills.length) {
-          kids.push(h("div", { key: "none", className: "empty" }, "共享技能库空空如也。"));
+          kids.push(h("div", { key: "none", className: "empty" }, tr("skl.empty")));
         } else {
           var rows = [];
           st.skills.forEach(function (sh) {
@@ -2087,13 +2759,13 @@ window.__ModuleLoader__.load({
                   { className: "gr" },
                   h("div", { className: "th" }, h("span", { className: "t" }, sh.name), h("span", { className: "tag" }, sh.id)),
                   h("div", { className: "d" }, sh.description || ""),
-                  sh.whenToUse ? h("div", { className: "d" }, "触发：" + sh.whenToUse) : null
+                  sh.whenToUse ? h("div", { className: "d" }, tr("skl.trigger") + sh.whenToUse) : null
                 )
               )
             );
           });
           kids.push(h("div", { key: "rows", className: "list" }, rows));
-          kids.push(h("div", { key: "tip", className: "ft" }, "点击任意技能查看全文；新增 = 往共享区 skills/ 放一个文件夹，各实例自动分发。"));
+          kids.push(h("div", { key: "tip", className: "ft" }, tr("skl.hint")));
         }
       } else {
         var crows = [];
@@ -2108,8 +2780,8 @@ window.__ModuleLoader__.load({
             )
           );
         });
-        kids.push(h("div", { key: "crows", className: "list" }, crows.length ? crows : h("div", { className: "empty" }, "暂无连接信息。")));
-        kids.push(h("div", { key: "ctip", className: "ft" }, "状态为只读探测：绿 = 已接通，灰 = 未配置（可选），红 = 异常。"));
+        kids.push(h("div", { key: "crows", className: "list" }, crows.length ? crows : h("div", { className: "empty" }, tr("skl.noConn"))));
+        kids.push(h("div", { key: "ctip", className: "ft" }, tr("skl.legend")));
       }
       return h(
         "div",
@@ -2122,7 +2794,7 @@ window.__ModuleLoader__.load({
             "div",
             { className: "hd" },
             h("span", { className: "ico" }, "🧩"),
-            h("div", null, h("div", { className: "t1" }, "专家技能 · 连接器"), h("div", { className: "t2" }, "技能库全文 + 连接器状态")),
+            h("div", null, h("div", { className: "t1" }, tr("skl.titleShort")), h("div", { className: "t2" }, tr("skl.panelTitle"))),
             h("button", { className: "x", onClick: toggle }, "✕")
           ),
           h("div", { className: "bd" }, kids)
@@ -2201,7 +2873,7 @@ window.__ModuleLoader__.load({
       }
 
       function post(path, body, okText) {
-        setMsg({ kind: "info", text: "处理中…" });
+        setMsg({ kind: "info", text: tr("common.processing") });
         fetch(path, { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify(body) })
           .then(function (r) {
             return r.json().then(function (d) {
@@ -2226,31 +2898,31 @@ window.__ModuleLoader__.load({
       function add() {
         var text = tRef.current ? tRef.current.value : "";
         if (!String(text).trim()) {
-          setMsg({ kind: "err", text: "内容不能为空" });
+          setMsg({ kind: "err", text: tr("common.required") });
           return;
         }
         var at = parseWhen(wRef.current ? wRef.current.value : "");
         if (!at) {
-          setMsg({ kind: "err", text: "时间格式：10:00 / 明天 09:00 / 09-22 10:00 / +30m" });
+          setMsg({ kind: "err", text: tr("auto.phTime") });
           return;
         }
-        post("/portal/api/admin/reminders/add", { at_epoch: at, text: text }, "已添加：到点会推送提醒（微信/Webhook 通道）");
+        post("/portal/api/admin/reminders/add", { at_epoch: at, text: text }, tr("auto.added"));
       }
 
       var trigger = h(
         "button",
-        { className: "ddb" + (wide ? "" : " rail"), onClick: toggle, title: "自动化：定时提醒与团队自动化" },
+        { className: "ddb" + (wide ? "" : " rail"), onClick: toggle, title: tr("auto.title") },
         h("span", { className: "ic" }, "⚡"),
-        wide ? h("span", { className: "lbl" }, "自动化") : null
+        wide ? h("span", { className: "lbl" }, tr("auto.tab")) : null
       );
       if (!open) return h("div", null, trigger);
 
       var kids = [];
-      if (st.phase === "loading") kids.push(h("div", { key: "ld", className: "empty" }, "读取中…"));
-      if (st.phase === "error") kids.push(h("div", { key: "er", className: "empty" }, "读不到（请从门户地址打开且已登录）。"));
+      if (st.phase === "loading") kids.push(h("div", { key: "ld", className: "empty" }, tr("common.loading")));
+      if (st.phase === "error") kids.push(h("div", { key: "er", className: "empty" }, tr("common.failHint")));
       if (st.phase === "ready") {
-        kids.push(h("div", { key: "sub", className: "lb" }, "待发送提醒（" + st.reminders.length + "）"));
-        if (!st.reminders.length) kids.push(h("div", { key: "nr", className: "empty" }, "还没有待发送的提醒。"));
+        kids.push(h("div", { key: "sub", className: "lb" }, tr("auto.pending") + st.reminders.length + ")"));
+        if (!st.reminders.length) kids.push(h("div", { key: "nr", className: "empty" }, tr("auto.emptyPending")));
         var rows = [];
         st.reminders.forEach(function (r) {
           rows.push(
@@ -2271,10 +2943,10 @@ window.__ModuleLoader__.load({
                         {
                           className: "mini",
                           onClick: function () {
-                            post("/portal/api/admin/reminders/rm", { id: r.id }, "已删除");
+                            post("/portal/api/admin/reminders/rm", { id: r.id }, tr("common.deleted"));
                           },
                         },
-                        "删除"
+                        tr("common.delete")
                       )
                     : null
                 ),
@@ -2289,19 +2961,19 @@ window.__ModuleLoader__.load({
             h(
               "div",
               { key: "add", className: "row" },
-              h("input", { ref: wRef, className: "inp", style: { width: 160, flex: "0 0 auto" }, placeholder: "10:00 / +30m / 明天 09:00", onKeyDown: function (e) { if (e.key === "Enter") add(); } }),
-              h("input", { ref: tRef, className: "inp", style: { flex: "1 1 120px", width: "auto" }, placeholder: "提醒内容", onKeyDown: function (e) { if (e.key === "Enter") add(); } }),
-              h("button", { className: "btn", onClick: add }, "添加")
+              h("input", { ref: wRef, className: "inp", style: { width: 160, flex: "0 0 auto" }, placeholder: tr("auto.phTime2"), onKeyDown: function (e) { if (e.key === "Enter") add(); } }),
+              h("input", { ref: tRef, className: "inp", style: { flex: "1 1 120px", width: "auto" }, placeholder: tr("auto.phText"), onKeyDown: function (e) { if (e.key === "Enter") add(); } }),
+              h("button", { className: "btn", onClick: add }, tr("common.add"))
             )
           );
-          kids.push(h("div", { key: "tip", className: "ft" }, "到点由通知桥推送微信。也可以直接对助理说：提醒我 明天 09:00 开会。"));
+          kids.push(h("div", { key: "tip", className: "ft" }, tr("auto.hintAdmin")));
         } else {
-          kids.push(h("div", { key: "tip", className: "ft" }, "成员可见提醒列表；新增 / 删除请找管理员，或直接对助理说：提醒我 明天 09:00 开会。"));
+          kids.push(h("div", { key: "tip", className: "ft" }, tr("auto.hintMember")));
         }
         if (st.recent && st.recent.length) {
-          kids.push(h("div", { key: "rh", className: "lb" }, "最近已发送"));
+          kids.push(h("div", { key: "rh", className: "lb" }, tr("auto.recent")));
           st.recent.forEach(function (r) {
-            kids.push(h("div", { key: "rs" + r.id, className: "sub" }, "· " + r.text + "（" + fmtEp(r.at_epoch) + "）"));
+            kids.push(h("div", { key: "rs" + r.id, className: "sub" }, "· " + r.text + "(" + fmtEp(r.at_epoch) + ")"));
           });
         }
       }
@@ -2319,7 +2991,7 @@ window.__ModuleLoader__.load({
             "div",
             { className: "hd" },
             h("span", { className: "ico" }, "⚡"),
-            h("div", null, h("div", { className: "t1" }, "自动化"), h("div", { className: "t2" }, "定时提醒与团队自动化")),
+            h("div", null, h("div", { className: "t1" }, tr("auto.tab")), h("div", { className: "t2" }, tr("auto.panelTitle"))),
             h("button", { className: "x", onClick: toggle }, "✕")
           ),
           h("div", { className: "bd" }, kids)
@@ -2349,10 +3021,10 @@ window.__ModuleLoader__.load({
       }
 
       function sessLabel(s) {
-        var base = String((s && s.cwd) || "").split("/").filter(Boolean).pop() || "会话";
+        var base = String((s && s.cwd) || "").split("/").filter(Boolean).pop() || tr("sess.tab");
         var d = new Date(Number(s && s.updatedAt) || 0);
         var when = isNaN(d.getTime()) ? "" : p2(d.getMonth() + 1) + "-" + p2(d.getDate()) + " " + p2(d.getHours()) + ":" + p2(d.getMinutes());
-        return base + " · " + String((s && s.sessionId) || "").slice(8, 16) + " · " + when + (s && s.blank ? " · 未开始" : "");
+        return base + " · " + String((s && s.sessionId) || "").slice(8, 16) + " · " + when + (s && s.blank ? tr("sess.notStarted") : "");
       }
 
       function listItemsOf(d) {
@@ -2429,7 +3101,7 @@ window.__ModuleLoader__.load({
       }, []);
 
       function post(path, body, okText, after) {
-        setMsg({ kind: "info", text: "处理中…" });
+        setMsg({ kind: "info", text: tr("common.processing") });
         fetch(path, { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify(body) })
           .then(function (r) { return r.json().then(function (d) { return { status: r.status, d: d }; }); })
           .then(function (res) {
@@ -2451,27 +3123,27 @@ window.__ModuleLoader__.load({
       }
 
       function statusChip(st) {
-        if (st === "pending") return "⏳ 待审批";
-        if (st === "approved") return "✅ 已批准";
-        if (st === "rejected") return "❌ 已驳回";
-        if (st === "cancelled") return "已撤销";
+        if (st === "pending") return tr("sess.pending");
+        if (st === "approved") return tr("sess.approved");
+        if (st === "rejected") return tr("sess.rejected");
+        if (st === "cancelled") return tr("sess.cancelled");
         return String(st);
       }
 
       var kids = [];
-      kids.push(h("div", { key: "t", style: { fontSize: 15, fontWeight: 700 } }, "会话管理"));
+      kids.push(h("div", { key: "t", style: { fontSize: 15, fontWeight: 700 } }, tr("sec.sessions")));
       kids.push(
         h(
           "div",
           { key: "sub", style: Object.assign({ fontSize: 12 }, muted) },
-          "删除需管理员确认：成员提交申请 → 管理员批准后执行；管理员可直接删除。执行删除时，对应实例会短暂重启（约 10~30 秒）。"
+          tr("sess.intro")
         )
       );
 
-      kids.push(h("div", { key: "own-t", style: { fontSize: 15, fontWeight: 700, marginTop: 10 } }, "我的会话（" + own.items.length + "）"));
-      if (own.phase === "loading") kids.push(h("div", { key: "own-ld", style: muted }, "读取中…"));
-      else if (own.phase === "error") kids.push(h("div", { key: "own-er", style: muted }, "读不到会话列表（需从工作台页面打开）。"));
-      else if (!own.items.length) kids.push(h("div", { key: "own-none", style: muted }, "暂无会话。"));
+      kids.push(h("div", { key: "own-t", style: { fontSize: 15, fontWeight: 700, marginTop: 10 } }, tr("sess.mine") + own.items.length + ")"));
+      if (own.phase === "loading") kids.push(h("div", { key: "own-ld", style: muted }, tr("common.loading")));
+      else if (own.phase === "error") kids.push(h("div", { key: "own-er", style: muted }, tr("sess.loadHint")));
+      else if (!own.items.length) kids.push(h("div", { key: "own-none", style: muted }, tr("sess.empty")));
       else {
         var orows = [];
         own.items.forEach(function (s) {
@@ -2485,13 +3157,13 @@ window.__ModuleLoader__.load({
                   key: "del",
                   style: btnDanger,
                   onClick: function () {
-                    if (!window.confirm("直接删除该会话？（管理员直删，实例将短暂重启）")) return;
-                    post("/portal/api/admin/session-mgr/delete", { user: adm.me, session_id: s.sessionId }, "已删除，实例重启中（约 10~30 秒）", function () {
+                    if (!window.confirm(tr("sess.delDirect"))) return;
+                    post("/portal/api/admin/session-mgr/delete", { user: adm.me, session_id: s.sessionId }, tr("sess.deletedRestarting"), function () {
                       setTimeout(loadOwn, 11000);
                     });
                   },
                 },
-                "删除"
+                tr("common.delete")
               )
             );
             if (pend) {
@@ -2502,15 +3174,15 @@ window.__ModuleLoader__.load({
                     key: "cancel",
                     style: btnLight,
                     onClick: function () {
-                      post("/portal/api/session-mgr/cancel", { id: pend.id }, "已撤销申请", loadMine);
+                      post("/portal/api/session-mgr/cancel", { id: pend.id }, tr("sess.requestCancelled"), loadMine);
                     },
                   },
-                  "撤销"
+                  tr("common.withdraw")
                 )
               );
             }
           } else if (pend) {
-            ops.push(h("span", { key: "pend", style: Object.assign({ fontSize: 12 }, muted) }, "⏳ 待管理员确认"));
+            ops.push(h("span", { key: "pend", style: Object.assign({ fontSize: 12 }, muted) }, tr("sess.waitingAdmin")));
             ops.push(
               h(
                 "button",
@@ -2518,10 +3190,10 @@ window.__ModuleLoader__.load({
                   key: "cancel",
                   style: btnLight,
                   onClick: function () {
-                    post("/portal/api/session-mgr/cancel", { id: pend.id }, "已撤销申请", loadMine);
+                    post("/portal/api/session-mgr/cancel", { id: pend.id }, tr("sess.requestCancelled"), loadMine);
                   },
                 },
-                "撤销"
+                tr("common.withdraw")
               )
             );
           } else {
@@ -2532,10 +3204,10 @@ window.__ModuleLoader__.load({
                   key: "req",
                   style: btnSmall,
                   onClick: function () {
-                    post("/portal/api/session-mgr/request", { session_id: s.sessionId, title: sessLabel(s) }, "已提交，等待管理员确认", loadMine);
+                    post("/portal/api/session-mgr/request", { session_id: s.sessionId, title: sessLabel(s) }, tr("sess.requested"), loadMine);
                   },
                 },
-                "申请删除"
+                tr("sess.requestDelete")
               )
             );
           }
@@ -2550,19 +3222,19 @@ window.__ModuleLoader__.load({
                   "span",
                   null,
                   sessLabel(s),
-                  s.running ? h("span", { style: Object.assign({ fontSize: 12 }, muted) }, " · ● 进行中") : null,
-                  s.parentSessionId ? h("span", { style: Object.assign({ fontSize: 12 }, muted) }, " · 子会话") : null
+                  s.running ? h("span", { style: Object.assign({ fontSize: 12 }, muted) }, tr("sess.running")) : null,
+                  s.parentSessionId ? h("span", { style: Object.assign({ fontSize: 12 }, muted) }, tr("sess.child")) : null
                 ),
                 h("span", { style: { display: "flex", gap: 6, alignItems: "center" } }, ops)
               ),
-              h("div", { style: Object.assign({ fontSize: 12 }, muted) }, (s.cwd || "-") + (s.agentPreset ? " · 预设 " + s.agentPreset : ""))
+              h("div", { style: Object.assign({ fontSize: 12 }, muted) }, (s.cwd || "-") + (s.agentPreset ? tr("sess.preset") + s.agentPreset : ""))
             )
           );
         });
         kids.push(h("div", { key: "own-rows", style: {} }, orows));
       }
 
-      kids.push(h("div", { key: "mine-t", style: { fontSize: 15, fontWeight: 700, marginTop: 10 } }, "我的申请"));
+      kids.push(h("div", { key: "mine-t", style: { fontSize: 15, fontWeight: 700, marginTop: 10 } }, tr("sess.myRequests")));
       var qrows = [];
       mine.requests.forEach(function (q) {
         qrows.push(
@@ -2573,16 +3245,16 @@ window.__ModuleLoader__.load({
               "div",
               { style: { display: "flex", justifyContent: "space-between", gap: 8 } },
               h("span", null, (q.title || q.session_id) + " "),
-              h("span", { style: Object.assign({ fontSize: 12 }, muted) }, statusChip(q.status) + (q.decided_by ? "（" + q.decided_by + "）" : ""))
+              h("span", { style: Object.assign({ fontSize: 12 }, muted) }, statusChip(q.status) + (q.decided_by ? "(" + q.decided_by + ")" : ""))
             ),
-            h("div", { style: Object.assign({ fontSize: 12 }, muted) }, String(q.session_id).slice(0, 26) + " · 申请于 " + String(q.created_at || "").slice(5, 16))
+            h("div", { style: Object.assign({ fontSize: 12 }, muted) }, String(q.session_id).slice(0, 26) + tr("sess.requestedAt") + String(q.created_at || "").slice(5, 16))
           )
         );
       });
-      kids.push(h("div", { key: "mine-rows", style: {} }, qrows.length ? qrows : h("div", { style: muted }, "暂无申请记录。")));
+      kids.push(h("div", { key: "mine-rows", style: {} }, qrows.length ? qrows : h("div", { style: muted }, tr("sess.noRequests"))));
 
       if (adm.phase === "ready") {
-        kids.push(h("div", { key: "adm-t", style: { fontSize: 15, fontWeight: 700, marginTop: 10 } }, "待审批（" + adm.pending.length + "）"));
+        kids.push(h("div", { key: "adm-t", style: { fontSize: 15, fontWeight: 700, marginTop: 10 } }, tr("sess.pendingCount") + adm.pending.length + ")"));
         var prows = [];
         adm.pending.forEach(function (q) {
           prows.push(
@@ -2601,26 +3273,26 @@ window.__ModuleLoader__.load({
                     {
                       style: btnDark,
                       onClick: function () {
-                        if (!window.confirm("批准并删除 " + q.username + " 的该会话？（对方实例将短暂重启）")) return;
-                        post("/portal/api/admin/session-mgr/decide", { id: q.id, action: "approve" }, "已批准并执行删除（实例约 10~30 秒后自动重启）", function () {
+                        if (!window.confirm(tr("sess.approveDelete") + q.username + tr("sess.approveDeleteQ"))) return;
+                        post("/portal/api/admin/session-mgr/decide", { id: q.id, action: "approve" }, tr("sess.approvedDone"), function () {
                           loadMine();
                           loadAdmin();
                         });
                       },
                     },
-                    "批准删除"
+                    tr("sess.approveBtn")
                   ),
                   h(
                     "button",
                     {
                       style: btnLight,
                       onClick: function () {
-                        post("/portal/api/admin/session-mgr/decide", { id: q.id, action: "reject" }, "已驳回", function () {
+                        post("/portal/api/admin/session-mgr/decide", { id: q.id, action: "reject" }, tr("sess.rejectedToast"), function () {
                           loadAdmin();
                         });
                       },
                     },
-                    "驳回"
+                    tr("sess.rejectBtn")
                   )
                 )
               ),
@@ -2628,9 +3300,9 @@ window.__ModuleLoader__.load({
             )
           );
         });
-        kids.push(h("div", { key: "adm-pending", style: {} }, prows.length ? prows : h("div", { style: muted }, "没有待审批的申请。")));
+        kids.push(h("div", { key: "adm-pending", style: {} }, prows.length ? prows : h("div", { style: muted }, tr("sess.noPending"))));
 
-        kids.push(h("div", { key: "m-t", style: { fontSize: 15, fontWeight: 700, marginTop: 10 } }, "成员会话"));
+        kids.push(h("div", { key: "m-t", style: { fontSize: 15, fontWeight: 700, marginTop: 10 } }, tr("sess.memberSessions")));
         kids.push(
           h(
             "div",
@@ -2644,9 +3316,9 @@ window.__ModuleLoader__.load({
                 },
                 style: field,
               },
-              h("option", { value: "" }, "选择成员…"),
+              h("option", { value: "" }, tr("sess.pickMember")),
               adm.members.map(function (m) {
-                return h("option", { key: m.username, value: m.username }, m.username + (m.agent_port ? "" : "（无实例）"));
+                return h("option", { key: m.username, value: m.username }, m.username + (m.agent_port ? "" : tr("sess.noInstance")));
               })
             ),
             h(
@@ -2655,18 +3327,18 @@ window.__ModuleLoader__.load({
                 style: btnLight,
                 onClick: function () {
                   if (!sel.user) {
-                    setMsg({ kind: "err", text: "先选择成员" });
+                    setMsg({ kind: "err", text: tr("sess.pickFirst") });
                     return;
                   }
                   loadMember(sel.user);
                 },
               },
-              "加载会话"
+              tr("sess.loadBtn")
             )
           )
         );
-        if (sel.phase === "loading") kids.push(h("div", { key: "m-ld", style: muted }, "读取中…"));
-        else if (sel.phase === "error") kids.push(h("div", { key: "m-er", style: muted }, sel.note || "读取失败"));
+        if (sel.phase === "loading") kids.push(h("div", { key: "m-ld", style: muted }, tr("common.loading")));
+        else if (sel.phase === "error") kids.push(h("div", { key: "m-er", style: muted }, sel.note || tr("common.loadFailed")));
         else if (sel.phase === "ready") {
           var mrows = [];
           sel.sessions.forEach(function (s) {
@@ -2683,32 +3355,32 @@ window.__ModuleLoader__.load({
                     {
                       style: btnDanger,
                       onClick: function () {
-                        if (!window.confirm("直接删除 " + sel.user + " 的该会话？")) return;
-                        post("/portal/api/admin/session-mgr/delete", { user: sel.user, session_id: s.sessionId }, "已删除，实例重启中（约 10~30 秒）", function () {
+                        if (!window.confirm(tr("sess.delOther") + sel.user + tr("sess.delOtherQ"))) return;
+                        post("/portal/api/admin/session-mgr/delete", { user: sel.user, session_id: s.sessionId }, tr("sess.deletedRestarting"), function () {
                           setTimeout(function () {
                             loadMember(sel.user);
                           }, 11000);
                         });
                       },
                     },
-                    "直接删除"
+                    tr("sess.delDirectBtn")
                   )
                 ),
                 h("div", { style: Object.assign({ fontSize: 12 }, muted) }, (s.cwd || "-") + " · " + String(s.sessionId).slice(8, 26))
               )
             );
           });
-          kids.push(h("div", { key: "m-rows", style: {} }, mrows.length ? mrows : h("div", { style: muted }, "该成员暂无会话。")));
+          kids.push(h("div", { key: "m-rows", style: {} }, mrows.length ? mrows : h("div", { style: muted }, tr("sess.memberNone"))));
         }
 
         if (adm.recent.length) {
-          kids.push(h("div", { key: "r-t", style: { fontSize: 15, fontWeight: 700, marginTop: 10 } }, "最近处理"));
+          kids.push(h("div", { key: "r-t", style: { fontSize: 15, fontWeight: 700, marginTop: 10 } }, tr("sess.recent")));
           adm.recent.forEach(function (q) {
             kids.push(
               h(
                 "div",
                 { key: "r" + q.id, style: { fontSize: 12, color: "var(--dsw-alias-label-tertiary, #8a8f98)", padding: "3px 0" } },
-                q.username + " · " + (q.title || q.session_id) + " → " + statusChip(q.status) + (q.decided_by ? "（" + q.decided_by + "）" : "") + " · " + String(q.decided_at || q.created_at || "").slice(5, 16)
+                q.username + " · " + (q.title || q.session_id) + " → " + statusChip(q.status) + (q.decided_by ? "(" + q.decided_by + ")" : "") + " · " + String(q.decided_at || q.created_at || "").slice(5, 16)
               )
             );
           });
@@ -2762,7 +3434,7 @@ window.__ModuleLoader__.load({
       }, []);
 
       function post(path, body, okText, clear) {
-        setMsg({ kind: "info", text: "处理中…" });
+        setMsg({ kind: "info", text: tr("common.processing") });
         fetch(path, { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify(body) })
           .then(function (r) {
             return r.json().then(function (d) {
@@ -2788,11 +3460,11 @@ window.__ModuleLoader__.load({
       }
 
       function sessLabel(s) {
-        var base = String((s && s.cwd) || "").split("/").filter(Boolean).pop() || "会话";
+        var base = String((s && s.cwd) || "").split("/").filter(Boolean).pop() || tr("sess.tab");
         var d = new Date(Number(s && s.updatedAt) || 0);
         function p2(x) { return (x < 10 ? "0" : "") + x; }
         var when = isNaN(d.getTime()) ? "" : p2(d.getMonth() + 1) + "-" + p2(d.getDate()) + " " + p2(d.getHours()) + ":" + p2(d.getMinutes());
-        return base + " · " + String((s && s.sessionId) || "").slice(8, 16) + " · " + when + (s && s.blank ? " · 未开始" : "");
+        return base + " · " + String((s && s.sessionId) || "").slice(8, 16) + " · " + when + (s && s.blank ? tr("sess.notStarted") : "");
       }
 
       function loadSessions() {
@@ -2832,12 +3504,12 @@ window.__ModuleLoader__.load({
         return String(raw || "").slice(0, 60);
       }
 
-      if (st.phase === "loading") return h("div", { style: wrap }, "读取任务板…");
-      if (st.phase === "error") return h("div", { style: wrap }, h("div", null, "读不到任务板（需从门户地址打开且已登录）。"));
+      if (st.phase === "loading") return h("div", { style: wrap }, tr("task.loading"));
+      if (st.phase === "error") return h("div", { style: wrap }, h("div", null, tr("task.failHint")));
 
-      var SM = { todo: ["待办", "#8a8f98"], doing: ["进行中", "#2f6fed"], done: ["已完成", "#1f9d55"] };
+      var SM = { todo: [tr("task.todo"), "#8a8f98"], doing: [tr("task.doing"), "#2f6fed"], done: [tr("task.done"), "#1f9d55"] };
       var NEXT = { todo: "doing", doing: "done", done: "todo" };
-      var NEXT_LABEL = { todo: "开始", doing: "完成", done: "重开" };
+      var NEXT_LABEL = { todo: tr("task.start"), doing: tr("task.finish"), done: tr("task.reopen") };
 
       var cTodo = 0;
       var cDoing = 0;
@@ -2861,14 +3533,14 @@ window.__ModuleLoader__.load({
 
       var kids = [];
 
-      var opts = [h("option", { key: "__none", value: "" }, "未指派")];
+      var opts = [h("option", { key: "__none", value: "" }, tr("task.unassigned"))];
       for (var mi = 0; mi < st.members.length; mi++) opts.push(h("option", { key: st.members[mi], value: st.members[mi] }, st.members[mi]));
       kids.push(
         h(
           "div",
           { key: "nf", style: { display: "flex", flexDirection: "column", gap: 6 } },
-          h("input", { ref: tRef, placeholder: "任务标题", style: field }),
-          h("input", { ref: nRef, placeholder: "备注（可选）", style: field }),
+          h("input", { ref: tRef, placeholder: tr("task.titlePh"), style: field }),
+          h("input", { ref: nRef, placeholder: tr("common.phNote"), style: field }),
           h(
             "div",
             { style: { display: "flex", gap: 8, alignItems: "center" } },
@@ -2881,30 +3553,30 @@ window.__ModuleLoader__.load({
                   post(
                     "/portal/api/tasks/create",
                     { title: tRef.current ? tRef.current.value : "", note: nRef.current ? nRef.current.value : "", assignee: aRef.current ? aRef.current.value : "" },
-                    "任务已创建",
+                    tr("task.created"),
                     true
                   );
                 },
               },
-              "新建任务"
+              tr("task.new")
             )
           )
         )
       );
 
-      var RVC = { submitted: ["待验收", "#b7791f"], accepted: ["已验收", "#1f9d55"], rejected: ["已打回", "#c0392b"] };
+      var RVC = { submitted: [tr("task.inReview"), "#b7791f"], accepted: [tr("task.accepted"), "#1f9d55"], rejected: [tr("task.returned"), "#c0392b"] };
       var sessOpts = [];
       if (sess.phase === "ready") {
         sessOpts = (sess.items || []).filter(function (s) { return !s.blank; });
         if (!sessOpts.length) sessOpts = (sess.items || []).slice(0, 12);
       }
       var fdefs = [
-        ["all", "全部 " + st.tasks.length],
-        ["todo", "待办 " + cTodo],
-        ["doing", "进行中 " + cDoing],
-        ["review", "待验收 " + cReview],
-        ["done", "已完成 " + cDone],
-        ["mine", "我的 " + cMine],
+        ["all", tr("task.filterAll") + st.tasks.length],
+        ["todo", tr("task.filterTodo") + cTodo],
+        ["doing", tr("task.filterDoing") + cDoing],
+        ["review", tr("task.filterReview") + cReview],
+        ["done", tr("task.filterDone") + cDone],
+        ["mine", tr("task.filterMine") + cMine],
       ];
       var fbtns = [];
       for (var fi = 0; fi < fdefs.length; fi++) {
@@ -2932,10 +3604,10 @@ window.__ModuleLoader__.load({
                   key: "nx",
                   style: btnSmall,
                   onClick: function () {
-                    post("/portal/api/tasks/update", { id: t.id, status: NEXT[t.status] || "todo" }, "已更新", false);
+                    post("/portal/api/tasks/update", { id: t.id, status: NEXT[t.status] || "todo" }, tr("task.updated"), false);
                   },
                 },
-                NEXT_LABEL[t.status] || "推进"
+                NEXT_LABEL[t.status] || tr("task.advance")
               )
             );
           }
@@ -2944,7 +3616,7 @@ window.__ModuleLoader__.load({
               h(
                 "button",
                 { key: "sb", style: btnSmall, onClick: function () { setSubmitFor(submitFor === t.id ? 0 : t.id); loadSessions(); } },
-                submitFor === t.id ? "收起" : "提交验收"
+                submitFor === t.id ? tr("common.collapse") : tr("task.submitReview")
               )
             );
           }
@@ -2956,10 +3628,10 @@ window.__ModuleLoader__.load({
                   key: "cx",
                   style: btnSmall,
                   onClick: function () {
-                    if (window.confirm("撤回对「" + t.title + "」的提交？")) post("/portal/api/tasks/review", { id: t.id, action: "cancel" }, "已撤回提交", false);
+                    if (window.confirm(tr("task.withdrawQ") + t.title + tr("task.withdrawQ2"))) post("/portal/api/tasks/review", { id: t.id, action: "cancel" }, tr("task.withdrawDone"), false);
                   },
                 },
-                "撤回"
+                tr("task.withdrawBtn")
               )
             );
           }
@@ -2967,8 +3639,8 @@ window.__ModuleLoader__.load({
             actions.push(
               h(
                 "button",
-                { key: "ap", style: btnSmall, onClick: function () { post("/portal/api/tasks/review", { id: t.id, action: "accept" }, "已验收通过", false); } },
-                "通过"
+                { key: "ap", style: btnSmall, onClick: function () { post("/portal/api/tasks/review", { id: t.id, action: "accept" }, tr("task.acceptedToast"), false); } },
+                tr("task.approveBtn")
               )
             );
             actions.push(
@@ -2978,11 +3650,11 @@ window.__ModuleLoader__.load({
                   key: "rj",
                   style: btnSmall,
                   onClick: function () {
-                    var r = window.prompt("打回理由（必填）：");
-                    if (r && r.trim()) post("/portal/api/tasks/review", { id: t.id, action: "reject", note: r.trim() }, "已打回", false);
+                    var r = window.prompt(tr("task.returnPrompt"));
+                    if (r && r.trim()) post("/portal/api/tasks/review", { id: t.id, action: "reject", note: r.trim() }, tr("task.returned"), false);
                   },
                 },
-                "打回"
+                tr("task.returnBtn")
               )
             );
           }
@@ -2994,10 +3666,10 @@ window.__ModuleLoader__.load({
                   key: "cl",
                   style: btnSmall,
                   onClick: function () {
-                    post("/portal/api/tasks/update", { id: t.id, assignee: st.me }, "已接领", false);
+                    post("/portal/api/tasks/update", { id: t.id, assignee: st.me }, tr("task.claimed"), false);
                   },
                 },
-                "接领"
+                tr("task.claimBtn")
               )
             );
           }
@@ -3009,10 +3681,10 @@ window.__ModuleLoader__.load({
                   key: "dl",
                   style: btnSmall,
                   onClick: function () {
-                    if (window.confirm("删除任务：" + t.title + "？")) post("/portal/api/tasks/delete", { id: t.id }, "已删除", false);
+                    if (window.confirm(tr("task.delTask") + t.title + "?")) post("/portal/api/tasks/delete", { id: t.id }, tr("common.deleted"), false);
                   },
                 },
-                "删除"
+                tr("common.delete")
               )
             );
           }
@@ -3027,7 +3699,7 @@ window.__ModuleLoader__.load({
                 h("span", { style: { fontWeight: 600, flex: 1, textDecoration: t.status === "done" ? "line-through" : "none", opacity: t.status === "done" ? 0.6 : 1 } }, t.title)
               ),
               t.note ? h("div", { style: { whiteSpace: "pre-wrap" } }, t.note) : null,
-              h("div", { style: Object.assign({ fontSize: 11 }, muted) }, "指派：" + (t.assignee || "未指派") + " · " + (t.created_by || "-") + " · " + fmtAt(t.updated_at)),
+              h("div", { style: Object.assign({ fontSize: 11 }, muted) }, tr("task.assign") + (t.assignee || tr("task.unassigned")) + " · " + (t.created_by || "-") + " · " + fmtAt(t.updated_at)),
               t.review_state && t.review_state !== "none"
                 ? h(
                     "div",
@@ -3035,13 +3707,13 @@ window.__ModuleLoader__.load({
                     h(
                       "div",
                       { style: { fontWeight: 600, color: (RVC[t.review_state] || [])[1] || "#8a8f98" } },
-                      ((RVC[t.review_state] || [t.review_state])[0] || t.review_state) + " · 提交：" + (t.submitted_by || "-") + (t.submitted_at ? " · " + fmtAt(t.submitted_at) : "")
+                      ((RVC[t.review_state] || [t.review_state])[0] || t.review_state) + tr("task.submittedBy") + (t.submitted_by || "-") + (t.submitted_at ? " · " + fmtAt(t.submitted_at) : "")
                     ),
-                    t.submit_note ? h("div", null, "说明：" + t.submit_note) : null,
+                    t.submit_note ? h("div", null, tr("task.note") + t.submit_note) : null,
                     t.commit_refs ? h("div", { style: { whiteSpace: "pre-wrap", fontFamily: "monospace", fontSize: 11, opacity: 0.85 } }, t.commit_refs) : null,
-                    t.session_refs ? h("div", { style: { opacity: 0.85 } }, "关联会话：" + shortSessionRefs(t.session_refs)) : null,
+                    t.session_refs ? h("div", { style: { opacity: 0.85 } }, tr("task.linkedSess") + shortSessionRefs(t.session_refs)) : null,
                     t.review_note
-                      ? h("div", null, (t.review_state === "rejected" ? "打回理由：" : "评审意见：") + t.review_note + (t.reviewed_by ? "（" + t.reviewed_by + "）" : ""))
+                      ? h("div", null, (t.review_state === "rejected" ? tr("task.returnReason") : tr("task.reviewNote")) + t.review_note + (t.reviewed_by ? "(" + t.reviewed_by + ")" : ""))
                       : null
                   )
                 : null,
@@ -3049,13 +3721,13 @@ window.__ModuleLoader__.load({
                 ? h(
                     "div",
                     { style: { marginTop: 4, padding: "8px", borderRadius: 6, background: "rgba(127,127,127,0.08)", display: "flex", flexDirection: "column", gap: 6, fontSize: 12 } },
-                    h("div", { style: { fontWeight: 600 } }, "提交验收"),
-                    h("textarea", { ref: cRef, placeholder: "提交内容（每行一条：commit 链接 / sha + 说明；可空）", style: Object.assign({}, field, { minHeight: 52, fontFamily: "inherit", resize: "vertical" }) }),
-                    h("input", { ref: snRef, placeholder: "提交说明（一句话，可空）", style: field }),
+                    h("div", { style: { fontWeight: 600 } }, tr("task.submitReview")),
+                    h("textarea", { ref: cRef, placeholder: tr("task.phCommits"), style: Object.assign({}, field, { minHeight: 52, fontFamily: "inherit", resize: "vertical" }) }),
+                    h("input", { ref: snRef, placeholder: tr("task.phSubmitNote"), style: field }),
                     h(
                       "select",
                       { ref: sesRef, style: field },
-                      [h("option", { key: "none", value: "" }, sess.phase === "loading" ? "读取会话中…" : sessOpts.length ? "关联会话（可选）" : "关联会话（暂无可选）")].concat(
+                      [h("option", { key: "none", value: "" }, sess.phase === "loading" ? tr("task.loadingSess") : sessOpts.length ? tr("task.pickSess") : tr("task.noSess"))].concat(
                         sessOpts.map(function (s) {
                           return h("option", { key: s.sessionId, value: s.sessionId }, sessLabel(s));
                         })
@@ -3078,14 +3750,14 @@ window.__ModuleLoader__.load({
                                 commits: cRef.current ? cRef.current.value : "",
                                 session_id: sesRef.current ? sesRef.current.value : "",
                               },
-                              "已提交，等待验收",
+                              tr("task.submittedToast"),
                               false
                             );
                           },
                         },
-                        "提交"
+                        tr("task.submitBtn")
                       ),
-                      h("button", { style: btnSmall, onClick: function () { setSubmitFor(0); } }, "取消")
+                      h("button", { style: btnSmall, onClick: function () { setSubmitFor(0); } }, tr("common.cancel"))
                     )
                   )
                 : null,
@@ -3098,7 +3770,7 @@ window.__ModuleLoader__.load({
         h(
           "div",
           { key: "rows", style: { display: "flex", flexDirection: "column" } },
-          rows.length ? rows : h("div", { style: muted }, filter === "all" ? "暂无任务，先在上面建一条。" : "此筛选下暂无任务")
+          rows.length ? rows : h("div", { style: muted }, filter === "all" ? tr("task.empty") : tr("task.emptyFilter"))
         )
       );
       if (msg.kind) {
@@ -3109,9 +3781,14 @@ window.__ModuleLoader__.load({
       return h("div", { style: Object.assign({}, wrap, { maxWidth: 640 }) }, kids);
     }
 
-    var inject = ["slots"];
+    var inject = ["slots", "locale"];
 
     function apply(ctx) {
+      DESK_CTX = ctx;
+      try {
+        ctx.effect(function () { return ctx.locale.register(DESK_NS, { zh: LOC_ZH, en: LOC_EN }); });
+        DESK_T = ctx.locale.bind(DESK_NS);
+      } catch (e) { /* 无语言服务时退回中文 */ }
       ctx.slots.inject("settings.section", function () {
         return ctx.slots.register(
           {
@@ -3119,7 +3796,7 @@ window.__ModuleLoader__.load({
             id: "desk-usage",
             order: 50,
             label: function () {
-              return "工作台用量";
+              return tr("sec.usage");
             },
           },
           DeskUsageSection
@@ -3132,7 +3809,7 @@ window.__ModuleLoader__.load({
             id: "desk-sessions",
             order: 58,
             label: function () {
-              return "会话管理";
+              return tr("sec.sessions");
             },
           },
           SessionsMgrSection
@@ -3145,7 +3822,7 @@ window.__ModuleLoader__.load({
             id: "desk-kb",
             order: 60,
             label: function () {
-              return "知识库";
+              return tr("sec.kb");
             },
           },
           KbSection
@@ -3158,7 +3835,7 @@ window.__ModuleLoader__.load({
             id: "desk-drive",
             order: 70,
             label: function () {
-              return "公司盘";
+              return tr("sec.drive");
             },
           },
           DriveSection
@@ -3171,7 +3848,7 @@ window.__ModuleLoader__.load({
             id: "desk-admin",
             order: 80,
             label: function () {
-              return "成员管理";
+              return tr("sec.members");
             },
           },
           AdminSection
@@ -3184,7 +3861,7 @@ window.__ModuleLoader__.load({
             id: "desk-notify",
             order: 90,
             label: function () {
-              return "通知";
+              return tr("sec.notify");
             },
           },
           NotifySection
@@ -3197,7 +3874,7 @@ window.__ModuleLoader__.load({
             id: "desk-announce",
             order: 90,
             label: function () {
-              return "公告";
+              return tr("ann.tab");
             },
           },
           AnnounceBoard
@@ -3210,7 +3887,7 @@ window.__ModuleLoader__.load({
             id: "desk-assistants",
             order: 86,
             label: function () {
-              return "助理";
+              return tr("asst.tab");
             },
           },
           AssistantsPanel
@@ -3223,7 +3900,7 @@ window.__ModuleLoader__.load({
             id: "desk-skills-conn",
             order: 87,
             label: function () {
-              return "技能·连接器";
+              return tr("skl.tab");
             },
           },
           SkillsConnPanel
@@ -3236,7 +3913,7 @@ window.__ModuleLoader__.load({
             id: "desk-auto",
             order: 88,
             label: function () {
-              return "自动化";
+              return tr("auto.tab");
             },
           },
           AutomationPanel
@@ -3249,7 +3926,7 @@ window.__ModuleLoader__.load({
             id: "desk-ops",
             order: 100,
             label: function () {
-              return "运维";
+              return tr("sec.ops");
             },
           },
           OpsSection
@@ -3262,7 +3939,7 @@ window.__ModuleLoader__.load({
             id: "desk-tasks",
             order: 55,
             label: function () {
-              return "任务板";
+              return tr("sec.tasks");
             },
           },
           TaskBoard
