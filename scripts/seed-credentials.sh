@@ -18,7 +18,11 @@ fi
 
 for u in "${users[@]}"; do
   key_file="$HOME/.desk/agents/$u.key"
-  home="$HOME/desk-test/$u"
+  # 实例家目录：优先从 systemd 单元推导（ExecStart 末尾的 desk-test/uN），兜底 desk-test/<用户名>
+  home="$(systemctl show "desk-agent-$u" -p ExecStart --value 2>/dev/null | tr " " "\n" | grep -E "/desk-test/[A-Za-z0-9_-]+$" | tail -1)"
+  if [ -z "$home" ] || [ ! -d "$home" ]; then
+    home="$HOME/desk-test/$u"
+  fi
   doc="$home/.credentials.yaml"
   if [ ! -f "$key_file" ]; then
     echo "[skip] $u：无钥匙文件 $key_file"
@@ -31,12 +35,12 @@ for u in "${users[@]}"; do
     cur="$(grep '^DEEPSEEK_API_KEY:' "$doc" | head -1 | sed 's/^DEEPSEEK_API_KEY:[[:space:]]*//')"
     if [ "$cur" = "$key" ]; then
       chmod 600 "$doc"
-      echo "[ok] $u：已同值，跳过"
+      echo "[ok] $u：已同值，跳过（$doc）"
       continue
     fi
     if [ "$force" != "1" ]; then
       chmod 600 "$doc"
-      echo "[keep] $u：已存在其他值（可能为用户在 Models 页自定义），保留不动；--force 可强制同步"
+      echo "[keep] $u：已存在其他值（可能为用户在 Models 页自定义），保留不动；--force 可强制同步（$doc）"
       continue
     fi
     tmp="$(mktemp)"
@@ -52,6 +56,6 @@ for u in "${users[@]}"; do
   else
     printf '# DSH-ANYWORK 团队网关虚拟钥匙（seed-credentials.sh 维护；Models 设置页可改，改动即时生效）\nDEEPSEEK_API_KEY: %s\n' "$key" > "$doc"
     chmod 600 "$doc"
-    echo "[done] $u：新建 $(wc -c < "$doc") bytes"
+    echo "[done] $u：新建 $doc（$(wc -c < "$doc") bytes）"
   fi
 done
