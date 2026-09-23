@@ -24,3 +24,6 @@
 - **删除成员不回收实例**：成员管理里删除用户只清「用户行 + 钥匙行 + 登录会话」，其 dsh 实例/工作区照跑——实例还活着但没有有效虚拟钥匙，模型请求会 401（`invalid or missing api key`，实测于 alice/bob 演示账号被删后的 bob 实例）。恢复法：从 `~/desk-backups/` 当日快照外科回插 `users` + `api_keys` 两行（`INSERT OR REPLACE`，保留现库其它数据）。后续可选：删除成员时联动停实例并在界面提示。
 - **Codex 额度与依赖**：`workflow` / `subagent_codex` 的消耗走用户自己的 Codex 账号额度（不进工作台账本）；codex provider 不支持 `outputSchema`（结构化输出），约定纯文本返回；实例依赖 `~/.codex/auth.json` 有效登录态。
 
+## 2026-09-23 新增
+
+- **容器版：「新建成员」只建号、不配实例**——成员管理界面建号后该成员可登录，但工作台显示「你的工作台还没有分配实例」；且界面建号不落 `~/.desk/agents/<u>.key` 虚拟钥匙文件（实例会因缺钥匙拒绝启动，5 秒循环失败）。当前处置流程：① `.env` 置 `ANYWORK_MEMBERS=<u1,u2>` ② 补铸钥匙（`newVirtualKey()`+`hashToken()` 插 `api_keys` + 写 `/data/.desk/agents/<u>.key` 0600）③ `docker compose up -d --force-recreate`（bootstrap 幂等补配：ensure_port / 家目录 / 软链 / settings / 四插件 / soul）④ 验证：instances.tsv 行数 / 每端口一进程 / 端口 401。实测 byc→3302、cth→3303（2026-09-23）。后续可选：member-create 自动建实例（ensure_port + 落钥匙 + supervisor 动态拾取新实例）。
