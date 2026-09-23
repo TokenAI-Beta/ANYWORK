@@ -763,6 +763,11 @@ window.__ModuleLoader__.load({
   body:has(.ddp) [class*="sidebarCol"] { backdrop-filter: none !important; -webkit-backdrop-filter: none !important; }
   /* 面板打开时隐藏右下角“用量”悬浮钮，避免压在面板上 */
   body:has(.ddp) #desk-usage-fab, body:has(.ddp) #desk-usage-panel { display: none !important; }
+  /* 关闭操作强化：✕ 更醒目、整屏轻压暗（点空白处关闭，见注入脚本） */
+  .ddp .hd { position:relative; z-index:2; }
+  .ddp .hd .x { width:44px; height:44px; font-size:19px; opacity:1; background:rgba(127,127,127,.16); border-radius:12px; touch-action:manipulation; }
+  .ddp .hd .x:active { background:rgba(127,127,127,.32); }
+  .ddp::after { content:""; position:fixed; left:0; top:0; right:0; bottom:0; background:rgba(6,10,14,.34); pointer-events:none; z-index:-1; }
 }
 `;
     (function () {
@@ -774,6 +779,28 @@ window.__ModuleLoader__.load({
           (document.head || document.documentElement).appendChild(st);
         }
       } catch (e) { /* 注入失败不影响功能 */ }
+    })();
+
+    (function () {
+      // 移动端：点面板外任意处 = 关闭（底部抽屉的标准手势；桌面端不启用，避免影响原有交互）
+      try {
+        document.addEventListener("click", function (ev) {
+          try {
+            if (!window.matchMedia || !window.matchMedia("(max-width:820px)").matches) return;
+            var t = ev.target;
+            if (!t || !t.closest) return;
+            if (t.closest(".ddp") || t.closest(".ddb")) return;
+            var all = document.querySelectorAll(".ddp"), vis = null, i, r;
+            for (i = 0; i < all.length; i++) {
+              r = all[i].getBoundingClientRect();
+              if (r.width > 0 && r.height > 0) vis = all[i];
+            }
+            if (!vis) return;
+            var x = vis.querySelector(".hd .x");
+            if (x) { x.click(); ev.stopPropagation(); ev.preventDefault(); }
+          } catch (e) { /* 忽略 */ }
+        }, true);
+      } catch (e) { /* 忽略 */ }
     })();
 
     var muted = { color: "var(--dsw-alias-label-tertiary, #65676b)" };
