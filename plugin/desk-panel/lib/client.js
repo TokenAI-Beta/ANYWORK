@@ -733,6 +733,8 @@ window.__ModuleLoader__.load({
 /* 侧栏底部动作区：壳默认为「横排不换行」，多个带文字入口会溢出被挤掉 —— 强制纵向堆叠成菜单 */
 [class*="footerActions"] { flex-direction: column !important; align-items: stretch !important; gap: 2px !important; }
 [class*="footerActions"] > div { width: 100%; }
+/* 面板打开时临时移除侧边栏 backdrop-filter：它给 fixed 面板造成「包含块 + 层叠」双重陷阱（宽度被锁 + 被内容层盖住） */
+body:has(.ddp) [class*="sidebarCol"] { backdrop-filter: none !important; -webkit-backdrop-filter: none !important; }
 
 /* ── 移动端（≤820px）：四个侧栏面板改为「底部抽屉」形态（触控尺寸 ≥44px、字号 +1、安全区适配） ── */
 @media (max-width: 820px) {
@@ -759,8 +761,6 @@ window.__ModuleLoader__.load({
   .ddp .ft { font-size:12.5px; }
   .ddp .msg, .ddp .empty { font-size:13px; }
   .ddp .code { font-size:12.5px; }
-  /* 面板打开时临时移除侧边栏的 backdrop-filter：它是 fixed 定位的包含块，会把面板锁成 54px 宽的侧栏盒 */
-  body:has(.ddp) [class*="sidebarCol"] { backdrop-filter: none !important; -webkit-backdrop-filter: none !important; }
   /* 面板打开时隐藏右下角“用量”悬浮钮，避免压在面板上 */
   body:has(.ddp) #desk-usage-fab, body:has(.ddp) #desk-usage-panel { display: none !important; }
   /* 关闭操作强化：✕ 更醒目、整屏轻压暗（点空白处关闭，见注入脚本） */
