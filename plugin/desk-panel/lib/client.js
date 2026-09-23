@@ -733,6 +733,33 @@ window.__ModuleLoader__.load({
 /* 侧栏底部动作区：壳默认为「横排不换行」，多个带文字入口会溢出被挤掉 —— 强制纵向堆叠成菜单 */
 [class*="footerActions"] { flex-direction: column !important; align-items: stretch !important; gap: 2px !important; }
 [class*="footerActions"] > div { width: 100%; }
+
+/* ── 移动端（≤820px）：四个侧栏面板改为「底部抽屉」形态（触控尺寸 ≥44px、字号 +1、安全区适配） ── */
+@media (max-width: 820px) {
+  .ddp { left:0; right:0; bottom:0; width:100%; max-width:none; max-height:86vh; border-radius:18px 18px 0 0; border-left:0; border-right:0; border-bottom:0; box-shadow:0 -14px 44px rgba(16,24,40,.28); }
+  .ddp::before { content:""; display:block; width:40px; height:4px; border-radius:2px; background:rgba(127,127,127,.35); margin:8px auto 0; flex:0 0 auto; }
+  .ddp .hd { padding:11px 16px 13px; }
+  .ddp .hd .ico { width:38px; height:38px; border-radius:11px; font-size:19px; }
+  .ddp .hd .t1 { font-size:16px; }
+  .ddp .hd .t2 { font-size:12px; }
+  .ddp .hd .x { width:42px; height:42px; border-radius:12px; font-size:17px; opacity:.85; }
+  .ddp .bd { padding:6px 16px calc(18px + env(safe-area-inset-bottom)); -webkit-overflow-scrolling:touch; overscroll-behavior:contain; }
+  .ddp .lb { font-size:12px; margin:14px 0 4px; }
+  .ddp .it { padding:12px 10px; }
+  .ddp .it .ico2 { width:30px; height:30px; border-radius:9px; font-size:15px; }
+  .ddp .t { font-size:14.5px; }
+  .ddp .d { font-size:13px; }
+  .ddp .bd2 { font-size:13.5px; }
+  .ddp .tabs .tb { padding:10px 8px; font-size:13.5px; }
+  .ddp .inp { height:44px; font-size:15px; }
+  .ddp .inp.ta { min-height:88px; }
+  .ddp .btn { height:auto; min-height:44px; padding:0 18px; font-size:14.5px; }
+  .ddp .btn.gh { min-height:44px; }
+  .ddp .mini { min-height:36px; font-size:12.5px; padding:0 12px; border-radius:9px; }
+  .ddp .ft { font-size:12.5px; }
+  .ddp .msg, .ddp .empty { font-size:13px; }
+  .ddp .code { font-size:12.5px; }
+}
 `;
     (function () {
       try {
