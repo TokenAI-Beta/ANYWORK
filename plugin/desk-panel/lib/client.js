@@ -735,6 +735,7 @@ window.__ModuleLoader__.load({
 [class*="footerActions"] > div { width: 100%; }
 /* 面板打开时临时移除侧边栏 backdrop-filter：它给 fixed 面板造成「包含块 + 层叠」双重陷阱（宽度被锁 + 被内容层盖住） */
 body:has(.ddp) [class*="sidebarCol"] { backdrop-filter: none !important; -webkit-backdrop-filter: none !important; }
+body.desk-panel-open [class*="sidebarCol"] { backdrop-filter: none !important; -webkit-backdrop-filter: none !important; }
 
 /* ── 移动端（≤820px）：四个侧栏面板改为「底部抽屉」形态（触控尺寸 ≥44px、字号 +1、安全区适配） ── */
 @media (max-width: 820px) {
@@ -763,6 +764,7 @@ body:has(.ddp) [class*="sidebarCol"] { backdrop-filter: none !important; -webkit
   .ddp .code { font-size:12.5px; }
   /* 面板打开时隐藏右下角“用量”悬浮钮，避免压在面板上 */
   body:has(.ddp) #desk-usage-fab, body:has(.ddp) #desk-usage-panel { display: none !important; }
+  body.desk-panel-open #desk-usage-fab, body.desk-panel-open #desk-usage-panel { display: none !important; }
   /* 关闭操作强化：✕ 更醒目、整屏轻压暗（点空白处关闭，见注入脚本） */
   .ddp .hd { position:relative; z-index:2; }
   .ddp .hd .x { width:44px; height:44px; font-size:19px; opacity:1; background:rgba(127,127,127,.16); border-radius:12px; touch-action:manipulation; }
@@ -801,6 +803,25 @@ body:has(.ddp) [class*="sidebarCol"] { backdrop-filter: none !important; -webkit
           } catch (e) { /* 忽略 */ }
         }, true);
       } catch (e) { /* 忽略 */ }
+    })();
+
+    (function () {
+      // 兜底（不依赖 :has 的浏览器）：面板打开时给 body 挂 desk-panel-open——
+      // 老内核里侧栏 backdrop-filter 会把 fixed 面板的包含块锁成窄条（面板被挤成竖条）
+      try {
+        var apply = function () {
+          try {
+            var has = document.querySelector(".ddp") !== null;
+            if (has !== document.body.classList.contains("desk-panel-open")) {
+              document.body.classList.toggle("desk-panel-open", has);
+            }
+          } catch (e) {}
+        };
+        var start = function () {
+          try { new MutationObserver(apply).observe(document.body, { childList: true, subtree: true }); apply(); } catch (e) {}
+        };
+        if (document.body) start(); else document.addEventListener("DOMContentLoaded", start);
+      } catch (e) {}
     })();
 
     var muted = { color: "var(--dsw-alias-label-tertiary, #65676b)" };
