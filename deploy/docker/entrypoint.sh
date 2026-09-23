@@ -4,7 +4,7 @@
 set -euo pipefail
 log() { echo "[anywork] $*"; }
 
-: "${ANYWORK_HOST:?请设置 ANYWORK_HOST（你访问工作台用的地址，如 192.168.1.50:8080）}"
+: "${ANYWORK_HOST:?请设置 ANYWORK_HOST（你访问工作台用的地址，如 192.168.1.50:8080）。本服务必须用 Docker Compose 启动（仓库文件夹里双击 deploy.bat），不要在 Docker Desktop 里直接运行镜像}"
 : "${DEEPSEEK_API_KEY:?请设置 DEEPSEEK_API_KEY（DeepSeek 真 key，只留在服务器上）}"
 
 export HOME="${HOME:-/data}"
