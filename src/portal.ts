@@ -366,7 +366,7 @@ const DESK_MOBILE_CSS = `
   [class*="CtUWPa_"] [contenteditable="true"] { font-size: 16px !important; }
   [class*="sidebarCol"] button { min-width: 42px !important; min-height: 42px !important; }
   body:has([class*="CtUWPa_root"]:not([class*="hero"])) #desk-usage-fab { bottom: calc(env(safe-area-inset-bottom, 0px) + 132px) !important; }
-  body:has([contenteditable="true"]:focus) #desk-usage-fab { display: none !important; }
+  body:has([class*="CtUWPa_root"]:not([class*="hero"])):has([contenteditable="true"]:focus) #desk-usage-fab { display: none !important; }
 }
 `
 
