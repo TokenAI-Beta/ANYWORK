@@ -353,11 +353,18 @@ const DESK_MOBILE_CSS = `
   [class*="LVqHyW_close"] { width: 40px !important; height: 40px !important; margin-left: 8px !important; }
   #desk-usage-fab { right: 12px !important; bottom: 12px !important; padding: 9px 13px !important; font-size: 12.5px !important; }
   body:has([class*="LVqHyW_overlay"]) #desk-usage-fab { display: none !important; }
+  /* 侧边栏抽屉化：展开时覆盖在内容上（不再压扁主内容）；点面板外收起（脚本见 usageWidgetTag） */
+  [data-dsh-frame]:not([data-sidebar-collapsed="true"]) { grid-template-columns: 0px minmax(0px, 1fr) 0px !important; }
+  [data-dsh-frame]:not([data-sidebar-collapsed="true"]) [class*="centerCol"] { grid-column: 2 !important; width: 100% !important; }
+  [data-dsh-frame]:not([data-sidebar-collapsed="true"]) [class*="sidebarCol"] { position: fixed !important; left: 12px !important; top: 12px !important; bottom: 12px !important; margin: 0 !important; box-sizing: border-box !important; width: min(82vw, 320px) !important; height: auto !important; z-index: 70 !important; border-radius: 14px !important; box-shadow: 0 18px 60px rgba(8,12,20,.42) !important; }
+  [data-dsh-frame]:not([data-sidebar-collapsed="true"]) [class*="handle"] { display: none !important; }
+  [data-dsh-frame]:not([data-sidebar-collapsed="true"]) [class*="overlayLayer"]::before { content:""; position: fixed; inset: 0; background: rgba(6,10,14,.32); pointer-events: none; z-index: 65; }
+  [data-dsh-frame]:not([data-sidebar-collapsed="true"]) #desk-usage-fab { display: none !important; }
 }
 `
 
 const usageWidgetTag = (lang: string): string =>
-  `<script>window.__DSH_HOST_PERSISTENCE__=true;window.__DESK_LANG=${lang === 'en' ? "'en'" : "'zh'"}</script><link rel="manifest" href="/portal.webmanifest"><link rel="icon" type="image/svg+xml" href="/portal-icon.svg"><meta name="theme-color" content="#1c1e21"><link rel="stylesheet" href="/portal/static/desk-mobile.css"><script src="/portal/static/desk-usage.js" defer></script>`
+  `<script>window.__DSH_HOST_PERSISTENCE__=true;window.__DESK_LANG=${lang === 'en' ? "'en'" : "'zh'"};(function(){try{document.addEventListener('click',function(ev){try{if(!window.matchMedia||!window.matchMedia('(max-width:820px)').matches)return;var t=ev.target;if(!t||!t.closest)return;if(t.closest('[class*="sidebarCol"]'))return;var f=document.querySelector('[data-dsh-frame]');if(!f||f.getAttribute('data-sidebar-collapsed')==='true')return;var s=document.querySelector('[class*="sidebarCol"]');if(!s)return;var bs=s.querySelectorAll('button[aria-label]');for(var i=0;i<bs.length;i++){var L=bs[i].getAttribute('aria-label')||'';if((L.indexOf('\u6536\u8d77')>=0||/collapse/i.test(L))&&!(L.indexOf('\u53f3')>=0||/right/i.test(L))){bs[i].click();ev.stopPropagation();ev.preventDefault();break;}}}catch(e){}},true);}catch(e){}})();</script><link rel="manifest" href="/portal.webmanifest"><link rel="icon" type="image/svg+xml" href="/portal-icon.svg"><meta name="theme-color" content="#1c1e21"><link rel="stylesheet" href="/portal/static/desk-mobile.css"><script src="/portal/static/desk-usage.js" defer></script>`
 
 /** PWA / 桌面端图标（SVG；浏览器「安装应用」与标签页图标共用） */
 const PORTAL_ICON_SVG = [
