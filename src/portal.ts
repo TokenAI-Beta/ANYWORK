@@ -315,8 +315,34 @@ function proxyHttp(req: IncomingMessage, res: ServerResponse, port: number, auth
   req.pipe(upstream)
 }
 
+/** 移动端适配样式（≤820px 生效；由 usageWidgetTag 注入到所有工作台页面；不改 dsh 源码） */
+const DESK_MOBILE_CSS = `
+@media (max-width: 820px) {
+  body [class*="LVqHyW_overlay"] { padding: 0 !important; margin: 0 !important; }
+  body [class*="LVqHyW_panel"] {
+    width: 100vw !important; max-width: 100vw !important; height: 100% !important;
+    max-height: 100dvh !important; margin: 0 !important; border-radius: 0 !important;
+    flex-direction: column !important;
+  }
+  [class*="LVqHyW_nav"] { width: 100% !important; flex: none !important; }
+  [class*="LVqHyW_navTitle"] { display: none !important; }
+  [class*="LVqHyW_navList"] {
+    width: 100% !important; flex-direction: row !important; overflow-x: auto !important;
+    gap: 6px !important; padding: 10px 12px !important; scrollbar-width: none;
+  }
+  [class*="LVqHyW_navList"]::-webkit-scrollbar { display: none; }
+  [class*="LVqHyW_navCell"] {
+    width: auto !important; flex: 0 0 auto !important; min-height: 42px !important;
+    padding: 0 14px !important; white-space: nowrap !important; font-size: 13px !important;
+  }
+  [class*="LVqHyW_content"] { width: 100% !important; flex: 1 !important; min-width: 0 !important; }
+  [class*="LVqHyW_options"] { padding: 12px 14px 24px !important; }
+  [class*="LVqHyW_close"] { width: 40px !important; height: 40px !important; }
+}
+`
+
 const usageWidgetTag = (lang: string): string =>
-  `<script>window.__DSH_HOST_PERSISTENCE__=true;window.__DESK_LANG=${lang === 'en' ? "'en'" : "'zh'"}</script><link rel="manifest" href="/portal.webmanifest"><link rel="icon" type="image/svg+xml" href="/portal-icon.svg"><meta name="theme-color" content="#1c1e21"><script src="/portal/static/desk-usage.js" defer></script>`
+  `<script>window.__DSH_HOST_PERSISTENCE__=true;window.__DESK_LANG=${lang === 'en' ? "'en'" : "'zh'"}</script><link rel="manifest" href="/portal.webmanifest"><link rel="icon" type="image/svg+xml" href="/portal-icon.svg"><meta name="theme-color" content="#1c1e21"><link rel="stylesheet" href="/portal/static/desk-mobile.css"><script src="/portal/static/desk-usage.js" defer></script>`
 
 /** PWA / 桌面端图标（SVG；浏览器「安装应用」与标签页图标共用） */
 const PORTAL_ICON_SVG = [
@@ -504,6 +530,10 @@ export function startPortal(opts: PortalOptions) {
       if (req.method === 'GET' && path === '/portal/static/desk-usage.js') {
         res.writeHead(200, { 'content-type': 'application/javascript; charset=utf-8' })
         return res.end(DESK_USAGE_JS)
+      }
+      if (req.method === 'GET' && path === '/portal/static/desk-mobile.css') {
+        res.writeHead(200, { 'content-type': 'text/css; charset=utf-8', 'cache-control': 'no-cache' })
+        return res.end(DESK_MOBILE_CSS)
       }
       if (req.method === 'GET' && path === '/portal/api/usage') {
         if (!user) {
