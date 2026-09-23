@@ -334,6 +334,11 @@ const DESK_MOBILE_CSS = `
   [class*="LVqHyW_navCell"] {
     width: auto !important; flex: 0 0 auto !important; min-height: 42px !important;
     padding: 0 14px !important; white-space: nowrap !important; font-size: 13px !important;
+    gap: 6px !important;
+  }
+  [class*="LVqHyW_navCell"] svg { width: 16px !important; height: 16px !important; flex: 0 0 auto !important; }
+  [class*="LVqHyW_navCell"] [class*="LVqHyW_navLabel"] {
+    width: auto !important; flex: 0 0 auto !important; white-space: nowrap !important;
   }
   [class*="LVqHyW_content"] {
     width: 100% !important; flex: 1 1 0 !important; min-width: 0 !important;
