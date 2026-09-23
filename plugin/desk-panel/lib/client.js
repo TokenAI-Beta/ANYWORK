@@ -759,6 +759,10 @@ window.__ModuleLoader__.load({
   .ddp .ft { font-size:12.5px; }
   .ddp .msg, .ddp .empty { font-size:13px; }
   .ddp .code { font-size:12.5px; }
+  /* 面板打开时临时移除侧边栏的 backdrop-filter：它是 fixed 定位的包含块，会把面板锁成 54px 宽的侧栏盒 */
+  body:has(.ddp) [class*="sidebarCol"] { backdrop-filter: none !important; -webkit-backdrop-filter: none !important; }
+  /* 面板打开时隐藏右下角“用量”悬浮钮，避免压在面板上 */
+  body:has(.ddp) #desk-usage-fab, body:has(.ddp) #desk-usage-panel { display: none !important; }
 }
 `;
     (function () {
