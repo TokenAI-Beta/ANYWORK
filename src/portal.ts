@@ -360,6 +360,13 @@ const DESK_MOBILE_CSS = `
   [data-dsh-frame]:not([data-sidebar-collapsed="true"]) [class*="handle"] { display: none !important; }
   [data-dsh-frame]:not([data-sidebar-collapsed="true"]) [class*="overlayLayer"]::before { content:""; position: fixed; inset: 0; background: rgba(6,10,14,.32); pointer-events: none; z-index: 65; }
   [data-dsh-frame]:not([data-sidebar-collapsed="true"]) #desk-usage-fab { display: none !important; }
+  /* 主界面微调（第 4 项）：触控尺寸 / 输入字号 / 用量钮防遮挡 */
+  [class*="CtUWPa_row"] button { min-width: 38px !important; min-height: 38px !important; }
+  button[aria-label="发送消息"], button[aria-label="send message" i] { min-width: 44px !important; min-height: 44px !important; }
+  [class*="CtUWPa_"] [contenteditable="true"] { font-size: 16px !important; }
+  [class*="sidebarCol"] button { min-width: 42px !important; min-height: 42px !important; }
+  body:has([class*="CtUWPa_root"]:not([class*="hero"])) #desk-usage-fab { bottom: calc(env(safe-area-inset-bottom, 0px) + 132px) !important; }
+  body:has([contenteditable="true"]:focus) #desk-usage-fab { display: none !important; }
 }
 `
 
