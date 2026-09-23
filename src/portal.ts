@@ -335,9 +335,19 @@ const DESK_MOBILE_CSS = `
     width: auto !important; flex: 0 0 auto !important; min-height: 42px !important;
     padding: 0 14px !important; white-space: nowrap !important; font-size: 13px !important;
   }
-  [class*="LVqHyW_content"] { width: 100% !important; flex: 1 !important; min-width: 0 !important; }
-  [class*="LVqHyW_options"] { padding: 12px 14px 24px !important; }
-  [class*="LVqHyW_close"] { width: 40px !important; height: 40px !important; }
+  [class*="LVqHyW_content"] {
+    width: 100% !important; flex: 1 1 0 !important; min-width: 0 !important;
+    min-height: 0 !important; overflow: hidden !important;
+  }
+  [class*="LVqHyW_options"] {
+    padding: 12px 14px 24px !important; overflow-y: auto !important; min-height: 0 !important;
+    overscroll-behavior: contain; -webkit-overflow-scrolling: touch;
+  }
+  [class*="LVqHyW_header"] { padding: 4px 8px 4px 14px !important; }
+  [class*="LVqHyW_header"] [class*="LVqHyW_actions"] { display: none !important; }
+  [class*="LVqHyW_close"] { width: 40px !important; height: 40px !important; margin-left: 8px !important; }
+  #desk-usage-fab { right: 12px !important; bottom: 12px !important; padding: 9px 13px !important; font-size: 12.5px !important; }
+  body:has([class*="LVqHyW_overlay"]) #desk-usage-fab { display: none !important; }
 }
 `
 
