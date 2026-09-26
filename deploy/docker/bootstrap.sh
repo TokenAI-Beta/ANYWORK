@@ -131,6 +131,11 @@ while IFS=$'\t' read -r u p h; do
   install_plugin "$u" "dsh-better-sidebar@latest" "dsh-better-sidebar"
 done < "$home/.desk/run/instances.tsv"
 
+# 本脚本已完成配置的成员：置就绪标记（运行中新增成员由监督器配置）
+while IFS=$'\t' read -r _u _p _h; do
+  [ -n "${_u:-}" ] && touch "$home/.desk/run/$_u.prov"
+done < "$home/.desk/run/instances.tsv"
+
 # ── 5b) aqua fork 适配：settings.plugin.item 补 key（0.1.5 keyed slot；幂等） ──
 python3 - <<'AQUA_PATCH' || log "警告：aqua key 补丁未执行"
 import glob, os

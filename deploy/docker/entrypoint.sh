@@ -62,24 +62,57 @@ trap stop TERM INT
   done
 ) & PIDS+=("$!")
 
-# 成员实例循环（清单由 bootstrap 生成：成员<TAB>端口<TAB>家目录）
-# 实例被会话删除等功能杀掉后，这里 5 秒自拉（与 systemd RestartSec=5 同语义）
-INST="$HOME/.desk/run/instances.tsv"
-if [ -s "$INST" ]; then
-  while IFS=$'\t' read -r m_user m_port m_home; do
-    [ -n "${m_user:-}" ] || continue
-    (
-      while :; do
-        bash /opt/anywork/scripts/agent-run.sh "$m_user" "$m_port" "$m_home" &
-        child=$!
-        echo "$child" > "$HOME/.desk/run/$m_user.pid"
-        wait "$child" || true
-        log "实例 $m_user 退出，5 秒后自动重启"
-        sleep 5
-      done
-    ) & PIDS+=("$!")
-  done < "$INST"
-fi
+# 成员实例动态监督（2026-09-26）：每 15 秒对账一次——
+#   新成员入列后先自动配置（member-provision.sh），配置完成即拉起实例；
+#   已在跑的成员保持“5 秒自拉”语义（会话删除等杀进程后会自愈）。
+declare -A SUP=()
+supervise() {
+  while :; do
+    # 期望清单：从数据库重算（新成员建号即入列）
+    if node --input-type=module -e "
+import { openDb } from '/opt/anywork/src/db.ts'
+const db = openDb()
+for (const r of db.prepare('SELECT username, agent_port FROM users WHERE agent_port IS NOT NULL ORDER BY id').all()) {
+  console.log(r.username + '\t' + r.agent_port + '\t' + process.env.HOME + '/desk-test/' + r.username)
+}
+" > "$HOME/.desk/run/instances.tsv.new" 2>/dev/null; then
+      mv "$HOME/.desk/run/instances.tsv.new" "$HOME/.desk/run/instances.tsv"
+    fi
+    local m_user m_port m_home
+    while IFS=$'\t' read -r m_user m_port m_home; do
+      [ -n "${m_user:-}" ] || continue
+      if [ ! -f "$HOME/.desk/run/$m_user.prov" ]; then
+        # 未配置：异步配置（避免阻塞对账循环）；完成后置 .prov 标记
+        if [ ! -f "$HOME/.desk/run/$m_user.provisioning" ]; then
+          touch "$HOME/.desk/run/$m_user.provisioning"
+          log "检测到新成员 $m_user，开始自动配置…"
+          (
+            bash /opt/anywork/deploy/docker/member-provision.sh "$m_user" "$m_port" "$m_home" >> "$HOME/.desk/run/$m_user.provision.log" 2>&1 \
+              && touch "$HOME/.desk/run/$m_user.prov" && log "成员 $m_user 配置完成"
+            rm -f "$HOME/.desk/run/$m_user.provisioning"
+          ) &
+        fi
+        continue
+      fi
+      if [ -z "${SUP[$m_user]:-}" ]; then
+        (
+          while :; do
+            bash /opt/anywork/scripts/agent-run.sh "$m_user" "$m_port" "$m_home" &
+            child=$!
+            echo "$child" > "$HOME/.desk/run/$m_user.pid"
+            wait "$child" || true
+            log "实例 $m_user 退出，5 秒后自动重启"
+            sleep 5
+          done
+        ) & PIDS+=("$!")
+        SUP[$m_user]=1
+        log "实例 $m_user（端口 $m_port）已拉起"
+      fi
+    done < "$HOME/.desk/run/instances.tsv"
+    sleep 15
+  done
+}
+supervise &
 
 log "全部就绪：请浏览器打开 http://$ANYWORK_HOST/（容器内端口 8080）"
 wait

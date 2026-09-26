@@ -50,7 +50,7 @@ const pageLang = (req: IncomingMessage, username?: string): string => {
 }
 import { deleteSession, listUserSessions, userHome } from './session-mgr.ts'
 import { instanceAuthCookie, requestAuthorityOf } from './instance-auth.ts'
-import { createReadStream, existsSync, readFileSync, statSync, writeFileSync } from 'node:fs'
+import { createReadStream, existsSync, mkdirSync, readFileSync, statSync, writeFileSync } from 'node:fs'
 import { join } from 'node:path'
 import { homedir } from 'node:os'
 
@@ -1383,8 +1383,28 @@ export function startPortal(opts: PortalOptions) {
           const userId = Number(info.lastInsertRowid)
           const token = newVirtualKey()
           db.prepare(`INSERT INTO api_keys (user_id, token_hash, prefix, label) VALUES (?, ?, ?, 'default')`).run(userId, hashToken(token), token.slice(0, 16))
+          // 自动配实例（2026-09-26）：① 写钥匙文件（agent-run.sh 硬检查；明文仅此刻可得）
+          // ② 分配实例端口（容器内监督器据此自动完成插件配置并拉起该成员的工作台）
+          try {
+            const deskHome = process.env.HOME || '/data'
+            mkdirSync(join(deskHome, '.desk', 'agents'), { recursive: true })
+            writeFileSync(join(deskHome, '.desk', 'agents', `${username}.key`), token, { mode: 0o600 })
+          } catch {
+            /* 忽略：不阻塞建号 */
+          }
+          try {
+            const row = db.prepare(`SELECT agent_port FROM users WHERE username = ?`).get(username) as { agent_port: number | null } | undefined
+            if (!row?.agent_port) {
+              const used = new Set((db.prepare(`SELECT agent_port FROM users WHERE agent_port IS NOT NULL`).all() as { agent_port: number }[]).map((x) => x.agent_port))
+              let port = 3301
+              while (used.has(port)) port++
+              db.prepare(`UPDATE users SET agent_port = ? WHERE username = ?`).run(port, username)
+            }
+          } catch {
+            /* 忽略：不阻塞建号 */
+          }
           res.writeHead(200, { 'content-type': 'application/json; charset=utf-8' })
-          return res.end(JSON.stringify({ username, key: token }))
+          return res.end(JSON.stringify({ username, key: token, autoProvision: true }))
         }
         if (req.method === 'POST' && path === '/portal/api/admin/member-delete') {
           const body = await readJsonBody()
