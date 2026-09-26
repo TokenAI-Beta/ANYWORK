@@ -6,7 +6,7 @@
 # 日志：/data/.desk/run/creds-guard.log；由 entrypoint 后台启动，每 15 秒检查一次。
 set -u
 home="${HOME:-/data}"
-echo "[creds-guard] 已启动（每 15 秒检查一次）"
+echo "[creds-guard] $(date '+%F %T') 已启动（每 15 秒检查一次）"
 while :; do
   sleep 15
   for dir in "$home"/desk-test/*/; do
@@ -40,6 +40,6 @@ if s2 != s:
     open(p, 'w').write(s2)
     print('restored')
 PY
-    echo "[creds-guard] $u：检测到把真 key 填到个人卡片（仍指向团队网关，必然无效）→ 已自动还原为虚拟钥匙"
+    echo "[creds-guard] $(date '+%F %T') $u：检测到把真 key 填到个人卡片（仍指向团队网关，必然无效）→ 已自动还原为虚拟钥匙"
   done
 done
