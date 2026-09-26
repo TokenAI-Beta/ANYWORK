@@ -110,7 +110,8 @@ window.__ModuleLoader__.load({
       "admin.phBudget": "月预算 CNY（可留空 = 不限）",
       "admin.memberCreated": "成员已创建：",
       "admin.createMember": "创建成员",
-      "admin.newKeyShown": "新成员虚拟钥匙（只显示这一次，请立即复制交给 ",
+      "admin.newKeyShown": "新成员虚拟钥匙——",
+      "admin.newKeyTail": " 的工作台已自动配置，无需转交；仅存档需要时复制。",
       "admin.copied": "已复制到剪贴板",
       "common.copyFail": "复制失败，请手动选中复制",
       "common.copy": "复制",
@@ -432,7 +433,8 @@ window.__ModuleLoader__.load({
       "admin.phBudget": "Monthly budget CNY (leave empty = unlimited)",
       "admin.memberCreated": "Member created: ",
       "admin.createMember": "Create member",
-      "admin.newKeyShown": "New member virtual key (shown once — copy it now for ",
+      "admin.newKeyShown": "New member virtual key — ",
+      "admin.newKeyTail": "'s workspace is auto-configured; no need to share (copy only for archival).",
       "admin.copied": "Copied to clipboard",
       "common.copyFail": "Copy failed — select and copy manually",
       "common.copy": "Copy",
@@ -1853,7 +1855,7 @@ body.desk-panel-open [class*="sidebarCol"] { backdrop-filter: none !important; -
           h(
             "div",
             { key: "key", style: { border: "1px solid var(--dsw-alias-border-l2, #ccd0d5)", borderRadius: 8, padding: 10, display: "flex", flexDirection: "column", gap: 8 } },
-            h("div", null, tr("admin.newKeyShown") + keyInfo.username + "): "),
+            h("div", null, tr("admin.newKeyShown") + keyInfo.username + tr("admin.newKeyTail")),
             h("div", { style: codeBox }, keyInfo.key),
             h(
               "div",
