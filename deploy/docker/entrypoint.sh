@@ -142,6 +142,9 @@ process.exit(db.prepare('SELECT 1 FROM users WHERE username = ?').get('$m_rec') 
     sleep 15
   done
 }
+# 个人钥匙防呆：真 key 误填个人卡片（仍指向团队网关时必然 401）→ 自动还原虚拟钥匙
+bash /opt/anywork/deploy/docker/creds-guard.sh >> "$HOME/.desk/run/creds-guard.log" 2>&1 & PIDS+=("$!")
+
 # 启动时同步一次「通道模型 → 各实例 settings.yaml」（在实例拉起前执行，确保模型选择器清单最新）
 (cd /opt/anywork && node src/cli.ts sync-models) >> "$HOME/.desk/run/models-sync.log" 2>&1 || true
 
