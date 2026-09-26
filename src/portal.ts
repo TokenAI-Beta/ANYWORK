@@ -92,6 +92,51 @@ function readUpstreamInfo(): { upstream: string; keySet: boolean; keyMasked: str
   }
 }
 
+// —— 通道服务商预置（「加入通道」傻瓜化：选服务商 → 贴 Key → 勾模型；随版本更新；不含任何 key）——
+// 说明：model id 以各服务商官网为准；此处仅列常用款，表单支持手动补充；参考价不预置（避免过期误导）。
+const CHANNEL_PRESETS = [
+  {
+    id: 'qwen',
+    name: '阿里云百炼（通义千问）',
+    nameEn: 'Alibaba Bailian (Qwen)',
+    baseUrl: 'https://dashscope.aliyuncs.com/compatible-mode/v1',
+    models: ['qwen-plus', 'qwen-max', 'qwen-turbo', 'qwen3-max'],
+    keyUrl: 'https://bailian.console.aliyun.com/?apiKey=1',
+  },
+  {
+    id: 'kimi',
+    name: '月之暗面 Kimi',
+    nameEn: 'Moonshot Kimi',
+    baseUrl: 'https://api.moonshot.cn/v1',
+    models: ['kimi-k2-turbo-preview', 'kimi-k2-0905-preview', 'moonshot-v1-128k'],
+    keyUrl: 'https://platform.moonshot.cn/console/api-keys',
+  },
+  {
+    id: 'glm',
+    name: '智谱 GLM',
+    nameEn: 'Zhipu GLM',
+    baseUrl: 'https://open.bigmodel.cn/api/paas/v4',
+    models: ['glm-5.1', 'glm-4.7', 'glm-4.7-flash', 'glm-4.5'],
+    keyUrl: 'https://bigmodel.cn/usercenter/apikeys',
+  },
+  {
+    id: 'siliconflow',
+    name: '硅基流动',
+    nameEn: 'SiliconFlow',
+    baseUrl: 'https://api.siliconflow.cn/v1',
+    models: ['deepseek-ai/DeepSeek-V3', 'Qwen/Qwen3-235B-A22B'],
+    keyUrl: 'https://cloud.siliconflow.cn/account/ak',
+  },
+  {
+    id: 'openrouter',
+    name: 'OpenRouter',
+    nameEn: 'OpenRouter',
+    baseUrl: 'https://openrouter.ai/api/v1',
+    models: ['deepseek/deepseek-chat', 'qwen/qwen3-235b-a22b'],
+    keyUrl: 'https://openrouter.ai/settings/keys',
+  },
+]
+
 export interface PortalOptions {
   db: DatabaseSync
   port: number
@@ -1599,6 +1644,50 @@ export function startPortal(opts: PortalOptions) {
           return
         }
 
+        if (req.method === 'GET' && path === '/portal/api/admin/channel-presets') {
+          const presetsOut = CHANNEL_PRESETS.map((p) => ({ ...p, name: langOf(req) === 'en' ? p.nameEn : p.name }))
+          res.writeHead(200, { 'content-type': 'application/json; charset=utf-8' })
+          return res.end(JSON.stringify({ ok: true, presets: presetsOut }))
+        }
+        if (req.method === 'POST' && path === '/portal/api/admin/channel-test') {
+          const body = await readJsonBody()
+          const chName = String(body.name ?? '').trim()
+          const reply = (obj: Record<string, unknown>): void => {
+            res.writeHead(200, { 'content-type': 'application/json; charset=utf-8' })
+            res.end(JSON.stringify(obj))
+          }
+          const chT = listChannels(db).find((c) => c.name === chName)
+          if (!chT) return reply({ error: L(langOf(req), '通道不存在', 'Channel not found') })
+          if (!chT.api_key) return reply({ error: L(langOf(req), '该通道还没有填 API Key', 'This channel has no API key') })
+          const testModel = chT.models[0]
+          if (!testModel) return reply({ error: L(langOf(req), '该通道还没有配置模型', 'No models configured for this channel') })
+          const t0 = Date.now()
+          try {
+            const r = await fetch(chT.base_url.replace(/\/+$/, '') + '/chat/completions', {
+              method: 'POST',
+              headers: { 'content-type': 'application/json', authorization: `Bearer ${chT.api_key}` },
+              body: JSON.stringify({ model: testModel, messages: [{ role: 'user', content: 'ping' }], max_tokens: 1, stream: false }),
+              signal: AbortSignal.timeout(12000),
+            })
+            const ms = Date.now() - t0
+            if (r.ok) return reply({ ok: true, ms, model: testModel })
+            let detail = ''
+            try { detail = (await r.text()).slice(0, 160) } catch { /* ignore */ }
+            let hint = ''
+            if (r.status === 401) hint = L(langOf(req), 'API Key 无效（检查是否贴错/贴漏，或国内/国际站混用）', 'Invalid API key (check for typos or wrong region)')
+            else if (r.status === 403) hint = L(langOf(req), '无权限（服务商侧未开通该模型或欠费）', 'Forbidden (model not enabled / no balance)')
+            else if (r.status === 404) hint = L(langOf(req), '模型不存在或 Base URL 不对', 'Model not found or wrong Base URL')
+            else if (r.status === 429) hint = L(langOf(req), '服务商侧限流（稍后再试）', 'Rate limited (try later)')
+            else hint = L(langOf(req), '服务商返回错误', 'Provider returned an error')
+            return reply({ error: `HTTP ${r.status} · ${hint}${detail ? ' · ' + detail.slice(0, 120) : ''}` })
+          } catch (e) {
+            const msg = String(e)
+            const hint = /timeout|Timeout|abort/i.test(msg)
+              ? L(langOf(req), '连接超时（检查网络，或这个服务商在当前网络不可达）', 'Connection timed out (check network reachability)')
+              : msg.slice(0, 200)
+            return reply({ error: hint })
+          }
+        }
         if (req.method === 'GET' && path === '/portal/api/admin/channels') {
           const channels = listChannels(db).map((c) => ({
             id: c.id,

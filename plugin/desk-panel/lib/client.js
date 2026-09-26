@@ -111,6 +111,28 @@ window.__ModuleLoader__.load({
       "team.locked": "已由管理员配置，固定不变",
       "admin.keyScopeNote": "换 Key 只影响默认上游；给特定模型接别的上游 / Key 在下方「模型通道」里配置。",
       "admin.channelsDesc": "按模型名把请求分流到其它上游（OpenAI 兼容）；未命中的模型走默认上游。",
+      "admin.chProvider": "服务商",
+      "admin.chProviderCustom": "自定义（手动填写）",
+      "admin.chGetKey": "去服务商官网获取 API Key ↗",
+      "admin.chPickModels": "选择模型（勾选的会加入「可用模型」，成员可选）",
+      "admin.chNoModelsHint": "（该服务商暂无预置模型，请在下方手动添加）",
+      "admin.chAddModelPh": "手动添加模型名（逗号分隔）",
+      "admin.chAdd": "添加",
+      "admin.chAdvanced": "高级设置（名称 / Base URL / 价目表 / 备注）",
+      "admin.chPriceHint": "价目表（可选）：留空 = 该模型不计价（仍统计 token）；单位 ¥/百万 tokens",
+      "admin.chInPh": "输入价",
+      "admin.chOutPh": "输出价",
+      "admin.chSaveTest": "保存并测试连通",
+      "admin.chTest": "测试",
+      "admin.chTesting": " · 连通测试中…",
+      "admin.chTestOk": "已连通（",
+      "admin.chTestOkS": " 秒）",
+      "admin.chTestFail": "连通测试失败：",
+      "admin.chNeedKey": "请先填 API Key",
+      "admin.chNeedName": "请先填通道名称",
+      "admin.chNeedUrl": "请先填 Base URL",
+      "admin.chNeedModels": "请至少勾选或添加一个模型",
+      "admin.chKeyPh": "API Key（sk-…）",
       "admin.membersCount": "成员（",
       "admin.newMember": "新建成员",
       "admin.phUsername": "用户名（小写字母数字，2-32 位）",
@@ -129,10 +151,7 @@ window.__ModuleLoader__.load({
       "admin.addChannel": "加入通道",
       "admin.phChannelName": "名称（英文小写，如 kimi）",
       "admin.phBaseUrl": "Base URL（OpenAI 兼容，含 /v1）",
-      "admin.phModels": "模型名（英文逗号分隔）",
-      "admin.phPrices": "价目表 JSON（可选，¥/百万 tokens）",
       "common.phNote": "备注（可选）",
-      "admin.badPrices": "价目表 JSON 解析失败",
       "admin.channelAdded": "通道已加入：",
       "admin.dangerNote": "删除成员不可撤销；其历史用量保留在账本。成员预算到 80% / 100% 时会经「通知」通道自动提醒管理员。若该成员配了实例服务，可在服务器用 scripts/desk.sh 停掉。通道 Key 只存在服务器数据库。",
       "notify.loading": "读取通知通道中…",
@@ -442,6 +461,28 @@ window.__ModuleLoader__.load({
       "team.locked": "Locked - managed by the admin",
       "admin.keyScopeNote": "Changing the key only affects the default upstream; route specific models to other upstreams/keys in “Model channels” below.",
       "admin.channelsDesc": "Route requests by model name to other OpenAI-compatible upstreams; unmatched models use the default upstream.",
+      "admin.chProvider": "Provider",
+      "admin.chProviderCustom": "Custom (fill manually)",
+      "admin.chGetKey": "Get an API key from the provider ↗",
+      "admin.chPickModels": "Pick models (checked = available to members)",
+      "admin.chNoModelsHint": "(no preset models for this provider - add manually below)",
+      "admin.chAddModelPh": "Add model names (comma-separated)",
+      "admin.chAdd": "Add",
+      "admin.chAdvanced": "Advanced (name / Base URL / prices / note)",
+      "admin.chPriceHint": "Prices (optional): empty = no costing (tokens still counted); CNY per million tokens",
+      "admin.chInPh": "Input",
+      "admin.chOutPh": "Output",
+      "admin.chSaveTest": "Save & test",
+      "admin.chTest": "Test",
+      "admin.chTesting": " - testing...",
+      "admin.chTestOk": "connected (",
+      "admin.chTestOkS": "s)",
+      "admin.chTestFail": "connection test failed: ",
+      "admin.chNeedKey": "Enter the API key first",
+      "admin.chNeedName": "Enter a channel name first",
+      "admin.chNeedUrl": "Enter the Base URL first",
+      "admin.chNeedModels": "Pick or add at least one model",
+      "admin.chKeyPh": "API Key (sk-...)",
       "admin.membersCount": "Members (",
       "admin.newMember": "New member",
       "admin.phUsername": "Username (lowercase letters/digits, 2–32)",
@@ -460,10 +501,7 @@ window.__ModuleLoader__.load({
       "admin.addChannel": "Add channel",
       "admin.phChannelName": "Name (lowercase, e.g. kimi)",
       "admin.phBaseUrl": "Base URL (OpenAI-compatible, include /v1)",
-      "admin.phModels": "Model names (comma-separated)",
-      "admin.phPrices": "Price table JSON (optional, ¥ per million tokens)",
       "common.phNote": "Note (optional)",
-      "admin.badPrices": "Price table JSON parse failed",
       "admin.channelAdded": "Channel added: ",
       "admin.dangerNote": "Deleting a member is irreversible; historical usage stays in the ledger. When a member reaches 80% / 100% of budget the admins get an automatic notice through the notification channels. If the member has an instance service, stop it on the server with scripts/desk.sh. Channel keys live only in the server database.",
       "notify.loading": "Loading notification channels…",
@@ -3702,6 +3740,139 @@ body.desk-panel-open [class*="sidebarCol"] { backdrop-filter: none !important; -
       return h("div", { style: Object.assign({}, wrap, { maxWidth: 640 }) }, kids);
     }
 
+    /** 「加入通道」傻瓜表单：选服务商 → 贴 Key → 勾模型 → 保存（高级可调 Base URL/价目表） */
+    function ChannelAddForm(props) {
+      var presets = props.presets || [];
+      var fPair = React.useState({ prov: "", name: "", base: "", key: "", models: [], prices: {}, custom: "", note: "" });
+      var f = fPair[0];
+      var setF = fPair[1];
+      function up(patch) {
+        setF(function (cur) { return Object.assign({}, cur, patch); });
+      }
+      function curPreset() {
+        for (var i = 0; i < presets.length; i++) if (presets[i].id === f.prov) return presets[i];
+        return null;
+      }
+      function pick(provId) {
+        var p = null;
+        for (var i = 0; i < presets.length; i++) if (presets[i].id === provId) p = presets[i];
+        if (p) up({ prov: provId, name: p.id, base: p.baseUrl });
+        else up({ prov: "" });
+      }
+      function toggleModel(m) {
+        var has = f.models.indexOf(m) >= 0;
+        up({ models: has ? f.models.filter(function (x) { return x !== m; }) : f.models.concat([m]) });
+      }
+      function addCustom() {
+        var parts = String(f.custom || "").split(/[,\uFF0C]/).map(function (t) { return t.trim(); }).filter(Boolean);
+        if (!parts.length) return;
+        var next = f.models.slice();
+        for (var i = 0; i < parts.length; i++) if (next.indexOf(parts[i]) < 0) next.push(parts[i]);
+        up({ models: next, custom: "" });
+      }
+      function setPrice(m, k, v) {
+        var pr = Object.assign({}, f.prices);
+        pr[m] = Object.assign({ in: "", out: "" }, pr[m] || {});
+        pr[m][k] = v;
+        up({ prices: pr });
+      }
+      function submit() {
+        if (!f.key.trim()) { props.onMsg({ kind: "err", text: tr("admin.chNeedKey") }); return; }
+        if (!f.name.trim()) { props.onMsg({ kind: "err", text: tr("admin.chNeedName") }); return; }
+        if (!f.base.trim()) { props.onMsg({ kind: "err", text: tr("admin.chNeedUrl") }); return; }
+        if (!f.models.length) { props.onMsg({ kind: "err", text: tr("admin.chNeedModels") }); return; }
+        var prices = null;
+        for (var i = 0; i < f.models.length; i++) {
+          var p = f.prices[f.models[i]];
+          if (!p) continue;
+          var inV = String(p.in == null ? "" : p.in).trim();
+          var outV = String(p.out == null ? "" : p.out).trim();
+          if (!inV && !outV) continue;
+          prices = prices || {};
+          prices[f.models[i]] = {};
+          if (inV) prices[f.models[i]].in = Number(inV) || 0;
+          if (outV) prices[f.models[i]].out = Number(outV) || 0;
+        }
+        var payload = { name: f.name.trim(), base_url: f.base.trim(), api_key: f.key.trim(), models: f.models.join(","), note: f.note.trim() };
+        if (prices) payload.prices = prices;
+        props.onMsg({ kind: "info", text: tr("common.processing") });
+        fetch("/portal/api/admin/channel-create?lang=" + deskLang(), { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify(payload) })
+          .then(function (r) { return r.json().then(function (d) { return { status: r.status, d: d }; }); })
+          .then(function (res) {
+            if (res.status !== 200 || (res.d && res.d.error)) { props.onMsg({ kind: "err", text: (res.d && res.d.error) || ("HTTP " + res.status) }); return; }
+            var name = payload.name;
+            up({ key: "" });
+            props.onRefresh();
+            props.onMsg({ kind: "info", text: tr("admin.channelAdded") + name + tr("admin.chTesting") });
+            fetch("/portal/api/admin/channel-test?lang=" + deskLang(), { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ name: name }) })
+              .then(function (r2) { return r2.json().catch(function () { return {}; }); })
+              .then(function (t) {
+                if (t && t.ok) props.onMsg({ kind: "ok", text: name + " · " + tr("admin.chTestOk") + (t.ms / 1000).toFixed(1) + tr("admin.chTestOkS") + (t.model ? " · " + t.model : "") });
+                else props.onMsg({ kind: "err", text: name + " · " + tr("admin.chTestFail") + ((t && t.error) || "?") });
+              })
+              .catch(function () {});
+          })
+          .catch(function (e) { props.onMsg({ kind: "err", text: String((e && e.message) || e) }); });
+      }
+      var kids = [];
+      var opts = [h("option", { key: "custom", value: "" }, tr("admin.chProviderCustom"))];
+      for (var pi = 0; pi < presets.length; pi++) opts.unshift(h("option", { key: "p" + presets[pi].id, value: presets[pi].id }, presets[pi].name));
+      var cp = curPreset();
+      kids.push(h("div", { key: "pv", style: { display: "flex", flexDirection: "column", gap: 6, marginTop: 6 } },
+        h("span", { style: Object.assign({ fontSize: 12 }, muted) }, tr("admin.chProvider")),
+        h("select", { value: f.prov, onChange: function (e) { pick(e.target.value); }, style: field }, opts),
+        cp ? h("a", { href: cp.keyUrl, target: "_blank", rel: "noreferrer", style: { fontSize: 12 } }, tr("admin.chGetKey")) : null
+      ));
+      if (!cp) {
+        kids.push(h("input", { key: "nm", value: f.name, onChange: function (e) { up({ name: e.target.value }); }, placeholder: tr("admin.phChannelName"), style: field }));
+        kids.push(h("input", { key: "bu", value: f.base, onChange: function (e) { up({ base: e.target.value }); }, placeholder: tr("admin.phBaseUrl"), style: field }));
+      }
+      kids.push(h("input", { key: "ky", value: f.key, onChange: function (e) { up({ key: e.target.value }); }, placeholder: tr("admin.chKeyPh"), type: "password", style: field }));
+      var allModels = [];
+      if (cp) allModels = cp.models.slice();
+      for (var mi = 0; mi < f.models.length; mi++) if (allModels.indexOf(f.models[mi]) < 0) allModels.push(f.models[mi]);
+      var chipKids = [];
+      for (var ci = 0; ci < allModels.length; ci++) {
+        (function (mm) {
+          chipKids.push(h("label", { key: "m" + mm, style: { display: "inline-flex", alignItems: "center", gap: 4, margin: "2px 12px 2px 0", fontSize: 12 } },
+            h("input", { type: "checkbox", checked: f.models.indexOf(mm) >= 0, onChange: function () { toggleModel(mm); } }),
+            mm));
+        })(allModels[ci]);
+      }
+      kids.push(h("div", { key: "ml", style: { display: "flex", flexDirection: "column", gap: 6, marginTop: 2 } },
+        h("span", { style: Object.assign({ fontSize: 12 }, muted) }, tr("admin.chPickModels")),
+        h("div", { style: { display: "flex", flexWrap: "wrap" } }, chipKids.length ? chipKids : h("span", { style: Object.assign({ fontSize: 12 }, muted) }, tr("admin.chNoModelsHint"))),
+        h("div", { style: { display: "flex", gap: 6 } },
+          h("input", { value: f.custom, onChange: function (e) { up({ custom: e.target.value }); }, placeholder: tr("admin.chAddModelPh"), style: Object.assign({}, field, { flex: 1 }) }),
+          h("button", { style: btnLight, onClick: addCustom }, tr("admin.chAdd"))
+        )
+      ));
+      var priceRows = [];
+      for (var prI = 0; prI < f.models.length; prI++) {
+        (function (mm) {
+          priceRows.push(h("div", { key: "pr" + mm, style: { display: "flex", alignItems: "center", gap: 6, fontSize: 12 } },
+            h("span", { style: { minWidth: 150 } }, mm),
+            h("input", { value: (f.prices[mm] || {}).in || "", onChange: function (e) { setPrice(mm, "in", e.target.value); }, placeholder: tr("admin.chInPh"), style: Object.assign({}, field, { width: 90 }) }),
+            h("input", { value: (f.prices[mm] || {}).out || "", onChange: function (e) { setPrice(mm, "out", e.target.value); }, placeholder: tr("admin.chOutPh"), style: Object.assign({}, field, { width: 90 }) })
+          ));
+        })(f.models[prI]);
+      }
+      kids.push(h("details", { key: "adv" },
+        h("summary", { style: { fontSize: 12, cursor: "pointer" } }, tr("admin.chAdvanced")),
+        h("div", { style: { display: "flex", flexDirection: "column", gap: 6, marginTop: 6 } },
+          h("input", { value: f.name, onChange: function (e) { up({ name: e.target.value }); }, placeholder: tr("admin.phChannelName"), style: field }),
+          h("input", { value: f.base, onChange: function (e) { up({ base: e.target.value }); }, placeholder: tr("admin.phBaseUrl"), style: field }),
+          priceRows.length ? h("div", { style: { display: "flex", flexDirection: "column", gap: 4 } },
+            h("span", { style: Object.assign({ fontSize: 12 }, muted) }, tr("admin.chPriceHint")),
+            priceRows
+          ) : null,
+          h("input", { value: f.note, onChange: function (e) { up({ note: e.target.value }); }, placeholder: tr("common.phNote"), style: field })
+        )
+      ));
+      kids.push(h("button", { key: "sv", style: btnDark, onClick: submit }, tr("admin.chSaveTest")));
+      return h("div", { style: { display: "flex", flexDirection: "column", gap: 6, marginTop: 4 } }, kids);
+    }
+
     /** 模型页扩展位（官方 settings.models.footer）：团队共用模型 Key —— 管理员可改 / 成员只读 */
     function TeamModelsFooter() {
       var langTick = useLocaleSignal();
@@ -3715,12 +3886,9 @@ body.desk-panel-open [class*="sidebarCol"] { backdrop-filter: none !important; -
       var chPair = React.useState([]);
       var chs = chPair[0];
       var setChs = chPair[1];
-      var chNameRef = React.useRef(null);
-      var chUrlRef = React.useRef(null);
-      var chKeyRef = React.useRef(null);
-      var chModelsRef = React.useRef(null);
-      var chPricesRef = React.useRef(null);
-      var chNoteRef = React.useRef(null);
+      var presPair = React.useState([]);
+      var presets = presPair[0];
+      var setPresets = presPair[1];
       function load() {
         fetch("/portal/api/models-catalog?lang=" + deskLang(), { headers: { accept: "application/json" } })
           .then(function (r) { return r.ok ? r.json() : {}; })
@@ -3749,6 +3917,10 @@ body.desk-panel-open [class*="sidebarCol"] { backdrop-filter: none !important; -
           .then(function (r) { return r.ok ? r.json() : {}; })
           .catch(function () { return {}; })
           .then(function (d) { setChs((d && d.channels) || []); });
+        fetch("/portal/api/admin/channel-presets?lang=" + deskLang(), { headers: { accept: "application/json" } })
+          .then(function (r) { return r.ok ? r.json() : {}; })
+          .catch(function () { return {}; })
+          .then(function (d) { setPresets((d && d.presets) || []); });
       }
       function chPost(path, body, okText, reloadAll) {
         setMsg({ kind: "info", text: tr("common.processing") });
@@ -3762,21 +3934,15 @@ body.desk-panel-open [class*="sidebarCol"] { backdrop-filter: none !important; -
           })
           .catch(function (e) { setMsg({ kind: "err", text: String((e && e.message) || e) }); });
       }
-      function addChannel() {
-        var name = chNameRef.current ? chNameRef.current.value.trim() : "";
-        var baseUrl = chUrlRef.current ? chUrlRef.current.value.trim() : "";
-        var apiKey = chKeyRef.current ? chKeyRef.current.value.trim() : "";
-        var models = chModelsRef.current ? chModelsRef.current.value : "";
-        var prices = chPricesRef.current ? chPricesRef.current.value.trim() : "";
-        var note = chNoteRef.current ? chNoteRef.current.value.trim() : "";
-        var payload = { name: name, base_url: baseUrl, api_key: apiKey, models: models, note: note };
-        if (prices) {
-          try { payload.prices = JSON.parse(prices); }
-          catch (e) { setMsg({ kind: "err", text: tr("admin.badPrices") }); return; }
-        }
-        var rl = [chNameRef, chUrlRef, chKeyRef, chModelsRef, chPricesRef, chNoteRef];
-        for (var i = 0; i < rl.length; i++) { if (rl[i].current) rl[i].current.value = ""; }
-        chPost("/portal/api/admin/channel-create", payload, tr("admin.channelAdded") + name, true);
+      function testChannel(name) {
+        setMsg({ kind: "info", text: name + tr("admin.chTesting") });
+        fetch("/portal/api/admin/channel-test?lang=" + deskLang(), { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ name: name }) })
+          .then(function (r) { return r.json().catch(function () { return {}; }); })
+          .then(function (t) {
+            if (t && t.ok) setMsg({ kind: "ok", text: name + " · " + tr("admin.chTestOk") + (t.ms / 1000).toFixed(1) + tr("admin.chTestOkS") + (t.model ? " · " + t.model : "") });
+            else setMsg({ kind: "err", text: name + " · " + tr("admin.chTestFail") + ((t && t.error) || "?") });
+          })
+          .catch(function (e) { setMsg({ kind: "err", text: String((e && e.message) || e) }); });
       }
       function toggleChannel(name, on) {
         chPost("/portal/api/admin/channel-toggle", { name: name }, tr("admin.channelToggled") + (on ? tr("common.disable") : tr("common.enable")) + ": " + name, true);
@@ -3852,6 +4018,7 @@ body.desk-panel-open [class*="sidebarCol"] { backdrop-filter: none !important; -
                     "span",
                     { style: { display: "flex", gap: 6 } },
                     h("button", { style: btnSmall, onClick: function () { toggleChannel(ch.name, ch.enabled); } }, ch.enabled ? tr("common.disable") : tr("common.enable")),
+                    h("button", { style: btnSmall, onClick: function () { testChannel(ch.name); } }, tr("admin.chTest")),
                     h("button", { style: btnDanger, onClick: function () { delChannel(ch.name); } }, tr("common.delete"))
                   )
                 ),
@@ -3866,15 +4033,13 @@ body.desk-panel-open [class*="sidebarCol"] { backdrop-filter: none !important; -
         kids.push(
           h(
             "div",
-            { key: "chF", style: { display: "flex", flexDirection: "column", gap: 6, marginTop: 4 } },
+            { key: "chF", style: { marginTop: 4 } },
             h("div", { style: { fontWeight: 600 } }, tr("admin.addChannel")),
-            h("input", { ref: chNameRef, placeholder: tr("admin.phChannelName"), style: field }),
-            h("input", { ref: chUrlRef, placeholder: tr("admin.phBaseUrl"), style: field }),
-            h("input", { ref: chKeyRef, placeholder: "API Key\uff08sk-...\uff09", type: "password", style: field }),
-            h("input", { ref: chModelsRef, placeholder: tr("admin.phModels"), style: field }),
-            h("input", { ref: chPricesRef, placeholder: tr("admin.phPrices"), style: field }),
-            h("input", { ref: chNoteRef, placeholder: tr("common.phNote"), style: field }),
-            h("button", { style: btnDark, onClick: addChannel }, tr("admin.addChannel"))
+            h(ChannelAddForm, {
+              presets: presets,
+              onMsg: setMsg,
+              onRefresh: function () { loadChannels(); load(); },
+            })
           )
         );
       }
