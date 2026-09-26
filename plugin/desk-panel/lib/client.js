@@ -133,6 +133,7 @@ window.__ModuleLoader__.load({
       "admin.chNeedUrl": "请先填 Base URL",
       "admin.chNeedModels": "请至少勾选或添加一个模型",
       "admin.chKeyPh": "API Key（sk-…）",
+      "admin.chRestartNote": " · 工作台将在约 10 秒内自动重启以刷新模型列表",
       "admin.membersCount": "成员（",
       "admin.newMember": "新建成员",
       "admin.phUsername": "用户名（小写字母数字，2-32 位）",
@@ -483,6 +484,7 @@ window.__ModuleLoader__.load({
       "admin.chNeedUrl": "Enter the Base URL first",
       "admin.chNeedModels": "Pick or add at least one model",
       "admin.chKeyPh": "API Key (sk-...)",
+      "admin.chRestartNote": " · workspaces will auto-restart in ~10s to refresh the model list",
       "admin.membersCount": "Members (",
       "admin.newMember": "New member",
       "admin.phUsername": "Username (lowercase letters/digits, 2–32)",
@@ -3807,8 +3809,8 @@ body.desk-panel-open [class*="sidebarCol"] { backdrop-filter: none !important; -
             fetch("/portal/api/admin/channel-test?lang=" + deskLang(), { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ name: name }) })
               .then(function (r2) { return r2.json().catch(function () { return {}; }); })
               .then(function (t) {
-                if (t && t.ok) props.onMsg({ kind: "ok", text: name + " · " + tr("admin.chTestOk") + (t.ms / 1000).toFixed(1) + tr("admin.chTestOkS") + (t.model ? " · " + t.model : "") });
-                else props.onMsg({ kind: "err", text: name + " · " + tr("admin.chTestFail") + ((t && t.error) || "?") });
+                if (t && t.ok) props.onMsg({ kind: "ok", text: name + " · " + tr("admin.chTestOk") + (t.ms / 1000).toFixed(1) + tr("admin.chTestOkS") + (t.model ? " · " + t.model : "") + tr("admin.chRestartNote") });
+                else props.onMsg({ kind: "err", text: name + " · " + tr("admin.chTestFail") + ((t && t.error) || "?") + tr("admin.chRestartNote") });
               })
               .catch(function () {});
           })
@@ -3945,11 +3947,11 @@ body.desk-panel-open [class*="sidebarCol"] { backdrop-filter: none !important; -
           .catch(function (e) { setMsg({ kind: "err", text: String((e && e.message) || e) }); });
       }
       function toggleChannel(name, on) {
-        chPost("/portal/api/admin/channel-toggle", { name: name }, tr("admin.channelToggled") + (on ? tr("common.disable") : tr("common.enable")) + ": " + name, true);
+        chPost("/portal/api/admin/channel-toggle", { name: name }, tr("admin.channelToggled") + (on ? tr("common.disable") : tr("common.enable")) + ": " + name + tr("admin.chRestartNote"), true);
       }
       function delChannel(name) {
         if (!window.confirm(tr("admin.delChannel") + name + "?")) return;
-        chPost("/portal/api/admin/channel-delete", { name: name }, tr("admin.channelDeleted") + name, true);
+        chPost("/portal/api/admin/channel-delete", { name: name }, tr("admin.channelDeleted") + name + tr("admin.chRestartNote"), true);
       }
       React.useEffect(function () { load(); }, [langTick]);
       function save() {

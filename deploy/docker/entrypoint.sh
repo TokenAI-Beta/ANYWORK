@@ -142,6 +142,9 @@ process.exit(db.prepare('SELECT 1 FROM users WHERE username = ?').get('$m_rec') 
     sleep 15
   done
 }
+# 启动时同步一次「通道模型 → 各实例 settings.yaml」（在实例拉起前执行，确保模型选择器清单最新）
+(cd /opt/anywork && node src/cli.ts sync-models) >> "$HOME/.desk/run/models-sync.log" 2>&1 || true
+
 supervise &
 
 log "全部就绪：请浏览器打开 http://$ANYWORK_HOST/（容器内端口 8080）"

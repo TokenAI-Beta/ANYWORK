@@ -14,6 +14,7 @@ import {
 import { hashToken, newVirtualKey } from './keys.ts'
 import { eventCost, monthStartUtc, prices } from './pricing.ts'
 import { addChannel, listChannels, removeChannel, setChannelEnabled } from './channel.ts'
+import { syncInstanceModels } from './models-sync.ts'
 import { kbSearch, listKbNotes, readKbNote, removeKbNote, saveKbNote } from './kb.ts'
 import { listDrive, resolveInDrive, saveToDrive, MAX_UPLOAD } from './drive.ts'
 import { addNotifyRoute, addReminder, dispatchNotify, listNotifyLog, listNotifyRoutes, listReminders, listRemindersSent, readOrCreateNotifyToken, removeNotifyRoute, removeReminder, toggleNotifyRoute } from './notify.ts'
@@ -136,6 +137,23 @@ const CHANNEL_PRESETS = [
     keyUrl: 'https://openrouter.ai/settings/keys',
   },
 ]
+
+/** 通道变更后：同步各实例模型清单并重启受影响实例（监督器 5 秒自拉，模型选择器随之刷新） */
+function applyChannelChanges(db: DatabaseSync): string[] {
+  const changed = syncInstanceModels(db)
+  for (const username of changed) {
+    try {
+      const pf = join(homedir(), '.desk', 'run', `${username}.pid`)
+      if (existsSync(pf)) {
+        const pid = Number(readFileSync(pf, 'utf8').trim())
+        if (Number.isFinite(pid) && pid > 1) process.kill(pid, 'SIGKILL')
+      }
+    } catch {
+      /* 单个实例失败不阻断 */
+    }
+  }
+  return changed
+}
 
 export interface PortalOptions {
   db: DatabaseSync
@@ -1545,21 +1563,24 @@ export function startPortal(opts: PortalOptions) {
             res.writeHead(400, { 'content-type': 'application/json; charset=utf-8' })
             return res.end(JSON.stringify({ error: r.error }))
           }
+          const syncedCreate = applyChannelChanges(db)
           res.writeHead(200, { 'content-type': 'application/json; charset=utf-8' })
-          return res.end(JSON.stringify({ name }))
+          return res.end(JSON.stringify({ name, modelsSynced: syncedCreate }))
         }
         if (req.method === 'POST' && (path === '/portal/api/admin/channel-toggle' || path === '/portal/api/admin/channel-delete')) {
           const body = await readJsonBody()
           const name = String(body.name ?? '').trim()
           if (path === '/portal/api/admin/channel-delete') {
             removeChannel(db, name)
+            const syncedDel = applyChannelChanges(db)
             res.writeHead(200, { 'content-type': 'application/json; charset=utf-8' })
-            return res.end(JSON.stringify({ name }))
+            return res.end(JSON.stringify({ name, modelsSynced: syncedDel }))
           }
           const cur = listChannels(db).find((c) => c.name === name)
           if (cur) setChannelEnabled(db, name, cur.enabled !== 1)
+          const syncedTog = applyChannelChanges(db)
           res.writeHead(200, { 'content-type': 'application/json; charset=utf-8' })
-          return res.end(JSON.stringify({ name, enabled: cur ? cur.enabled !== 1 : false }))
+          return res.end(JSON.stringify({ name, enabled: cur ? cur.enabled !== 1 : false, modelsSynced: syncedTog }))
         }
         if (req.method === 'GET' && path === '/portal/api/admin/session-mgr') {
           const pending = db

@@ -10,7 +10,9 @@
 //   channel rm <name>                   删除通道
 //   channel on|off <name>               启用/停用通道
 //   usage [username] [--month]          token 用量与估算费用
+//   sync-models                         把已启用通道的模型同步进各实例 model 清单（容器启动时自动执行）
 import { hashPassword } from './auth.ts'
+import { syncInstanceModels } from './models-sync.ts'
 import { addChannel, listChannels, removeChannel, setChannelEnabled } from './channel.ts'
 import { openDb } from './db.ts'
 import { hashToken, newVirtualKey } from './keys.ts'
@@ -257,6 +259,10 @@ else if (cmd === 'channel' && sub === 'add' && a1 && a2 && a3 && a4) cmdChannelA
 else if (cmd === 'channel' && sub === 'rm' && a1) cmdChannelRemove(a1)
 else if (cmd === 'channel' && sub === 'on' && a1) cmdChannelToggle(a1, true)
 else if (cmd === 'channel' && sub === 'off' && a1) cmdChannelToggle(a1, false)
+else if (cmd === 'sync-models') {
+  const changed = syncInstanceModels(db)
+  console.log('模型清单已同步：' + (changed.length ? changed.join(', ') : '（无变化）'))
+}
 else if (cmd === 'usage') cmdUsage(sub)
 else {
   console.log('用法：')
