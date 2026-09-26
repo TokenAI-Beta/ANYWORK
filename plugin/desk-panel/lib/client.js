@@ -118,7 +118,8 @@ window.__ModuleLoader__.load({
       "admin.chNoModelsHint": "（该服务商暂无预置模型，请在下方手动添加）",
       "admin.chAddModelPh": "手动添加模型名（逗号分隔）",
       "admin.chAdd": "添加",
-      "admin.chAdvanced": "高级设置（名称 / Base URL / 价目表 / 备注）",
+      "admin.chAdvanced": "高级设置（名称 / Base URL / 价目表 / 输出上限 / 备注）",
+      "admin.chCapPh": "单次输出上限 tokens（如 32768；留空 = 不设置，可能被供应商拒）",
       "admin.chPriceHint": "价目表（可选）：留空 = 该模型不计价（仍统计 token）；单位 ¥/百万 tokens",
       "admin.chInPh": "输入价",
       "admin.chOutPh": "输出价",
@@ -469,7 +470,8 @@ window.__ModuleLoader__.load({
       "admin.chNoModelsHint": "(no preset models for this provider - add manually below)",
       "admin.chAddModelPh": "Add model names (comma-separated)",
       "admin.chAdd": "Add",
-      "admin.chAdvanced": "Advanced (name / Base URL / prices / note)",
+      "admin.chAdvanced": "Advanced (name / Base URL / prices / max output tokens / note)",
+      "admin.chCapPh": "Max output tokens cap (e.g. 32768; empty = unset)",
       "admin.chPriceHint": "Prices (optional): empty = no costing (tokens still counted); CNY per million tokens",
       "admin.chInPh": "Input",
       "admin.chOutPh": "Output",
@@ -794,6 +796,10 @@ window.__ModuleLoader__.load({
 /* 面板打开时临时移除侧边栏 backdrop-filter：它给 fixed 面板造成「包含块 + 层叠」双重陷阱（宽度被锁 + 被内容层盖住） */
 body:has(.ddp) [class*="sidebarCol"] { backdrop-filter: none !important; -webkit-backdrop-filter: none !important; }
 body.desk-panel-open [class*="sidebarCol"] { backdrop-filter: none !important; -webkit-backdrop-filter: none !important; }
+/* 面板打开时释放侧边栏裁剪：dsh 侧边栏自带 overflow:hidden（+aqua 变换把 fixed 面板的包含块锁在侧边栏上），
+   两者叠加会把 .ddp 面板裁成侧边栏宽度——右边框与右上角 ✕ 被切掉。打开期间临时放开。 */
+body:has(.ddp) [class*="sidebarCol"] { overflow: visible !important; }
+body.desk-panel-open [class*="sidebarCol"] { overflow: visible !important; }
 
 /* ── 移动端（≤820px）：四个侧栏面板改为「底部抽屉」形态（触控尺寸 ≥44px、字号 +1、安全区适配） ── */
 @media (max-width: 820px) {
@@ -3745,7 +3751,7 @@ body.desk-panel-open [class*="sidebarCol"] { backdrop-filter: none !important; -
     /** 「加入通道」傻瓜表单：选服务商 → 贴 Key → 勾模型 → 保存（高级可调 Base URL/价目表） */
     function ChannelAddForm(props) {
       var presets = props.presets || [];
-      var fPair = React.useState({ prov: "", name: "", base: "", key: "", models: [], prices: {}, custom: "", note: "" });
+      var fPair = React.useState({ prov: "", name: "", base: "", key: "", models: [], prices: {}, custom: "", note: "", cap: "" });
       var f = fPair[0];
       var setF = fPair[1];
       function up(patch) {
@@ -3758,7 +3764,7 @@ body.desk-panel-open [class*="sidebarCol"] { backdrop-filter: none !important; -
       function pick(provId) {
         var p = null;
         for (var i = 0; i < presets.length; i++) if (presets[i].id === provId) p = presets[i];
-        if (p) up({ prov: provId, name: p.id, base: p.baseUrl });
+        if (p) up({ prov: provId, name: p.id, base: p.baseUrl, cap: p.maxTokensCap ? String(p.maxTokensCap) : "" });
         else up({ prov: "" });
       }
       function toggleModel(m) {
@@ -3797,6 +3803,9 @@ body.desk-panel-open [class*="sidebarCol"] { backdrop-filter: none !important; -
         }
         var payload = { name: f.name.trim(), base_url: f.base.trim(), api_key: f.key.trim(), models: f.models.join(","), note: f.note.trim() };
         if (prices) payload.prices = prices;
+        var capV = String(f.cap == null ? "" : f.cap).trim();
+        var capN = Number(capV);
+        if (capV && isFinite(capN) && capN > 0) payload.max_tokens_cap = Math.floor(capN);
         props.onMsg({ kind: "info", text: tr("common.processing") });
         fetch("/portal/api/admin/channel-create?lang=" + deskLang(), { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify(payload) })
           .then(function (r) { return r.json().then(function (d) { return { status: r.status, d: d }; }); })
@@ -3868,6 +3877,7 @@ body.desk-panel-open [class*="sidebarCol"] { backdrop-filter: none !important; -
             h("span", { style: Object.assign({ fontSize: 12 }, muted) }, tr("admin.chPriceHint")),
             priceRows
           ) : null,
+          h("input", { value: f.cap, onChange: function (e) { up({ cap: e.target.value }); }, placeholder: tr("admin.chCapPh"), inputMode: "numeric", style: field }),
           h("input", { value: f.note, onChange: function (e) { up({ note: e.target.value }); }, placeholder: tr("common.phNote"), style: field })
         )
       ));

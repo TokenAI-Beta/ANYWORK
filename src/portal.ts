@@ -1452,6 +1452,7 @@ export function startPortal(opts: PortalOptions) {
             keyPrefix: c.api_key ? c.api_key.slice(0, 6) + '…' : '',
             prices: Object.keys(c.prices).length,
             note: c.note ?? '',
+            maxTokensCap: c.max_tokens_cap,
           }))
           res.writeHead(200, { 'content-type': 'application/json; charset=utf-8' })
           return res.end(JSON.stringify({ members, channels, trend }))
@@ -1727,6 +1728,7 @@ export function startPortal(opts: PortalOptions) {
             keyPrefix: c.api_key ? c.api_key.slice(0, 6) + '…' : '',
             prices: Object.keys(c.prices).length,
             note: c.note ?? '',
+            maxTokensCap: c.max_tokens_cap,
           }))
           res.writeHead(200, { 'content-type': 'application/json; charset=utf-8' })
           return res.end(JSON.stringify({ ok: true, channels }))
