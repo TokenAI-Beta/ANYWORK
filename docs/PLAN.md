@@ -24,7 +24,7 @@
 2. **`DSH_HOME` 可配置**：profiles / 会话 / 全局配置都在其下 —— 每人一份 home = 会话与设置天然隔离。
 3. **启动参数**：`dsh web` 支持 `--port`、可重复的 `--trusted-host`（`apps/cli/reference/README.zh.md`）；`--trusted-host` 用来让非回环访问通过 `/api` 浏览器信任围栏 —— 门户反代需要它。
 4. **多实例共存**：默认端口来自 `ctx.webStartup.port ?? 3080`（`packages/bundle/web-app/cordis.patch.yml`），换端口即可同机跑多个实例。
-5. **前端事件面**：WebSocket（`/api/events.mux`、`/api/events.host`）+ `POST /api` RPC —— 反代必须透传 WS。
+5. **前端事件面**：WebSocket（实测路径 `/api/remote.mux`；nginx 反代需透传 Upgrade）+ `POST /api` RPC —— 反代必须透传 WS。
 6. **`--host` 说法不一**：参考文档称 CLI 有意不支持 `0.0.0.0` 并直接报用法错误 —— 不影响本方案：实例只绑回环，由门户代理对外。
 7. **现有环境**：dsh 在 WSL `~/deepseek-harness`（0.1.0-rc.5，已 build）；node 24 + pnpm 就绪；KRouter 已挂 headless。
 8. **客户端插件机制（2026-09-19 打通）**：dsh 前端本身由插件组合（`ui-slots` 槽位 + `ui-settings-*` 系列）；外部包声明 `dsh.bundle.patch`（`cordis.patch.yml`，插入行用 `- insert:` 块）+ `dsh.client`（`{platform:'web', inject:[]}` + `./client` 导出），经 `dsh plugin --profile web add file:` 挂载后自动进入 bundles 层；浏览器侧 bundle 为闭包工厂格式，`require` 仅限平台模块（react / ui-slots / ui-primitives / web-react / schema-form / attachment / cordis）。→ 设置内嵌页面零改源码可实现。

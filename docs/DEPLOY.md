@@ -151,3 +151,44 @@ bash deploy/docker/build-cn.sh
 ```
 
 3. 若 gh-proxy.com 不通：编辑 `deploy/docker/build-cn.sh`，去掉 `--build-arg DSH_REPO=…` 行（即回退 GitHub 直连）。
+
+## 方式三：云端部署（GHCR 镜像 + 服务器只拉不编）
+
+适合小型云服务器（2 核 / 3.5G 也能跑）：**服务器永不编译**，镜像由 GitHub Actions 云端构建。
+
+```
+代码 push/打 tag ──▶ GitHub Actions（.github/workflows/build-image.yml）
+                     构建并推送镜像 ghcr.io/bugbyc0922/dsh-anywork:{latest, vX.Y, sha}
+                              │
+服务器：docker compose pull && docker compose up -d   （只拉取运行，分钟级）
+```
+
+**服务器侧最小步骤**（以东京机为例）：
+
+```bash
+git clone https://github.com/bugbyc0922/DSH-ANYWORK.git /opt/dsh-anywork && cd /opt/dsh-anywork
+cat > .env <<'EOF'
+ANYWORK_HOST=你的域名:8443
+ANYWORK_BIND=127.0.0.1          # 只监听本机，公网走 nginx 反代
+ANYWORK_PORT=8080
+ANYWORK_ADMIN_USER=admin001
+ANYWORK_ADMIN_PASSWORD=<管理员密码>
+ANYWORK_MEMBERS=<成员列表>
+DEEPSEEK_API_KEY=<真 key>
+ANYWORK_IMAGE_TAG=v1.0          # 钉版本；也可用 latest 或提交 sha
+EOF
+chmod 600 .env
+docker compose pull && docker compose up -d
+curl -s -o /dev/null -w '%{http_code}\n' http://127.0.0.1:8080/healthz   # 期望 200
+```
+
+**HTTPS（nginx + acme.sh，脚本化）**：`bash deploy/docker/setup-https.sh` —— 80 口 ACME 验证 + 301 跳转、签发证书、8443 反代（含 WebSocket 与长超时）。
+
+**更新与回滚**：
+- 更新：改代码 → 打 tag（如 `git tag -a v1.1 -m ... && git push origin v1.1`）→ CI 自动构建 → 服务器 `docker compose pull && docker compose up -d`。
+- 回滚：`.env` 改 `ANYWORK_IMAGE_TAG=<旧版本或旧 sha>` → `docker compose pull && docker compose up -d`（约 2 分钟）。
+
+**说明**：
+- 镜像默认公开（`ghcr.io/bugbyc0922/dsh-anywork`），服务器无需登录即可拉取；仓库公开、镜像内不含任何密钥。
+- 手动触发构建：Actions → build-image → Run workflow。
+- 境内本机构建仍可用 `bash deploy/docker/build-cn.sh`（见本页末节加速通道）。
