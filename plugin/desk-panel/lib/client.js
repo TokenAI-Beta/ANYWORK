@@ -109,7 +109,8 @@ window.__ModuleLoader__.load({
       "team.hint": "上方「模型」卡片是你的个人 API 配置；如需换成自己的 key，请同时把 Base URL 改为 https://api.deepseek.com。",
       "team.loading": "读取团队模型配置中…",
       "team.locked": "已由管理员配置，固定不变",
-      "admin.keyScopeNote": "换 Key 只影响默认上游；给特定模型接别的上游 / Key 请在 设置 → 成员管理 →「模型通道」里配置。",
+      "admin.keyScopeNote": "换 Key 只影响默认上游；给特定模型接别的上游 / Key 在下方「模型通道」里配置。",
+      "admin.channelsDesc": "按模型名把请求分流到其它上游（OpenAI 兼容）；未命中的模型走默认上游。",
       "admin.membersCount": "成员（",
       "admin.newMember": "新建成员",
       "admin.phUsername": "用户名（小写字母数字，2-32 位）",
@@ -439,7 +440,8 @@ window.__ModuleLoader__.load({
       "team.hint": "The \"Models\" cards above are your personal API configuration; to use your own key, also set Base URL to https://api.deepseek.com.",
       "team.loading": "Loading team model configuration...",
       "team.locked": "Locked - managed by the admin",
-      "admin.keyScopeNote": "Changing the key only affects the default upstream; route specific models to other upstreams/keys via Settings → Members → “Model channels”.",
+      "admin.keyScopeNote": "Changing the key only affects the default upstream; route specific models to other upstreams/keys in “Model channels” below.",
+      "admin.channelsDesc": "Route requests by model name to other OpenAI-compatible upstreams; unmatched models use the default upstream.",
       "admin.membersCount": "Members (",
       "admin.newMember": "New member",
       "admin.phUsername": "Username (lowercase letters/digits, 2–32)",
@@ -1549,12 +1551,6 @@ body.desk-panel-open [class*="sidebarCol"] { backdrop-filter: none !important; -
       var uRef = React.useRef(null);
       var pRef = React.useRef(null);
       var bRef = React.useRef(null);
-      var chNameRef = React.useRef(null);
-      var chUrlRef = React.useRef(null);
-      var chKeyRef = React.useRef(null);
-      var chModelsRef = React.useRef(null);
-      var chPricesRef = React.useRef(null);
-      var chNoteRef = React.useRef(null);
 
       function load(quiet) {
         if (!quiet) setData({ phase: "loading", members: [], channels: [], message: "" });
@@ -1670,55 +1666,6 @@ body.desk-panel-open [class*="sidebarCol"] { backdrop-filter: none !important; -
         );
       }
 
-      var chRows = [];
-      for (var c = 0; c < data.channels.length; c++) {
-        var ch = data.channels[c];
-        chRows.push(
-          h(
-            "div",
-            { key: "c" + c, style: rowBase },
-            h(
-              "div",
-              { style: { display: "flex", justifyContent: "space-between", alignItems: "center", gap: 8 } },
-              h("span", null, ch.name + " ", h("span", { style: Object.assign({ fontSize: 12 }, muted) }, ch.enabled ? tr("common.enable") : tr("common.disable"))),
-              h(
-                "span",
-                { style: { display: "flex", gap: 6 } },
-                h(
-                  "button",
-                  {
-                    style: btnSmall,
-                    onClick: (function (name, on) {
-                      return function () {
-                        post("/portal/api/admin/channel-toggle", { name: name }, tr("admin.channelToggled") + (on ? tr("common.disable") : tr("common.enable")) + ": " + name);
-                      };
-                    })(ch.name, ch.enabled),
-                  },
-                  ch.enabled ? tr("common.disable") : tr("common.enable")
-                ),
-                h(
-                  "button",
-                  {
-                    style: btnDanger,
-                    onClick: (function (name) {
-                      return function () {
-                        if (!window.confirm(tr("admin.delChannel") + name + "?")) return;
-                        post("/portal/api/admin/channel-delete", { name: name }, tr("admin.channelDeleted") + name);
-                      };
-                    })(ch.name),
-                  },
-                  tr("common.delete")
-                )
-              )
-            ),
-            h(
-              "div",
-              { style: Object.assign({ fontSize: 12 }, muted) },
-              ch.models.join(", ") + (ch.baseUrl ? " · " + ch.baseUrl : "") + (ch.keyPrefix ? " · key " + ch.keyPrefix : "")
-            )
-          )
-        );
-      }
 
       var kids = [];
       var trend = data.trend || [];
@@ -1828,46 +1775,6 @@ body.desk-panel-open [class*="sidebarCol"] { backdrop-filter: none !important; -
           )
         );
       }
-      kids.push(h("div", { key: "t2", style: { fontSize: 15, fontWeight: 700, marginTop: 8 } }, tr("admin.channelsCount") + data.channels.length + ")"));
-      kids.push(h("div", { key: "cr", style: {} }, chRows.length ? chRows : h("div", { style: muted }, tr("admin.noChannels"))));
-      kids.push(
-        h(
-          "div",
-          { key: "cnf", style: { display: "flex", flexDirection: "column", gap: 6, marginTop: 4 } },
-          h("div", { style: { fontWeight: 600 } }, tr("admin.addChannel")),
-          h("input", { ref: chNameRef, placeholder: tr("admin.phChannelName"), style: field }),
-          h("input", { ref: chUrlRef, placeholder: tr("admin.phBaseUrl"), style: field }),
-          h("input", { ref: chKeyRef, placeholder: "API Key（sk-...）", type: "password", style: field }),
-          h("input", { ref: chModelsRef, placeholder: tr("admin.phModels"), style: field }),
-          h("input", { ref: chPricesRef, placeholder: tr("admin.phPrices"), style: field }),
-          h("input", { ref: chNoteRef, placeholder: tr("common.phNote"), style: field }),
-          h(
-            "button",
-            {
-              style: btnDark,
-              onClick: function () {
-                var name = chNameRef.current ? chNameRef.current.value.trim() : "";
-                var baseUrl = chUrlRef.current ? chUrlRef.current.value.trim() : "";
-                var apiKey = chKeyRef.current ? chKeyRef.current.value.trim() : "";
-                var models = chModelsRef.current ? chModelsRef.current.value : "";
-                var prices = chPricesRef.current ? chPricesRef.current.value.trim() : "";
-                var note = chNoteRef.current ? chNoteRef.current.value.trim() : "";
-                var payload = { name: name, base_url: baseUrl, api_key: apiKey, models: models, note: note };
-                if (prices) {
-                  try {
-                    payload.prices = JSON.parse(prices);
-                  } catch (e) {
-                    setMsg({ kind: "err", text: tr("admin.badPrices") });
-                    return;
-                  }
-                }
-                post("/portal/api/admin/channel-create", payload, tr("admin.channelAdded") + name);
-              },
-            },
-            tr("admin.addChannel")
-          )
-        )
-      );
       if (msg.kind) {
         kids.push(
           h(
@@ -3805,6 +3712,15 @@ body.desk-panel-open [class*="sidebarCol"] { backdrop-filter: none !important; -
       var msgSt = React.useState(null);
       var msg = msgSt[0];
       var setMsg = msgSt[1];
+      var chPair = React.useState([]);
+      var chs = chPair[0];
+      var setChs = chPair[1];
+      var chNameRef = React.useRef(null);
+      var chUrlRef = React.useRef(null);
+      var chKeyRef = React.useRef(null);
+      var chModelsRef = React.useRef(null);
+      var chPricesRef = React.useRef(null);
+      var chNoteRef = React.useRef(null);
       function load() {
         fetch("/portal/api/models-catalog?lang=" + deskLang(), { headers: { accept: "application/json" } })
           .then(function (r) { return r.ok ? r.json() : {}; })
@@ -3824,8 +3740,50 @@ body.desk-panel-open [class*="sidebarCol"] { backdrop-filter: none !important; -
                   writable: !up || up.writable !== false,
                   models: (cat && cat.models) || [],
                 });
+                if (!(up && up.forbidden)) loadChannels();
               });
           });
+      }
+      function loadChannels() {
+        fetch("/portal/api/admin/channels?lang=" + deskLang(), { headers: { accept: "application/json" } })
+          .then(function (r) { return r.ok ? r.json() : {}; })
+          .catch(function () { return {}; })
+          .then(function (d) { setChs((d && d.channels) || []); });
+      }
+      function chPost(path, body, okText, reloadAll) {
+        setMsg({ kind: "info", text: tr("common.processing") });
+        fetch(path + "?lang=" + deskLang(), { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify(body) })
+          .then(function (r) { return r.json().then(function (d) { return { status: r.status, d: d }; }); })
+          .then(function (res) {
+            if (res.status !== 200 || (res.d && res.d.error)) { setMsg({ kind: "err", text: (res.d && res.d.error) || ("HTTP " + res.status) }); return; }
+            setMsg({ kind: "ok", text: okText });
+            loadChannels();
+            if (reloadAll) load();
+          })
+          .catch(function (e) { setMsg({ kind: "err", text: String((e && e.message) || e) }); });
+      }
+      function addChannel() {
+        var name = chNameRef.current ? chNameRef.current.value.trim() : "";
+        var baseUrl = chUrlRef.current ? chUrlRef.current.value.trim() : "";
+        var apiKey = chKeyRef.current ? chKeyRef.current.value.trim() : "";
+        var models = chModelsRef.current ? chModelsRef.current.value : "";
+        var prices = chPricesRef.current ? chPricesRef.current.value.trim() : "";
+        var note = chNoteRef.current ? chNoteRef.current.value.trim() : "";
+        var payload = { name: name, base_url: baseUrl, api_key: apiKey, models: models, note: note };
+        if (prices) {
+          try { payload.prices = JSON.parse(prices); }
+          catch (e) { setMsg({ kind: "err", text: tr("admin.badPrices") }); return; }
+        }
+        var rl = [chNameRef, chUrlRef, chKeyRef, chModelsRef, chPricesRef, chNoteRef];
+        for (var i = 0; i < rl.length; i++) { if (rl[i].current) rl[i].current.value = ""; }
+        chPost("/portal/api/admin/channel-create", payload, tr("admin.channelAdded") + name, true);
+      }
+      function toggleChannel(name, on) {
+        chPost("/portal/api/admin/channel-toggle", { name: name }, tr("admin.channelToggled") + (on ? tr("common.disable") : tr("common.enable")) + ": " + name, true);
+      }
+      function delChannel(name) {
+        if (!window.confirm(tr("admin.delChannel") + name + "?")) return;
+        chPost("/portal/api/admin/channel-delete", { name: name }, tr("admin.channelDeleted") + name, true);
       }
       React.useEffect(function () { load(); }, [langTick]);
       function save() {
@@ -3878,6 +3836,48 @@ body.desk-panel-open [class*="sidebarCol"] { backdrop-filter: none !important; -
         }
       }
       if (isAdmin) kids.push(h("div", { key: "sn", style: Object.assign({ fontSize: 12, marginTop: 6 }, muted) }, tr("admin.keyScopeNote")));
+      if (isAdmin) {
+        var chRows = [];
+        for (var ci = 0; ci < chs.length; ci++) {
+          (function (ch) {
+            chRows.push(
+              h(
+                "div",
+                { key: "c" + ch.name, style: rowBase },
+                h(
+                  "div",
+                  { style: { display: "flex", justifyContent: "space-between", alignItems: "center", gap: 8 } },
+                  h("span", null, ch.name + " ", h("span", { style: Object.assign({ fontSize: 12 }, muted) }, ch.enabled ? tr("common.enable") : tr("common.disable"))),
+                  h(
+                    "span",
+                    { style: { display: "flex", gap: 6 } },
+                    h("button", { style: btnSmall, onClick: function () { toggleChannel(ch.name, ch.enabled); } }, ch.enabled ? tr("common.disable") : tr("common.enable")),
+                    h("button", { style: btnDanger, onClick: function () { delChannel(ch.name); } }, tr("common.delete"))
+                  )
+                ),
+                h("div", { style: Object.assign({ fontSize: 12 }, muted) }, ch.models.join(", ") + (ch.baseUrl ? " \u00b7 " + ch.baseUrl : "") + (ch.keyPrefix ? " \u00b7 key " + ch.keyPrefix : ""))
+              )
+            );
+          })(chs[ci]);
+        }
+        kids.push(h("div", { key: "chT", style: { fontSize: 15, fontWeight: 700, marginTop: 12 } }, tr("admin.channelsCount") + chs.length + ")"));
+        kids.push(h("div", { key: "chD", style: Object.assign({ fontSize: 12, marginTop: 2 }, muted) }, tr("admin.channelsDesc")));
+        kids.push(h("div", { key: "chR", style: {} }, chRows.length ? chRows : h("div", { style: muted }, tr("admin.noChannels"))));
+        kids.push(
+          h(
+            "div",
+            { key: "chF", style: { display: "flex", flexDirection: "column", gap: 6, marginTop: 4 } },
+            h("div", { style: { fontWeight: 600 } }, tr("admin.addChannel")),
+            h("input", { ref: chNameRef, placeholder: tr("admin.phChannelName"), style: field }),
+            h("input", { ref: chUrlRef, placeholder: tr("admin.phBaseUrl"), style: field }),
+            h("input", { ref: chKeyRef, placeholder: "API Key\uff08sk-...\uff09", type: "password", style: field }),
+            h("input", { ref: chModelsRef, placeholder: tr("admin.phModels"), style: field }),
+            h("input", { ref: chPricesRef, placeholder: tr("admin.phPrices"), style: field }),
+            h("input", { ref: chNoteRef, placeholder: tr("common.phNote"), style: field }),
+            h("button", { style: btnDark, onClick: addChannel }, tr("admin.addChannel"))
+          )
+        );
+      }
       kids.push(h("div", { key: "mo", style: { marginTop: 8, fontSize: 12 } }, tr("team.models"), chips()));
       kids.push(h("div", { key: "h", style: Object.assign({ fontSize: 12, marginTop: 8 }, muted) }, tr("team.hint")));
       if (msg) kids.push(h("div", { key: "ms", style: { fontSize: 12, marginTop: 6, color: msg.kind === "err" ? "var(--dsw-alias-label-error, #c0392b)" : "var(--dsw-alias-label-secondary, #65676b)" } }, msg.text));

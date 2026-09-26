@@ -1598,6 +1598,21 @@ export function startPortal(opts: PortalOptions) {
           setTimeout(() => process.exit(0), 800)
           return
         }
+
+        if (req.method === 'GET' && path === '/portal/api/admin/channels') {
+          const channels = listChannels(db).map((c) => ({
+            id: c.id,
+            name: c.name,
+            baseUrl: c.base_url,
+            models: c.models,
+            enabled: c.enabled === 1,
+            keyPrefix: c.api_key ? c.api_key.slice(0, 6) + '…' : '',
+            prices: Object.keys(c.prices).length,
+            note: c.note ?? '',
+          }))
+          res.writeHead(200, { 'content-type': 'application/json; charset=utf-8' })
+          return res.end(JSON.stringify({ ok: true, channels }))
+        }
         if (req.method === 'GET' && path === '/portal/api/admin/notify') {
           res.writeHead(200, { 'content-type': 'application/json; charset=utf-8' })
           return res.end(
