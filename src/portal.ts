@@ -1280,6 +1280,35 @@ export function startPortal(opts: PortalOptions) {
         res.writeHead(200, { 'content-type': 'application/json; charset=utf-8' })
         return res.end(JSON.stringify({ ok: true }))
       }
+      // —— 团队模型目录（全员：只列模型名与来源，不含任何 key；模型页「团队共用模型」模块用）——
+      if (req.method === 'GET' && path === '/portal/api/models-catalog') {
+        if (!user) {
+          res.writeHead(401, { 'content-type': 'application/json' })
+          return res.end(JSON.stringify({ error: 'login required' }))
+        }
+        const seenModel = new Set<string>()
+        const models: { name: string; source: string }[] = []
+        try {
+          for (const c of listChannels(db)) {
+            if (c.enabled !== 1) continue
+            for (const m of c.models) {
+              if (!m || seenModel.has(m)) continue
+              seenModel.add(m)
+              models.push({ name: m, source: c.name })
+            }
+          }
+        } catch { /* 通道读取失败不致命 */ }
+        try {
+          for (const m of Object.keys(prices.models ?? {})) {
+            if (seenModel.has(m)) continue
+            seenModel.add(m)
+            models.push({ name: m, source: 'default' })
+          }
+        } catch { /* 价格表读取失败不致命 */ }
+        const upHost = (process.env.DESK_UPSTREAM ?? 'https://api.deepseek.com').replace(/^https?:\/\//, '')
+        res.writeHead(200, { 'content-type': 'application/json; charset=utf-8' })
+        return res.end(JSON.stringify({ ok: true, upstream: upHost, models }))
+      }
       // —— 管理 API（工作台 设置 →「成员管理」插件调用；仅管理员）——
       if (path.startsWith('/portal/api/admin/')) {
         if (!user) {

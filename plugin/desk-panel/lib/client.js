@@ -95,14 +95,21 @@ window.__ModuleLoader__.load({
       "admin.delChannel": "删除通道 ",
       "admin.channelDeleted": "通道已删除：",
       "admin.teamUsage7d": "近 7 天团队用量 · 合计 ",
-      "admin.upstreamTitle": "团队共用上游（默认）",
-      "admin.upstreamDesc": "所有成员默认经这里出网；外部通道按模型名分流（见下方「模型通道」）。Key 只存服务器，成员不可见。",
       "admin.upstreamSrc": "（来源 ",
       "admin.keyMissing": "Key 未配置",
       "admin.keyPh": "sk-…（粘贴新的 DeepSeek API Key；保存后网关自动重启约 5~10 秒）",
       "admin.updateKey": "更新 Key",
       "admin.keyEnvLocked": "当前 Key 来自服务环境变量（DESK_REAL_KEY），请在服务环境里修改。",
-      "admin.keyScopeNote": "换 Key 只影响默认上游；给特定模型接别的上游 / Key 用下方「模型通道」。",
+      "team.title": "团队共用模型 Key",
+      "team.titleMember": "团队共用模型（固定）",
+      "team.desc": "所有成员默认经团队网关出网；Key 只存服务器，成员不可见。保存后网关自动重启（约 5~10 秒）。",
+      "team.descMember": "由团队管理员统一配置，你无需填写任何 Key；直接使用下列模型即可。",
+      "team.models": "可用模型：",
+      "team.noModels": "（尚未配置模型清单）",
+      "team.hint": "上方「模型」卡片是你的个人 API 配置；如需换成自己的 key，请同时把 Base URL 改为 https://api.deepseek.com。",
+      "team.loading": "读取团队模型配置中…",
+      "team.locked": "已由管理员配置，固定不变",
+      "admin.keyScopeNote": "换 Key 只影响默认上游；给特定模型接别的上游 / Key 请在 设置 → 成员管理 →「模型通道」里配置。",
       "admin.membersCount": "成员（",
       "admin.newMember": "新建成员",
       "admin.phUsername": "用户名（小写字母数字，2-32 位）",
@@ -418,14 +425,21 @@ window.__ModuleLoader__.load({
       "admin.delChannel": "Delete channel ",
       "admin.channelDeleted": "Channel deleted: ",
       "admin.teamUsage7d": "Team usage, last 7 days · total ",
-      "admin.upstreamTitle": "Team upstream (default)",
-      "admin.upstreamDesc": "All members go upstream through here by default; external channels route by model name (see “Model channels” below). The key stays on the server — members never see it.",
       "admin.upstreamSrc": " (source ",
       "admin.keyMissing": "Key not configured",
       "admin.keyPh": "sk-… (paste a new DeepSeek API key; saving restarts the gateway in ~5–10 s)",
       "admin.updateKey": "Update key",
       "admin.keyEnvLocked": "The current key comes from the service environment (DESK_REAL_KEY); change it there.",
-      "admin.keyScopeNote": "Changing the key only affects the default upstream; route specific models to other upstreams/keys with “Model channels” below.",
+      "team.title": "Team shared model key",
+      "team.titleMember": "Team shared models (locked)",
+      "team.desc": "All members route through the team gateway by default; the key stays on the server (invisible to members). Saving restarts the gateway (~5-10s).",
+      "team.descMember": "Managed by the team admin - no key needed; just use the models below.",
+      "team.models": "Available models: ",
+      "team.noModels": "(no model list configured yet)",
+      "team.hint": "The \"Models\" cards above are your personal API configuration; to use your own key, also set Base URL to https://api.deepseek.com.",
+      "team.loading": "Loading team model configuration...",
+      "team.locked": "Locked - managed by the admin",
+      "admin.keyScopeNote": "Changing the key only affects the default upstream; route specific models to other upstreams/keys via Settings → Members → “Model channels”.",
       "admin.membersCount": "Members (",
       "admin.newMember": "New member",
       "admin.phUsername": "Username (lowercase letters/digits, 2–32)",
@@ -1541,17 +1555,9 @@ body.desk-panel-open [class*="sidebarCol"] { backdrop-filter: none !important; -
       var chModelsRef = React.useRef(null);
       var chPricesRef = React.useRef(null);
       var chNoteRef = React.useRef(null);
-      var upPair = React.useState({ phase: "loading", upstream: "", keySet: false, keyMasked: "", source: "", writable: true });
-      var up = upPair[0];
-      var setUp = upPair[1];
-      var upKeyRef = React.useRef(null);
 
       function load(quiet) {
         if (!quiet) setData({ phase: "loading", members: [], channels: [], message: "" });
-        fetch("/portal/api/admin/upstream?lang=" + deskLang(), { headers: { accept: "application/json" } })
-          .then(function (r) { return r.ok ? r.json() : {}; })
-          .then(function (d) { setUp({ phase: "ready", upstream: d.upstream || "", keySet: !!d.keySet, keyMasked: d.keyMasked || "", source: d.source || "", writable: d.writable !== false }); })
-          .catch(function () { setUp({ phase: "error", upstream: "", keySet: false, keyMasked: "", source: "", writable: true }); });
         fetch("/portal/api/admin/overview", { headers: { accept: "application/json" } })
           .then(function (r) {
             if (r.status === 403) throw new Error("NOPERM");
@@ -1593,35 +1599,6 @@ body.desk-panel-open [class*="sidebarCol"] { backdrop-filter: none !important; -
           });
       }
 
-      function saveUpstream(raw) {
-        if (!raw) {
-          setMsg({ kind: "err", text: tr("admin.pasteKey") });
-          return;
-        }
-        setMsg({ kind: "info", text: tr("common.saving") });
-        fetch("/portal/api/admin/upstream-set?lang=" + deskLang(), { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ api_key: raw }) })
-          .then(function (r) {
-            return r.json().then(function (d) {
-              return { status: r.status, d: d };
-            });
-          })
-          .then(function (res) {
-            if (res.status !== 200 || (res.d && res.d.error)) {
-              setMsg({ kind: "err", text: (res.d && res.d.error) || "HTTP " + res.status });
-              return;
-            }
-            if (res.d && res.d.unchanged) {
-              setMsg({ kind: "ok", text: tr("admin.sameKey") });
-              return;
-            }
-            if (upKeyRef.current) upKeyRef.current.value = "";
-            setMsg({ kind: "ok", text: tr("admin.updatedOpen") + ((res.d && res.d.keyMasked) || "") + tr("admin.restartSuffix") });
-            setTimeout(function () { load(true); }, 12000);
-          })
-          .catch(function (e) {
-            setMsg({ kind: "err", text: String((e && e.message) || e) });
-          });
-      }
 
       if (data.phase === "loading") return h("div", { style: wrap }, tr("admin.loadingMembers"));
       if (data.phase === "error") {
@@ -1774,50 +1751,6 @@ body.desk-panel-open [class*="sidebarCol"] { backdrop-filter: none !important; -
           { key: "trend" },
           h("div", { style: { fontWeight: 600 } }, tr("admin.teamUsage7d") + fmt(total7)),
           h("div", { style: { display: "flex", gap: 6, alignItems: "flex-end" } }, barNodes)
-        )
-      );
-      kids.push(
-        h(
-          "div",
-          { key: "up" },
-          h("div", { style: { fontSize: 15, fontWeight: 700 } }, tr("admin.upstreamTitle")),
-          h(
-            "div",
-            { style: Object.assign({ fontSize: 12, marginTop: 2 }, muted) },
-            tr("admin.upstreamDesc")
-          ),
-          h(
-            "div",
-            { style: { marginTop: 6 } },
-            "🌐 " + (up.upstream || "-") + "　",
-            h(
-              "span",
-              { style: Object.assign({ fontSize: 12 }, muted) },
-              up.keySet ? "Key " + up.keyMasked + tr("admin.upstreamSrc") + up.source + ")" : tr("admin.keyMissing")
-            )
-          ),
-          up.writable
-            ? h(
-                "div",
-                { style: { display: "flex", gap: 6, marginTop: 6, flexWrap: "wrap" } },
-                h("input", { ref: upKeyRef, type: "password", placeholder: tr("admin.keyPh"), style: field }),
-                h(
-                  "button",
-                  {
-                    style: btnDark,
-                    onClick: function () {
-                      saveUpstream(upKeyRef.current ? upKeyRef.current.value.trim() : "");
-                    },
-                  },
-                  tr("admin.updateKey")
-                )
-              )
-            : h("div", { style: Object.assign({ fontSize: 12, marginTop: 6 }, muted) }, tr("admin.keyEnvLocked")),
-          h(
-            "div",
-            { style: Object.assign({ fontSize: 12, marginTop: 6 }, muted) },
-            tr("admin.keyScopeNote")
-          )
         )
       );
       kids.push(h("div", { key: "t1", style: { fontSize: 15, fontWeight: 700 } }, tr("admin.membersCount") + data.members.length + ")"));
@@ -3862,6 +3795,95 @@ body.desk-panel-open [class*="sidebarCol"] { backdrop-filter: none !important; -
       return h("div", { style: Object.assign({}, wrap, { maxWidth: 640 }) }, kids);
     }
 
+    /** 模型页扩展位（官方 settings.models.footer）：团队共用模型 Key —— 管理员可改 / 成员只读 */
+    function TeamModelsFooter() {
+      var langTick = useLocaleSignal();
+      var st = React.useState({ phase: "loading", role: "member", upstream: "", keySet: false, keyMasked: "", source: "", writable: true, models: [] });
+      var s = st[0];
+      var setS = st[1];
+      var keyRef = React.useRef(null);
+      var msgSt = React.useState(null);
+      var msg = msgSt[0];
+      var setMsg = msgSt[1];
+      function load() {
+        fetch("/portal/api/models-catalog?lang=" + deskLang(), { headers: { accept: "application/json" } })
+          .then(function (r) { return r.ok ? r.json() : {}; })
+          .catch(function () { return {}; })
+          .then(function (cat) {
+            return fetch("/portal/api/admin/upstream?lang=" + deskLang(), { headers: { accept: "application/json" } })
+              .then(function (r) { return r.status === 403 ? { forbidden: true } : (r.ok ? r.json() : {}); })
+              .catch(function () { return {}; })
+              .then(function (up) {
+                setS({
+                  phase: "ready",
+                  role: up.forbidden ? "member" : "admin",
+                  upstream: (up && up.upstream) || (cat && cat.upstream) || "",
+                  keySet: !!(up && up.keySet),
+                  keyMasked: (up && up.keyMasked) || "",
+                  source: (up && up.source) || "",
+                  writable: !up || up.writable !== false,
+                  models: (cat && cat.models) || [],
+                });
+              });
+          });
+      }
+      React.useEffect(function () { load(); }, [langTick]);
+      function save() {
+        var raw = keyRef.current ? keyRef.current.value.trim() : "";
+        if (!raw) { setMsg({ kind: "err", text: tr("admin.pasteKey") }); return; }
+        setMsg({ kind: "info", text: tr("common.saving") });
+        fetch("/portal/api/admin/upstream-set?lang=" + deskLang(), { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ api_key: raw }) })
+          .then(function (r) { return r.json().then(function (d) { return { status: r.status, d: d }; }); })
+          .then(function (res) {
+            if (res.status !== 200 || (res.d && res.d.error)) { setMsg({ kind: "err", text: (res.d && res.d.error) || ("HTTP " + res.status) }); return; }
+            if (res.d && res.d.unchanged) { setMsg({ kind: "ok", text: tr("admin.sameKey") }); return; }
+            if (keyRef.current) keyRef.current.value = "";
+            setMsg({ kind: "ok", text: tr("admin.updatedOpen") + ((res.d && res.d.keyMasked) || "") + tr("admin.restartSuffix") });
+            setTimeout(function () { load(); }, 12000);
+          })
+          .catch(function (e) { setMsg({ kind: "err", text: String((e && e.message) || e) }); });
+      }
+      function chips() {
+        if (!s.models.length) return h("span", { style: Object.assign({ fontSize: 12 }, muted) }, tr("team.noModels"));
+        return s.models.map(function (m, i) {
+          return h("span", { key: "m" + i, style: { display: "inline-block", margin: "2px 4px 0 0", padding: "1px 8px", borderRadius: 999, border: "1px solid var(--dsw-alias-border-l2, rgba(127,127,127,.3))", fontSize: 12 } }, m.name);
+        });
+      }
+      if (s.phase === "loading") return h("div", { style: Object.assign({ fontSize: 12, marginTop: 10 }, muted) }, tr("team.loading"));
+      var kids = [];
+      var isAdmin = s.role === "admin";
+      var titleText = isAdmin ? tr("team.title") : tr("team.titleMember");
+      var descText = isAdmin ? tr("team.desc") : tr("team.descMember");
+      kids.push(h("div", { key: "t", style: { fontSize: 15, fontWeight: 700 } }, titleText));
+      kids.push(h("div", { key: "d", style: Object.assign({ fontSize: 12, marginTop: 2 }, muted) }, descText));
+      kids.push(
+        h("div", { key: "u", style: { marginTop: 6 } },
+          "\u{1F310} " + (s.upstream || "-"),
+          isAdmin
+            ? h("span", { style: Object.assign({ fontSize: 12, marginLeft: 8 }, muted) },
+                s.keySet ? "Key " + s.keyMasked + tr("admin.upstreamSrc") + s.source + ")" : tr("admin.keyMissing"))
+            : h("span", { style: Object.assign({ fontSize: 12, marginLeft: 8 }, muted) }, tr("team.locked"))
+        )
+      );
+      if (isAdmin) {
+        if (s.writable) {
+          kids.push(
+            h("div", { key: "e", style: { display: "flex", gap: 6, marginTop: 6, flexWrap: "wrap" } },
+              h("input", { ref: keyRef, type: "password", placeholder: tr("admin.keyPh"), style: field }),
+              h("button", { style: btnDark, onClick: save }, tr("admin.updateKey"))
+            )
+          );
+        } else {
+          kids.push(h("div", { key: "e", style: Object.assign({ fontSize: 12, marginTop: 6 }, muted) }, tr("admin.keyEnvLocked")));
+        }
+      }
+      if (isAdmin) kids.push(h("div", { key: "sn", style: Object.assign({ fontSize: 12, marginTop: 6 }, muted) }, tr("admin.keyScopeNote")));
+      kids.push(h("div", { key: "mo", style: { marginTop: 8, fontSize: 12 } }, tr("team.models"), chips()));
+      kids.push(h("div", { key: "h", style: Object.assign({ fontSize: 12, marginTop: 8 }, muted) }, tr("team.hint")));
+      if (msg) kids.push(h("div", { key: "ms", style: { fontSize: 12, marginTop: 6, color: msg.kind === "err" ? "var(--dsw-alias-label-error, #c0392b)" : "var(--dsw-alias-label-secondary, #65676b)" } }, msg.text));
+      return h("div", { style: { display: "flex", flexDirection: "column", borderTop: "1px solid var(--dsw-alias-border-l2, rgba(127,127,127,.25))", marginTop: 14, paddingTop: 12 } }, kids);
+    }
+
     var inject = ["slots", "locale"];
 
     function apply(ctx) {
@@ -3870,6 +3892,14 @@ body.desk-panel-open [class*="sidebarCol"] { backdrop-filter: none !important; -
         ctx.effect(function () { return ctx.locale.register(DESK_NS, { zh: LOC_ZH, en: LOC_EN }); });
         DESK_T = ctx.locale.bind(DESK_NS);
       } catch (e) { /* 无语言服务时退回中文 */ }
+
+      // 模型页扩展位（官方 settings.models.footer）：团队共用模型 Key（管理员可改；成员只读）
+      ctx.slots.inject("settings.models.footer", function () {
+        return ctx.slots.register(
+          { name: "settings.models.footer", id: "desk-team-models", order: 10 },
+          TeamModelsFooter
+        );
+      });
       ctx.slots.inject("settings.section", function () {
         return ctx.slots.register(
           {

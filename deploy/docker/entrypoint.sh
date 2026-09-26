@@ -144,8 +144,5 @@ process.exit(db.prepare('SELECT 1 FROM users WHERE username = ?').get('$m_rec') 
 }
 supervise &
 
-# 管理员钥匙桥：管理员实例「设置→模型」里改 key → 自动应用到团队网关（仅管理员；成员账号不受影响）
-bash /opt/anywork/deploy/docker/admin-key-sync.sh >> "$HOME/.desk/run/admin-key-sync.log" 2>&1 & PIDS+=("$!")
-
 log "全部就绪：请浏览器打开 http://$ANYWORK_HOST/（容器内端口 8080）"
 wait
