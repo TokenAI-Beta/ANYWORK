@@ -126,7 +126,9 @@ while IFS=$'\t' read -r u p h; do
   install_plugin "$u" "file:$repo/plugin/desk-panel" "dsh-desk-panel"
   install_plugin "$u" "https://github.com/Zagadka-3906/DSH-Transparent-UI-Plugin-dsh015.git" "dsh-client-ui-aqua"
   install_plugin "$u" "dsh-chat-import" "dsh-chat-import"
-  install_plugin "$u" "dsh-better-sidebar@latest" "dsh-better-sidebar" "$home/desk-test/$u/profiles/web/node_modules/node-pty/build/Release/pty.node"
+  # 注：better-sidebar 0.21+ 起不再依赖 node-pty（官方改走引擎内建终端）——不再设置 pty 探针。
+  #     历史版本（0.19.x）曾需要 node-pty@build/Release/pty.node；如回到旧版本再加回探针。
+  install_plugin "$u" "dsh-better-sidebar@latest" "dsh-better-sidebar"
 done < "$home/.desk/run/instances.tsv"
 
 # ── 5b) aqua fork 适配：settings.plugin.item 补 key（0.1.5 keyed slot；幂等） ──
