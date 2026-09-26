@@ -11,12 +11,17 @@ name: anywork
 
 services:
   anywork:
+    # 本地构建（build-cn.sh）与云端镜像（GHCR）并存：
+    #   本机：bash deploy/docker/build-cn.sh && docker compose up -d   （本地 build 出的镜像即打此名）
+    #   服务器：docker compose pull && docker compose up -d            （只拉不编）
+    image: ghcr.io/bugbyc0922/dsh-anywork:${ANYWORK_IMAGE_TAG:-latest}
     build:
       context: .
       dockerfile: deploy/docker/Dockerfile
     restart: unless-stopped
     ports:
-      - "${ANYWORK_PORT:-8080}:8080"
+      # 监听地址：本机/局域网默认 0.0.0.0（手机可访问）；公网服务器建议 127.0.0.1（只走反代）
+      - "${ANYWORK_BIND:-0.0.0.0}:${ANYWORK_PORT:-8080}:8080"
     volumes:
       - anywork-data:/data
     environment:
