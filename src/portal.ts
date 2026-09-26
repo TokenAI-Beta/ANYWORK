@@ -103,6 +103,7 @@ const CHANNEL_PRESETS = [
     baseUrl: 'https://dashscope.aliyuncs.com/compatible-mode/v1',
     models: ['qwen-plus', 'qwen-max', 'qwen-turbo', 'qwen3-max'],
     keyUrl: 'https://bailian.console.aliyun.com/?apiKey=1',
+    maxTokensCap: 32768,
   },
   {
     id: 'kimi',
@@ -111,6 +112,7 @@ const CHANNEL_PRESETS = [
     baseUrl: 'https://api.moonshot.cn/v1',
     models: ['kimi-k2-turbo-preview', 'kimi-k2-0905-preview', 'moonshot-v1-128k'],
     keyUrl: 'https://platform.moonshot.cn/console/api-keys',
+    maxTokensCap: 32768,
   },
   {
     id: 'glm',
@@ -119,6 +121,7 @@ const CHANNEL_PRESETS = [
     baseUrl: 'https://open.bigmodel.cn/api/paas/v4',
     models: ['glm-5.1', 'glm-4.7', 'glm-4.7-flash', 'glm-4.5'],
     keyUrl: 'https://bigmodel.cn/usercenter/apikeys',
+    maxTokensCap: 32768,
   },
   {
     id: 'siliconflow',
@@ -127,6 +130,7 @@ const CHANNEL_PRESETS = [
     baseUrl: 'https://api.siliconflow.cn/v1',
     models: ['deepseek-ai/DeepSeek-V3', 'Qwen/Qwen3-235B-A22B'],
     keyUrl: 'https://cloud.siliconflow.cn/account/ak',
+    maxTokensCap: 32768,
   },
   {
     id: 'openrouter',
@@ -135,6 +139,7 @@ const CHANNEL_PRESETS = [
     baseUrl: 'https://openrouter.ai/api/v1',
     models: ['deepseek/deepseek-chat', 'qwen/qwen3-235b-a22b'],
     keyUrl: 'https://openrouter.ai/settings/keys',
+    maxTokensCap: 32768,
   },
 ]
 
@@ -1546,6 +1551,8 @@ export function startPortal(opts: PortalOptions) {
           const name = String(body.name ?? '').trim()
           const baseUrl = String(body.base_url ?? '').trim()
           const apiKey = String(body.api_key ?? '').trim()
+          const capRaw = Number(body.max_tokens_cap ?? NaN)
+          const maxTokensCap = Number.isFinite(capRaw) && capRaw > 0 ? Math.floor(capRaw) : undefined
           const models = (Array.isArray(body.models) ? (body.models as unknown[]) : String(body.models ?? '').split(','))
             .map((s) => String(s).trim())
             .filter(Boolean)
@@ -1558,6 +1565,7 @@ export function startPortal(opts: PortalOptions) {
             models,
             prices: priceObj,
             note: String(body.note ?? '').trim() || undefined,
+            max_tokens_cap: maxTokensCap,
           })
           if ('error' in r) {
             res.writeHead(400, { 'content-type': 'application/json; charset=utf-8' })

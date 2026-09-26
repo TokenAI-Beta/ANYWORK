@@ -11,6 +11,7 @@ export interface Channel {
   prices: Record<string, { in?: number; out?: number }>
   enabled: number
   note: string | null
+  max_tokens_cap: number | null
 }
 
 function parseJson<T>(s: unknown, fallback: T): T {
@@ -32,6 +33,7 @@ export function listChannels(db: DatabaseSync): Channel[] {
     prices: parseJson<Record<string, { in?: number; out?: number }>>(r.prices, {}),
     enabled: Number(r.enabled ?? 1),
     note: (r.note as string | null) ?? null,
+    max_tokens_cap: r.max_tokens_cap == null ? null : Number(r.max_tokens_cap),
   }))
 }
 
@@ -58,6 +60,7 @@ export function addChannel(
     models: string[]
     prices?: Record<string, { in?: number; out?: number }>
     note?: string
+    max_tokens_cap?: number
   },
 ): { ok: true; id: number } | { error: string } {
   const name = input.name.trim()
@@ -67,7 +70,7 @@ export function addChannel(
   const dup = db.prepare(`SELECT id FROM channels WHERE name = ?`).get(name)
   if (dup) return { error: `通道名已存在：${name}` }
   const info = db
-    .prepare(`INSERT INTO channels (name, base_url, api_key, models, prices, note) VALUES (?, ?, ?, ?, ?, ?)`)
+    .prepare(`INSERT INTO channels (name, base_url, api_key, models, prices, note, max_tokens_cap) VALUES (?, ?, ?, ?, ?, ?, ?)`)
     .run(
       name,
       input.base_url.trim(),
@@ -75,6 +78,7 @@ export function addChannel(
       JSON.stringify(input.models),
       JSON.stringify(input.prices ?? {}),
       input.note ?? null,
+      input.max_tokens_cap ?? null,
     )
   return { ok: true, id: Number(info.lastInsertRowid) }
 }

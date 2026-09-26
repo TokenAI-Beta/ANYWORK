@@ -75,6 +75,7 @@ function migrate(db: DatabaseSync): void {
       prices TEXT NOT NULL DEFAULT '{}',
       enabled INTEGER NOT NULL DEFAULT 1,
       note TEXT,
+      max_tokens_cap INTEGER,
       created_at TEXT NOT NULL DEFAULT (datetime('now'))
     );
 
@@ -189,4 +190,9 @@ function migrate(db: DatabaseSync): void {
   addTaskCol('reviewed_by', 'reviewed_by TEXT')
   addTaskCol('reviewed_at', 'reviewed_at TEXT')
   addTaskCol('review_note', 'review_note TEXT')
+  // 通道单次输出上限（2026-09-26）：写入实例模型条目 maxTokens 的来源，防供应商拒绝超大 max_tokens
+  const ccols = db.prepare('PRAGMA table_info(channels)').all() as { name: string }[]
+  if (!ccols.some((c) => c.name === 'max_tokens_cap')) {
+    db.exec('ALTER TABLE channels ADD COLUMN max_tokens_cap INTEGER')
+  }
 }
