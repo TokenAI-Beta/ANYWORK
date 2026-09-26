@@ -1430,6 +1430,22 @@ export function startPortal(opts: PortalOptions) {
           } finally {
             db.exec('PRAGMA foreign_keys = ON')
           }
+          // 自动回收工作台（2026-09-26）：立即停掉该成员实例；实例目录与残留文件由容器内监督器下一轮对账回收
+          try {
+            const deskHome = process.env.HOME || '/data'
+            const pid = Number(readFileSync(`${deskHome}/.desk/run/${username}.pid`, 'utf8').trim())
+            if (pid > 1) {
+              try {
+                const env = readFileSync(`/proc/${pid}/environ`, 'utf8')
+                const isMine = env.includes(`DSH_HOME=${deskHome}/desk-test/${username}`) || readFileSync(`/proc/${pid}/cmdline`, 'utf8').includes('agent-run')
+                if (isMine) process.kill(pid, 'SIGKILL')
+              } catch {
+                /* 目标进程已退出 */
+              }
+            }
+          } catch {
+            /* 无实例或文件缺失：交给监督器兜底 */
+          }
           res.writeHead(200, { 'content-type': 'application/json; charset=utf-8' })
           return res.end(JSON.stringify({ username }))
         }

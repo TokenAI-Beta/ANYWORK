@@ -95,12 +95,15 @@ for (const r of db.prepare('SELECT username, agent_port FROM users WHERE agent_p
         continue
       fi
       if [ -z "${SUP[$m_user]:-}" ]; then
+        touch "$HOME/.desk/run/$m_user.keep"
         (
           while :; do
+            [ -f "$HOME/.desk/run/$m_user.keep" ] || break
             bash /opt/anywork/scripts/agent-run.sh "$m_user" "$m_port" "$m_home" &
             child=$!
             echo "$child" > "$HOME/.desk/run/$m_user.pid"
             wait "$child" || true
+            [ -f "$HOME/.desk/run/$m_user.keep" ] || break
             log "实例 $m_user 退出，5 秒后自动重启"
             sleep 5
           done
@@ -109,6 +112,33 @@ for (const r of db.prepare('SELECT username, agent_port FROM users WHERE agent_p
         log "实例 $m_user（端口 $m_port）已拉起"
       fi
     done < "$HOME/.desk/run/instances.tsv"
+    # 成员回收对账：有运行痕迹但不在清单里的成员——账户已删 → 连工作台数据一并回收；账户在（仅撤端口）→ 只停实例
+    _cands="$(cd "$HOME/.desk/run" && ls *.keep *.pid *.prov 2>/dev/null | sed 's/\.[A-Za-z]*$//' | sort -u)"
+    for m_rec in $_cands; do
+      awk -F '\t' -v u="$m_rec" '$1 == u { f = 1 } END { exit(f ? 0 : 1) }' "$HOME/.desk/run/instances.tsv" && continue
+      rm -f "$HOME/.desk/run/$m_rec.keep"
+      # 杀实例：优先按 pid 文件精确杀（agent-run 用 exec 变成 node 进程，pkill 模式可能失效）；
+      # /proc/<pid>/environ 的 DSH_HOME 校验目标身份，避免误杀复用的 pid
+      _p="$(cat "$HOME/.desk/run/$m_rec.pid" 2>/dev/null || true)"
+      if [ -n "${_p:-}" ] && [ -d "/proc/$_p" ] && tr '\0' '\n' < "/proc/$_p/environ" 2>/dev/null | grep -q "^DSH_HOME=$HOME/desk-test/$m_rec$"; then
+        kill -9 "$_p" 2>/dev/null || true
+      else
+        pkill -f "agent-run.sh $m_rec " 2>/dev/null || true
+      fi
+      if node --input-type=module -e "
+import { openDb } from '/opt/anywork/src/db.ts'
+const db = openDb()
+process.exit(db.prepare('SELECT 1 FROM users WHERE username = ?').get('$m_rec') ? 0 : 1)
+" 2>/dev/null; then
+        unset "SUP[$m_rec]"
+        log "成员 $m_rec 实例已停（账户保留、端口撤下）"
+      else
+        rm -rf "$HOME/desk-test/$m_rec"
+        rm -f "$HOME/.desk/agents/$m_rec.key" "$HOME/.desk/run/$m_rec.pid" "$HOME/.desk/run/$m_rec.prov" "$HOME/.desk/run/$m_rec.provisioning" "$HOME/.desk/run/$m_rec.provision.log"
+        unset "SUP[$m_rec]"
+        log "成员 $m_rec 已删除：工作台实例已停止、数据已回收"
+      fi
+    done
     sleep 15
   done
 }
