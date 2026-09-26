@@ -133,3 +133,21 @@ python3? 不需要——零依赖
 - 开关：工作台 设置 → 插件 → 插件配置 →「玻璃主题」（每人浏览器本地开关，关掉即完整还原）。
 - 版本对表：本插件 1.3.x 面向 DSH 0.1.0-rc.5；升级 dsh 后需换对应 fork（Zagadka-3906 / afrel1024 / du-u-uck）。
 
+
+## 中国大陆网络构建（可选）
+
+境内构建若遇 Docker Hub / npm / GitHub / Debian 源不稳定：
+
+1. **Docker 镜像加速**（一次性）：Docker Desktop → Settings → Docker Engine 加入并 Apply：
+
+```json
+{ "registry-mirrors": ["https://docker.1ms.run"] }
+```
+
+2. **一键构建**（npm→npmmirror、apt→阿里云、dsh 源码→gh-proxy）：
+
+```bash
+bash deploy/docker/build-cn.sh
+```
+
+3. 若 gh-proxy.com 不通：编辑 `deploy/docker/build-cn.sh`，去掉 `--build-arg DSH_REPO=…` 行（即回退 GitHub 直连）。

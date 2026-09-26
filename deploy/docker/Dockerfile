@@ -8,9 +8,15 @@
 FROM node:24-bookworm AS dsbuild
 ARG DSH_REPO=https://github.com/deepseek-ai/deepseek-harness.git
 ARG DSH_REF=dsh-v0.1.5-rc.2
-RUN apt-get update \
+# —— 可选：网络源覆盖（中国大陆构建建议传入；不传 = 保持官方源）——
+ARG DEBIAN_MIRROR=
+ARG NPM_REGISTRY=
+RUN if [ -n "$DEBIAN_MIRROR" ]; then for f in /etc/apt/sources.list /etc/apt/sources.list.d/*.sources; do [ -f "$f" ] && sed -i "s|deb.debian.org|$DEBIAN_MIRROR|g" "$f"; done; fi \
+ && apt-get update \
  && apt-get install -y --no-install-recommends git ca-certificates python3 build-essential \
  && rm -rf /var/lib/apt/lists/*
+ENV COREPACK_NPM_REGISTRY=${NPM_REGISTRY:-https://registry.npmjs.org} \
+    npm_config_registry=${NPM_REGISTRY:-https://registry.npmjs.org}
 RUN corepack enable
 WORKDIR /src
 RUN git clone --depth 1 --branch "${DSH_REF}" "${DSH_REPO}" deepseek-harness
@@ -26,9 +32,14 @@ RUN pnpm --filter @deepseek-ai/dsh-client-ui-settings-general run bundle || echo
 
 # ---------- 阶段 2：运行时 ----------
 FROM node:24-bookworm-slim AS runtime
-RUN apt-get update \
+ARG DEBIAN_MIRROR=
+ARG NPM_REGISTRY=
+RUN if [ -n "$DEBIAN_MIRROR" ]; then for f in /etc/apt/sources.list /etc/apt/sources.list.d/*.sources; do [ -f "$f" ] && sed -i "s|deb.debian.org|$DEBIAN_MIRROR|g" "$f"; done; fi \
+ && apt-get update \
  && apt-get install -y --no-install-recommends python3 ca-certificates curl procps tini git make g++ \
  && rm -rf /var/lib/apt/lists/*
+ENV COREPACK_NPM_REGISTRY=${NPM_REGISTRY:-https://registry.npmjs.org} \
+    npm_config_registry=${NPM_REGISTRY:-https://registry.npmjs.org}
 RUN corepack enable
 WORKDIR /opt/anywork
 COPY . /opt/anywork
