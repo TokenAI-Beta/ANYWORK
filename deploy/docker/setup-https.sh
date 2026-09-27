@@ -10,7 +10,7 @@ mkdir -p /usr/share/nginx/html
 cat > /etc/nginx/conf.d/anywork-80.conf <<'EOF'
 server {
     listen 80;
-    server_name anywork.your-domain.com;
+    server_name your-domain.com;
     location /.well-known/acme-challenge/ { root /usr/share/nginx/html; }
     location / { return 301 https://$host:8443$request_uri; }
 }
@@ -22,9 +22,9 @@ if [ ! -x /root/.acme.sh/acme.sh ]; then
   curl -s https://get.acme.sh | sh -s email=admin@your-domain.com >/dev/null 2>&1 || echo "acme.sh 安装异常"
 fi
 /root/.acme.sh/acme.sh --set-default-ca --server letsencrypt 2>&1 | tail -1
-/root/.acme.sh/acme.sh --issue -d anywork.your-domain.com --webroot /usr/share/nginx/html --keylength ec-256 2>&1 | tail -8
+/root/.acme.sh/acme.sh --issue -d your-domain.com --webroot /usr/share/nginx/html --keylength ec-256 2>&1 | tail -8
 mkdir -p /etc/nginx/ssl
-/root/.acme.sh/acme.sh --install-cert -d anywork.your-domain.com --ecc \
+/root/.acme.sh/acme.sh --install-cert -d your-domain.com --ecc \
   --fullchain-file /etc/nginx/ssl/anywork.crt \
   --key-file /etc/nginx/ssl/anywork.key \
   --reloadcmd "systemctl reload nginx" 2>&1 | tail -3
@@ -35,7 +35,7 @@ cat > /etc/nginx/conf.d/anywork-8443.conf <<'EOF'
 map $http_upgrade $connection_upgrade_anywork { default upgrade; '' close; }
 server {
     listen 8443 ssl;
-    server_name anywork.your-domain.com;
+    server_name your-domain.com;
     ssl_certificate     /etc/nginx/ssl/anywork.crt;
     ssl_certificate_key /etc/nginx/ssl/anywork.key;
     client_max_body_size 100m;
@@ -55,5 +55,5 @@ server {
 }
 EOF
 nginx -t && systemctl reload nginx && echo "8443 OK"
-curl -sk -m 8 -o /dev/null -w "本机 8443 测试: %{http_code}\n" https://127.0.0.1:8443/ -H "Host: anywork.your-domain.com"
+curl -sk -m 8 -o /dev/null -w "本机 8443 测试: %{http_code}\n" https://127.0.0.1:8443/ -H "Host: your-domain.com"
 echo "=== HTTPS 配置完成 ==="
