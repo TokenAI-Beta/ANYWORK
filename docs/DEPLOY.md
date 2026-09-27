@@ -175,7 +175,7 @@ ANYWORK_ADMIN_USER=admin001
 ANYWORK_ADMIN_PASSWORD=<管理员密码>
 ANYWORK_MEMBERS=<成员列表>
 DEEPSEEK_API_KEY=<真 key>
-ANYWORK_IMAGE_TAG=v1.0          # 钉版本；也可用 latest 或提交 sha
+ANYWORK_IMAGE_TAG=v1.1          # 钉版本；也可用 latest 或提交 sha
 EOF
 chmod 600 .env
 docker compose pull && docker compose up -d
