@@ -27,3 +27,15 @@
 ## 2026-09-23 新增
 
 - **新建成员自动配实例（已实现，2026-09-26）**：成员管理建号自动完成全流程——写钥匙文件（`~/.desk/agents/<u>.key`）、分配实例端口；容器内监督器检测到即自动配置（插件优先从既有成员复制、秒级；无模板时在线安装）并拉起实例。约 1 分钟内成员可登录使用。
+
+## better-sidebar 版本陷阱：0.21.x 在 dsh 0.1.5-rc.2 上「文件」标签页崩溃（2026-09-27 修复）
+
+- **现象**：右侧面板点「文件」（或打开文档标签）→ `dsh-better-sidebar: Minified React error #130` + 重试按钮。
+- **根因**：镜像/bootstrap 曾用 `dsh-better-sidebar@latest` 安装，装到 0.21.x（面向 dsh 0.1.7-rc 构建；peerDeps ^0.1.7-rc.1），而本引擎为 0.1.5-rc.2。
+- **处置**：锁定 `dsh-better-sidebar@0.19.1`（peerDeps ^0.1.5-rc.1 适配版）。bootstrap.sh / member-provision.sh 已钉版本；已装实例就地降级：
+  ```sh
+  docker compose exec -T -e npm_config_registry=https://registry.npmmirror.com anywork sh -c \
+    'DSH_HOME=/data/desk-test/<成员> node /data/deepseek-harness/apps/cli/lib/bin.js plugin --profile web add dsh-better-sidebar@0.19.1'
+  ```
+  然后 kill 对应实例进程（监督器 3~5s 自拉）。0.19.x 依赖 node-pty（原生模块），缺失时 `pnpm approve-builds --all && pnpm install`。
+- **注意**：国内网络装 npm 包建议加 `npm_config_registry=https://registry.npmmirror.com`（官方源慢十倍以上）。

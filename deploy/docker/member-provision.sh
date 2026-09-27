@@ -45,9 +45,13 @@ fi
 if [ ! -f "$prof/web/package.json" ]; then
   log "无可复制模板，改为在线安装插件（需要外网）"
   DSH_HOME="$h" node "$dsh" plugin --profile web list >/dev/null 2>&1 || true
-  for spec in "file:$repo/plugin/desk-panel" "https://github.com/Zagadka-3906/DSH-Transparent-UI-Plugin-dsh015.git" "dsh-chat-import" "dsh-better-sidebar@latest"; do
+  for spec in "file:$repo/plugin/desk-panel" "https://github.com/Zagadka-3906/DSH-Transparent-UI-Plugin-dsh015.git" "dsh-chat-import" "dsh-better-sidebar@0.19.1"; do
     DSH_HOME="$h" node "$dsh" plugin --profile web add "$spec" >/dev/null 2>&1 || log "插件安装失败（可重启容器重试）：$spec"
   done
+  # node-pty（better-sidebar 0.19.x 的原生依赖）没编出来时：approve 后原地重装
+  if [ -f "$prof/web/package.json" ] && [ ! -e "$prof/web/node_modules/node-pty/build/Release/pty.node" ]; then
+    (cd "$prof/web" && pnpm approve-builds --all >/dev/null 2>&1 && pnpm install >/dev/null 2>&1) || true
+  fi
 fi
 
 # 4) aqua key 补丁（幂等；复制来的通常已打）

@@ -126,9 +126,11 @@ while IFS=$'\t' read -r u p h; do
   install_plugin "$u" "file:$repo/plugin/desk-panel" "dsh-desk-panel"
   install_plugin "$u" "https://github.com/Zagadka-3906/DSH-Transparent-UI-Plugin-dsh015.git" "dsh-client-ui-aqua"
   install_plugin "$u" "dsh-chat-import" "dsh-chat-import"
-  # 注：better-sidebar 0.21+ 起不再依赖 node-pty（官方改走引擎内建终端）——不再设置 pty 探针。
-  #     历史版本（0.19.x）曾需要 node-pty@build/Release/pty.node；如回到旧版本再加回探针。
-  install_plugin "$u" "dsh-better-sidebar@latest" "dsh-better-sidebar"
+  # 版本锁定：dsh-better-sidebar 0.21.x 面向 dsh 0.1.7-rc 构建，装在本引擎 0.1.5-rc.2 上
+  # 会让「文件」等标签页 React #130 崩溃（2026-09-27 云/本机双端实测）；0.19.1 = peerDeps ^0.1.5-rc.1 的适配版。
+  # 0.19.x 依赖 node-pty（原生模块，approve-builds 兜底），探针 = pty.node。
+  install_plugin "$u" "dsh-better-sidebar@0.19.1" "dsh-better-sidebar" \
+    "$home/desk-test/$u/profiles/web/node_modules/node-pty/build/Release/pty.node"
 done < "$home/.desk/run/instances.tsv"
 
 # 本脚本已完成配置的成员：置就绪标记（运行中新增成员由监督器配置）
