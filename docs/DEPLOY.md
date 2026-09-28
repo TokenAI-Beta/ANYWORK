@@ -175,7 +175,7 @@ ANYWORK_ADMIN_USER=admin001
 ANYWORK_ADMIN_PASSWORD=<管理员密码>
 ANYWORK_MEMBERS=<成员列表>
 DEEPSEEK_API_KEY=<真 key>
-ANYWORK_IMAGE_TAG=v1.1          # 钉版本；也可用 latest 或提交 sha
+ANYWORK_IMAGE_TAG=v1.2          # 钉版本；也可用 latest 或提交 sha
 EOF
 chmod 600 .env
 docker compose pull && docker compose up -d
@@ -185,7 +185,7 @@ curl -s -o /dev/null -w '%{http_code}\n' http://127.0.0.1:8080/healthz   # 期�
 **HTTPS（nginx + acme.sh，脚本化）**：`bash deploy/docker/setup-https.sh` —— 80 口 ACME 验证 + 301 跳转、签发证书、8443 反代（含 WebSocket 与长超时）。
 
 **更新与回滚**：
-- 更新：改代码 → 打 tag（如 `git tag -a v1.1 -m ... && git push origin v1.1`）→ CI 自动构建 → 服务器 `docker compose pull && docker compose up -d`。
+- 更新：改代码 → 打 tag（如 `git tag -a v1.2 -m ... && git push origin v1.2`）→ CI 自动构建 → 服务器 `docker compose pull && docker compose up -d`。
 - 回滚：`.env` 改 `ANYWORK_IMAGE_TAG=<旧版本或旧 sha>` → `docker compose pull && docker compose up -d`（约 2 分钟）。
 
 **说明**：
