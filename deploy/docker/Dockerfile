@@ -13,7 +13,7 @@ ARG DEBIAN_MIRROR=
 ARG NPM_REGISTRY=
 RUN if [ -n "$DEBIAN_MIRROR" ]; then for f in /etc/apt/sources.list /etc/apt/sources.list.d/*.sources; do [ -f "$f" ] && sed -i "s|deb.debian.org|$DEBIAN_MIRROR|g" "$f"; done; fi \
  && apt-get update \
- && apt-get install -y --no-install-recommends git ca-certificates python3 build-essential \
+ && apt-get install -y --no-install-recommends git ca-certificates python3 build-essential musl-tools \
  && rm -rf /var/lib/apt/lists/*
 ENV COREPACK_NPM_REGISTRY=${NPM_REGISTRY:-https://registry.npmjs.org} \
     npm_config_registry=${NPM_REGISTRY:-https://registry.npmjs.org}
@@ -27,6 +27,12 @@ RUN DSH_SRC=/src/deepseek-harness python3 /src/patches/dsh-settings-lan-persiste
 WORKDIR /src/deepseek-harness
 RUN pnpm install
 RUN pnpm build
+# 原生载荷（native/system）：默认构建只做 host-addon-only，*不会*产出静态 musl 的
+# Landlock 启动器 bin/landlock-run（它需要 musl-tools，见上面的 apt 安装）。
+# 缺它时容器内 Linux 沙箱链（bwrap → Landlock）两档运行器皆不可用 → agent 的
+# bash 工具全部 fail-closed，报 "no sandbox backend is usable on this host"。
+# 别删这一行；native 的完整载荷 = landlock-run + glibc/musl system.node。
+RUN ./node_modules/.bin/tsx native/system/scripts/build.ts
 RUN pnpm --filter @deepseek-ai/dsh-client-ui-settings run bundle || echo "WARN: ui-settings bundle skipped"
 RUN pnpm --filter @deepseek-ai/dsh-client-ui-settings-general run bundle || echo "WARN: ui-settings-general bundle skipped"
 
