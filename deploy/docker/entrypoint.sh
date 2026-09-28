@@ -65,6 +65,10 @@ trap stop TERM INT
 # 成员实例动态监督（2026-09-26）：每 15 秒对账一次——
 #   新成员入列后先自动配置（member-provision.sh），配置完成即拉起实例；
 #   已在跑的成员保持“5 秒自拉”语义（会话删除等杀进程后会自愈）。
+# 实例错峰启动（2026-09-28）：容器启动时各实例依次拉起、间隔 ${ANYWORK_START_STAGGER}s（默认 15），
+# 避免多实例同时冷启动把低配服务器顶到高负载；单实例崩溃自愈/新增成员不等待、即时启动。
+STAGGER="${ANYWORK_START_STAGGER:-15}"
+
 declare -A SUP=()
 supervise() {
   while :; do
@@ -79,6 +83,7 @@ for (const r of db.prepare('SELECT username, agent_port FROM users WHERE agent_p
       mv "$HOME/.desk/run/instances.tsv.new" "$HOME/.desk/run/instances.tsv"
     fi
     local m_user m_port m_home
+    _started=0
     while IFS=$'\t' read -r m_user m_port m_home; do
       [ -n "${m_user:-}" ] || continue
       if [ ! -f "$HOME/.desk/run/$m_user.prov" ]; then
@@ -95,6 +100,10 @@ for (const r of db.prepare('SELECT username, agent_port FROM users WHERE agent_p
         continue
       fi
       if [ -z "${SUP[$m_user]:-}" ]; then
+        if [ "$_started" -gt 0 ]; then
+          log "错峰启动：等待 ${STAGGER}s 再拉起下一实例（$m_user）"
+          sleep "$STAGGER"
+        fi
         touch "$HOME/.desk/run/$m_user.keep"
         (
           while :; do
@@ -109,6 +118,7 @@ for (const r of db.prepare('SELECT username, agent_port FROM users WHERE agent_p
           done
         ) & PIDS+=("$!")
         SUP[$m_user]=1
+        _started=$((_started + 1))
         log "实例 $m_user（端口 $m_port）已拉起"
       fi
     done < "$HOME/.desk/run/instances.tsv"
