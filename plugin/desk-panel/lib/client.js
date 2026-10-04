@@ -235,6 +235,20 @@ window.__ModuleLoader__.load({
       "notify.kindHermes": "hermes —— 经 通知平台（weixin 微信等）",
       "notify.kindTelegram": "telegram —— Bot API（BotFather 机器人，直连/反代）",
       "notify.kindWhatsapp": "whatsapp —— CallMeBot（免费个人）/ green-api / UltraMsg",
+      "notify.kindFeishu": "feishu —— 飞书群机器人 Webhook",
+      "notify.kindDingtalk": "dingtalk —— 钉钉群机器人（可加签）",
+      "notify.kindWecom": "wecom —— 企业微信群机器人 Webhook",
+      "notify.kindDiscord": "discord —— 频道 Webhook",
+      "notify.kindSlack": "slack —— Slack Incoming Webhook",
+      "notify.kindTeams": "teams —— Microsoft Teams 频道 Webhook",
+      "notify.kindNtfy": "ntfy —— 手机推送（ntfy.sh）",
+      "notify.phFeishu": "https://open.feishu.cn/open-apis/bot/v2/hook/…",
+      "notify.phDingtalk": "webhook地址[|加签Secret]",
+      "notify.phWecom": "https://qyapi.weixin.qq.com/cgi-bin/webhook/send?key=…",
+      "notify.phDiscord": "https://discord.com/api/webhooks/…",
+      "notify.phSlack": "https://hooks.slack.com/services/…",
+      "notify.phTeams": "https://….webhook.office.com/webhookb2/…",
+      "notify.phNtfy": "主题名（如 anywork-bai）[|服务器[|Token]]",
       "notify.phName": "名称（英文小写，如 wecom-group / wechat-me）",
       "notify.phTelegram": "bot_token|chat_id（可选 |api_base 反代）",
       "notify.phWhatsapp": "callmebot|apikey|手机号 或 greenapi|id|token|chatId 或 ultramsg|id|token|to",
@@ -651,6 +665,20 @@ window.__ModuleLoader__.load({
       "notify.kindHermes": "hermes — via the Hermes platform (WeChat etc.)",
       "notify.kindTelegram": "telegram — Bot API (BotFather bot; direct or proxied)",
       "notify.kindWhatsapp": "whatsapp — CallMeBot (free, personal) / green-api / UltraMsg",
+      "notify.kindFeishu": "feishu — Feishu custom-bot webhook",
+      "notify.kindDingtalk": "dingtalk — DingTalk robot (optional secret)",
+      "notify.kindWecom": "wecom — WeCom group-robot webhook",
+      "notify.kindDiscord": "discord — channel webhook",
+      "notify.kindSlack": "slack — Slack incoming webhook",
+      "notify.kindTeams": "teams — Microsoft Teams channel webhook",
+      "notify.kindNtfy": "ntfy — phone push (ntfy.sh)",
+      "notify.phFeishu": "https://open.feishu.cn/open-apis/bot/v2/hook/…",
+      "notify.phDingtalk": "webhook URL[|secret]",
+      "notify.phWecom": "https://qyapi.weixin.qq.com/cgi-bin/webhook/send?key=…",
+      "notify.phDiscord": "https://discord.com/api/webhooks/…",
+      "notify.phSlack": "https://hooks.slack.com/services/…",
+      "notify.phTeams": "https://….webhook.office.com/webhookb2/…",
+      "notify.phNtfy": "topic (e.g. anywork-bai) [|server[|token]]",
       "notify.phName": "Name (lowercase, e.g. wecom-group / wechat-me)",
       "notify.phTelegram": "bot_token|chat_id (optional |api_base proxy)",
       "notify.phWhatsapp": "callmebot|apikey|phone or greenapi|id|token|chatId or ultramsg|id|token|to",
@@ -2211,7 +2239,14 @@ body.desk-panel-open [class*="sidebarCol"] { transform: none !important; }
             h("option", { value: "webhook" }, tr("notify.kindWebhook")),
             h("option", { value: "hermes" }, tr("notify.kindHermes")),
             h("option", { value: "telegram" }, tr("notify.kindTelegram")),
-            h("option", { value: "whatsapp" }, tr("notify.kindWhatsapp"))
+            h("option", { value: "whatsapp" }, tr("notify.kindWhatsapp")),
+            h("option", { value: "feishu" }, tr("notify.kindFeishu")),
+            h("option", { value: "dingtalk" }, tr("notify.kindDingtalk")),
+            h("option", { value: "wecom" }, tr("notify.kindWecom")),
+            h("option", { value: "discord" }, tr("notify.kindDiscord")),
+            h("option", { value: "slack" }, tr("notify.kindSlack")),
+            h("option", { value: "teams" }, tr("notify.kindTeams")),
+            h("option", { value: "ntfy" }, tr("notify.kindNtfy"))
           ),
           h("input", { ref: nRef, placeholder: tr("notify.phName"), style: field }),
           h("input", {
@@ -2223,7 +2258,23 @@ body.desk-panel-open [class*="sidebarCol"] { transform: none !important; }
                   ? "weixin"
                   : kind === "telegram"
                     ? tr("notify.phTelegram")
-                    : tr("notify.phWhatsapp"),
+                    : kind === "whatsapp"
+                      ? tr("notify.phWhatsapp")
+                      : kind === "feishu"
+                        ? tr("notify.phFeishu")
+                        : kind === "dingtalk"
+                          ? tr("notify.phDingtalk")
+                          : kind === "wecom"
+                            ? tr("notify.phWecom")
+                            : kind === "discord"
+                              ? tr("notify.phDiscord")
+                              : kind === "slack"
+                                ? tr("notify.phSlack")
+                                : kind === "teams"
+                                  ? tr("notify.phTeams")
+                                  : kind === "ntfy"
+                                    ? tr("notify.phNtfy")
+                                    : tr("notify.phWhatsapp"),
             style: field,
           }),
           kind === "telegram" || kind === "whatsapp"
@@ -2282,12 +2333,12 @@ body.desk-panel-open [class*="sidebarCol"] { transform: none !important; }
       if (testRes && testRes.phase === "ready") {
         var trNodes = [];
         for (var k = 0; k < testRes.results.length; k++) {
-          var tr = testRes.results[k];
+          var trow = testRes.results[k];
           trNodes.push(
             h(
               "div",
-              { key: "tr" + k, style: { fontSize: 12, color: tr.ok ? undefined : "#c0392b" } },
-              (tr.ok ? "✓ " : "✗ ") + tr.route + ": " + tr.info
+              { key: "tr" + k, style: { fontSize: 12, color: trow.ok ? undefined : "#c0392b" } },
+              (trow.ok ? "✓ " : "✗ ") + trow.route + ": " + trow.info
             )
           );
         }
