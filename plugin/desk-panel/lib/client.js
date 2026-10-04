@@ -16,6 +16,19 @@ window.__ModuleLoader__.load({
       "fv.back": "← 返回对话",
       "asst.groupTeam": "团队角色",
       "asst.defaultTag": "默认",
+      "skl.platforms": "消息平台",
+      "skl.tools": "开发工具",
+      "skl.connect": "连接",
+      "skl.addMore": "加一条",
+      "skl.test": "测试",
+      "skl.connected": "已连接",
+      "skl.notConnected": "未连接",
+      "skl.routesUnit": " 条",
+      "skl.save": "保存",
+      "skl.namePh": "通道名称（小写英文，如 feishu-team）",
+      "skl.needNameTarget": "名称和内容都要填",
+      "skl.routeSaved": "已保存，通道即刻生效",
+      "skl.adminOnly": "通道配置仅管理员可操作——成员可看状态。",
       "asst.groupBuiltin": "引擎自带模式",
       "asst.builtinTag": "自带",
       "usage.loading": "读取用量中…",
@@ -419,6 +432,19 @@ window.__ModuleLoader__.load({
       "fv.back": "← Back to chat",
       "asst.groupTeam": "Team roles",
       "asst.defaultTag": "Default",
+      "skl.platforms": "Messaging platforms",
+      "skl.tools": "Dev tools",
+      "skl.connect": "Connect",
+      "skl.addMore": "Add route",
+      "skl.test": "Test",
+      "skl.connected": "Connected",
+      "skl.notConnected": "Not connected",
+      "skl.routesUnit": " route(s)",
+      "skl.save": "Save",
+      "skl.namePh": "Route name (lowercase, e.g. feishu-team)",
+      "skl.needNameTarget": "Name and target are both required",
+      "skl.routeSaved": "Saved — the route is live",
+      "skl.adminOnly": "Only admins can configure routes — members can view status.",
       "asst.groupBuiltin": "Built-in modes",
       "asst.builtinTag": "Built-in",
       "usage.loading": "Loading usage…",
@@ -926,6 +952,28 @@ window.__ModuleLoader__.load({
 .ddp .rc-ico { width:30px; height:30px; border-radius:9px; display:flex; align-items:center; justify-content:center; background:var(--dsw-alias-bg-base, #f2f3f5); flex:0 0 auto; }
 .ddp .rc-name { font-weight:640; font-size:13.5px; }
 .ddp .rc-d { font-size:12.5px; color:var(--dsw-alias-label-secondary, #5f6570); line-height:1.65; }
+/* 连接器页：消息平台 */
+.ddp .lb { font-size:12px; font-weight:640; color:var(--dsw-alias-label-secondary, #6b7280); margin:12px 0 8px; letter-spacing:.4px; }
+.ddp .pgrid { display:grid; grid-template-columns:repeat(auto-fill, minmax(238px, 1fr)); gap:10px; }
+.ddp .pcard { border:1px solid var(--dsw-alias-border-l2, #e4e6eb); border-radius:12px; padding:12px 13px; background:var(--dsw-alias-bg-layer-2, #fff); display:flex; flex-direction:column; }
+.ddp .pcard.on { border-color:rgba(79,124,247,.42); }
+.ddp .ptop { display:flex; align-items:center; gap:8px; margin-bottom:6px; flex-wrap:wrap; }
+.ddp .ptile { width:30px; height:30px; border-radius:9px; display:flex; align-items:center; justify-content:center; flex:0 0 auto; }
+.ddp .pname { font-weight:640; font-size:13.5px; }
+.ddp .pd { font-size:12.5px; color:var(--dsw-alias-label-secondary, #5f6570); line-height:1.6; flex:1; }
+.ddp .pform { display:flex; flex-direction:column; gap:6px; margin:8px 0 2px; }
+.ddp .pfoot { display:flex; align-items:center; gap:8px; margin-top:9px; flex-wrap:wrap; }
+.ddp .pst { font-size:12px; color:var(--dsw-alias-label-tertiary, #8a8f98); }
+.ddp .pst.ok { color:#31a24c; }
+.ddp .pbtns { margin-left:auto; display:flex; gap:6px; }
+.ddp .bbtn { font-size:12px; border:1px solid var(--dsw-alias-border-l2, #d4d7dc); border-radius:8px; padding:4px 11px; background:transparent; color:inherit; cursor:pointer; font-family:inherit; }
+.ddp .bbtn:hover { background:rgba(127,127,127,.10); }
+.ddp .bbtn.pri { background:#4f7cf7; border-color:#4f7cf7; color:#fff; }
+.ddp .bbtn.pri:hover { filter:brightness(1.08); }
+.ddp .bbtn:disabled { opacity:.55; cursor:default; }
+.ddp .msg { font-size:12.5px; margin:8px 0; padding:8px 10px; border-radius:9px; background:rgba(127,127,127,.09); }
+.ddp .msg.ok { color:#31a24c; background:rgba(49,162,76,.10); }
+.ddp .msg.err { color:#d9534f; background:rgba(217,83,79,.10); }
 body:has(.ddp.fv) #desk-usage-fab, body:has(.ddp.fv) #desk-usage-panel { display:none !important; }
 body.desk-panel-open #desk-usage-fab, body.desk-panel-open #desk-usage-panel { display:none !important; }
 @media (max-width: 820px) {
@@ -2503,6 +2551,17 @@ body.desk-panel-open [class*="sidebarCol"] { transform: none !important; }
       terminal: ["m4 17 6-6-6-6", "M12 19h8"],
       braces: ["M8 3H7a2 2 0 0 0-2 2v5a2 2 0 0 1-2 2 2 2 0 0 1 2 2v5a2 2 0 0 0 2 2h1", "M16 3h1a2 2 0 0 1 2 2v5a2 2 0 0 0 2 2 2 2 0 0 0-2 2v5a2 2 0 0 1-2 2h-1"],
       sparkle: ["M12 3l1.9 5.8a2 2 0 0 0 1.3 1.3L21 12l-5.8 1.9a2 2 0 0 0-1.3 1.3L12 21l-1.9-5.8a2 2 0 0 0-1.3-1.3L3 12l5.8-1.9a2 2 0 0 0 1.3-1.3Z"],
+      send: ["m22 2-7 20-4-9-9-4Z", "M22 2 11 13"],
+      bubble: ["M7.9 20A9 9 0 1 0 4 16.1L2 22Z"],
+      msq: ["M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"],
+      bell: ["M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9", "M10.3 21a1.94 1.94 0 0 0 3.4 0"],
+      pin: ["M12 17v5", "M9 10.76a2 2 0 0 1-1.11 1.79l-1.78.9A2 2 0 0 0 5 15.24V16a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1v-.76a2 2 0 0 0-1.11-1.79l-1.78-.9A2 2 0 0 1 15 10.76V6h1a2 2 0 0 0 0-4H8a2 2 0 0 0 0 4h1z"],
+      hash: ["M4 9h16", "M4 15h16", "M10 3 8 21", "M16 3l-2 18"],
+      gamepad: ["M6 12h4", "M8 10v4", "M15 11h.01", "M18 11h.01", "M17.32 5H6.68a4 4 0 0 0-3.978 3.59c-.006.052-.01.101-.017.152C2.604 9.416 2 14.456 2 16a3 3 0 0 0 3 3c1 0 1.5-.5 2-1l1.414-1.414A2 2 0 0 1 9.828 16h4.344a2 2 0 0 1 1.414.586L17 18c.5.5 1 1 2 1a3 3 0 0 0 3-3c0-1.545-.604-6.584-.685-7.258-.007-.05-.011-.1-.017-.151A4 4 0 0 0 17.32 5z"],
+      grid: ["rect|3,3,7,7,1", "rect|14,3,7,7,1", "rect|3,14,7,7,1", "rect|14,14,7,7,1"],
+      phone: ["M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72c.127.96.361 1.903.7 2.81a2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45c.907.339 1.85.573 2.81.7A2 2 0 0 1 22 16.92z"],
+      link: ["M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71", "M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"],
+      briefcase: ["M16 20V4a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16", "rect|2,6,20,14,2"],
     };
     function dicon(name, size) {
       var list = DESK_ICONS[name] || [];
@@ -2527,6 +2586,19 @@ body.desk-panel-open [class*="sidebarCol"] { transform: none !important; }
       standard: "package", minimal: "terminal", ptc: "braces", cordis: "sparkle",
     };
     function roleIcon(id) { return ROLE_ICON[id] || "assist"; }
+    var PLAT_META = {
+      wechat: { i: "bubble", c: "#3ecf8e" },
+      telegram: { i: "send", c: "#5cc8f7" },
+      feishu: { i: "msq", c: "#7fa3ff" },
+      dingtalk: { i: "pin", c: "#5db4ff" },
+      wecom: { i: "briefcase", c: "#79aaff" },
+      discord: { i: "gamepad", c: "#8b95ff" },
+      slack: { i: "hash", c: "#d99fdb" },
+      teams: { i: "grid", c: "#9b9dd8" },
+      whatsapp: { i: "phone", c: "#5fe08f" },
+      ntfy: { i: "bell", c: "#e8b44a" },
+      webhook: { i: "link", c: "#aeb7c6" },
+    };
 
     function TeamHub(props) {
       var wide = !!(props && props.wide);
@@ -3192,7 +3264,7 @@ body.desk-panel-open [class*="sidebarCol"] { transform: none !important; }
 
     function SkillsConnPanel(props) {
       var wide = !!(props && props.wide);
-      var sPair = React.useState({ phase: "loading", skills: [], items: [] });
+      var sPair = React.useState({ phase: "loading", skills: [], items: [], platforms: [], role: "member" });
       var st = sPair[0];
       var setSt = sPair[1];
       var tPair = React.useState("skills");
@@ -3206,6 +3278,46 @@ body.desk-panel-open [class*="sidebarCol"] { transform: none !important; }
       var langTick = useLocaleSignal();
       var det = dPair[0];
       var setDet = dPair[1];
+      var cPair = React.useState({ form: "", name: "", target: "", busy: false, msg: "", msgKind: "" });
+      var cs = cPair[0];
+      var setCs = cPair[1];
+      function cset(patch) {
+        setCs(function (prev) {
+          var n = {};
+          for (var k in prev) n[k] = prev[k];
+          for (var k2 in patch) n[k2] = patch[k2];
+          return n;
+        });
+      }
+      function cAdd() {
+        var name = String(cs.name || "").trim();
+        var target = String(cs.target || "").trim();
+        if (!name || !target) {
+          cset({ msg: tr("skl.needNameTarget"), msgKind: "err" });
+          return;
+        }
+        cset({ busy: true, msg: tr("common.processing"), msgKind: "" });
+        fetch("/portal/api/admin/notify/route-add", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ name: name, kind: cs.form, target: target }) })
+          .then(function (r) { return r.json().then(function (d) { return { s: r.status, d: d }; }); })
+          .then(function (res) {
+            if (res.s !== 200) throw new Error((res.d && res.d.error) || "HTTP " + res.s);
+            cset({ busy: false, form: "", name: "", target: "", msg: tr("skl.routeSaved"), msgKind: "ok" });
+            load();
+          })
+          .catch(function (e) { cset({ busy: false, msg: String((e && e.message) || e), msgKind: "err" }); });
+      }
+      function cTest(kind) {
+        cset({ busy: true, msg: tr("common.processing"), msgKind: "" });
+        fetch("/portal/api/admin/notify-test", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ kind: kind }) })
+          .then(function (r) { return r.json(); })
+          .then(function (d) {
+            var rs = (d && d.results) || [];
+            var line = rs.map(function (x) { return (x.route || "?") + " " + (x.ok ? "✓" : "✗ " + (x.info || "")); }).join("；").slice(0, 220);
+            var allOk = rs.length > 0 && rs.every(function (x) { return x.ok; });
+            cset({ busy: false, msg: line || tr("skl.noConn"), msgKind: allOk ? "ok" : "err" });
+          })
+          .catch(function (e) { cset({ busy: false, msg: String((e && e.message) || e), msgKind: "err" }); });
+      }
 
       function load() {
         Promise.all([
@@ -3219,10 +3331,10 @@ body.desk-panel-open [class*="sidebarCol"] { transform: none !important; }
           }),
         ])
           .then(function (rs) {
-            setSt({ phase: "ready", skills: (rs[0] && rs[0].skills) || [], items: (rs[1] && rs[1].items) || [] });
+            setSt({ phase: "ready", skills: (rs[0] && rs[0].skills) || [], items: (rs[1] && rs[1].items) || [], platforms: (rs[1] && rs[1].platforms) || [], role: (rs[1] && rs[1].role) || "member" });
           })
           .catch(function () {
-            setSt({ phase: "error", skills: [], items: [] });
+            setSt({ phase: "error", skills: [], items: [], platforms: [], role: "member" });
           });
       }
       React.useEffect(function () {
@@ -3283,7 +3395,7 @@ body.desk-panel-open [class*="sidebarCol"] { transform: none !important; }
                 setDet({ phase: "none", id: "", name: "", content: "" });
               },
             },
-            tr("skl.connectors") + (st.phase === "ready" ? "(" + st.items.length + ")" : "")
+            tr("skl.connectors") + (st.phase === "ready" ? "(" + (st.platforms || []).length + ")" : "")
           )
         )
       );
@@ -3334,6 +3446,44 @@ body.desk-panel-open [class*="sidebarCol"] { transform: none !important; }
           kids.push(h("div", { key: "tip", className: "ft" }, tr("skl.hint")));
         }
       } else {
+        var isAdmin = st.role === "admin";
+        var pcards = [];
+        (st.platforms || []).forEach(function (p) {
+          var meta = PLAT_META[p.id] || { i: "link", c: "#aeb7c6" };
+          var acts = [];
+          if (isAdmin) {
+            if (cs.form === p.kind) {
+              acts.push(h("button", { key: "a", className: "bbtn pri", onClick: cAdd, disabled: cs.busy }, tr("skl.save")));
+              acts.push(h("button", { key: "c", className: "bbtn", onClick: function () { cset({ form: "", name: "", target: "", msg: "", msgKind: "" }); } }, tr("th.cancel")));
+            } else {
+              acts.push(h("button", { key: "a", className: "bbtn" + (p.connected ? "" : " pri"), onClick: function () { cset({ form: p.kind, name: p.id, target: "", msg: "", msgKind: "" }); } }, p.connected ? tr("skl.addMore") : tr("skl.connect")));
+            }
+            if (p.connected) acts.push(h("button", { key: "t", className: "bbtn", onClick: function () { cTest(p.kind); }, disabled: cs.busy }, tr("skl.test")));
+          }
+          var stat = isAdmin && p.connected && p.routes > 0 ? p.routesEnabled + tr("skl.routesUnit") + " · " + tr("skl.connected") : p.connected ? tr("skl.connected") : tr("skl.notConnected");
+          pcards.push(
+            h(
+              "div",
+              { key: "pl" + p.id, className: "pcard" + (p.connected ? " on" : "") },
+              h("div", { className: "ptop" }, h("span", { className: "ptile", style: { background: meta.c + "26", color: meta.c } }, dicon(meta.i, 17)), h("span", { className: "pname" }, p.name)),
+              h("div", { className: "pd" }, p.desc || ""),
+              cs.form === p.kind && isAdmin
+                ? h(
+                    "div",
+                    { className: "pform" },
+                    h("input", { className: "inp", placeholder: tr("skl.namePh"), value: cs.name, onChange: function (e) { cset({ name: e.target.value }); } }),
+                    h("input", { className: "inp", placeholder: p.hint || "", value: cs.target, onChange: function (e) { cset({ target: e.target.value }); } })
+                  )
+                : null,
+              h("div", { className: "pfoot" }, h("span", { className: "pst" + (p.connected ? " ok" : "") }, "● " + stat), h("span", { className: "pbtns" }, acts))
+            )
+          );
+        });
+        kids.push(h("div", { key: "pl-lb", className: "lb" }, tr("skl.platforms")));
+        kids.push(h("div", { key: "plgrid", className: "pgrid" }, pcards.length ? pcards : h("div", { className: "empty" }, tr("skl.noConn"))));
+        if (cs.msg) kids.push(h("div", { key: "cmsg", className: "msg" + (cs.msgKind === "err" ? " err" : cs.msgKind === "ok" ? " ok" : "") }, cs.msg));
+        if (!isAdmin) kids.push(h("div", { key: "crole", className: "ft" }, tr("skl.adminOnly")));
+
         var crows = [];
         st.items.forEach(function (it) {
           var dotCls = it.ok === true ? "dot ok" : it.ok === false ? "dot bad" : "dot off";
@@ -3346,6 +3496,7 @@ body.desk-panel-open [class*="sidebarCol"] { transform: none !important; }
             )
           );
         });
+        kids.push(h("div", { key: "tools-lb", className: "lb" }, tr("skl.tools")));
         kids.push(h("div", { key: "crows", className: "list" }, crows.length ? crows : h("div", { className: "empty" }, tr("skl.noConn"))));
         kids.push(h("div", { key: "ctip", className: "ft" }, tr("skl.legend")));
       }

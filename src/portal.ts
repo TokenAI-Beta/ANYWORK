@@ -19,7 +19,7 @@ import { kbSearch, listKbNotes, readKbNote, removeKbNote, saveKbNote } from './k
 import { listDrive, makeDir, movePath, removePath, resolveInDrive, saveToDrive, MAX_UPLOAD } from './drive.ts'
 import { addNotifyRoute, addReminder, dispatchNotify, listNotifyLog, listNotifyRoutes, listReminders, listRemindersSent, readOrCreateNotifyToken, removeNotifyRoute, removeReminder, toggleNotifyRoute } from './notify.ts'
 import { defaultDataDir } from './db.ts'
-import { collectConnectors, collectPresets, collectSkills, readSkill } from './panel.ts'
+import { collectConnectors, collectPlatforms, collectPresets, collectSkills, readSkill } from './panel.ts'
 import { collectOps } from './ops.ts'
 
 /** 请求语言：?lang=en 时为英文（由工作台客户端带过来），默认中文 */
@@ -1055,7 +1055,7 @@ export function startPortal(opts: PortalOptions) {
           return res.end(JSON.stringify({ error: 'login required' }))
         }
         res.writeHead(200, { 'content-type': 'application/json; charset=utf-8' })
-        return res.end(JSON.stringify({ ok: true, items: collectConnectors(db, langOf(req)) }))
+        return res.end(JSON.stringify({ ok: true, role: user.role, items: collectConnectors(db, langOf(req)), platforms: collectPlatforms(db, langOf(req)) }))
       }
       if (req.method === 'GET' && path === '/portal/api/panel/auto') {
         if (!user) {
@@ -1818,7 +1818,8 @@ export function startPortal(opts: PortalOptions) {
           const body = await readJsonBody()
           const title = String(body.title ?? '工作台通知测试').trim()
           const text = String(body.text ?? '这是一条来自 DSH-ANYWORK 的测试通知，收到即通。').trim()
-          const results = await dispatchNotify(db, { title, text, source: 'admin-test' })
+          const kind = String(body.kind ?? '').trim()
+          const results = await dispatchNotify(db, { title, text, source: 'admin-test' }, kind ? { kind } : undefined)
           res.writeHead(200, { 'content-type': 'application/json; charset=utf-8' })
           return res.end(JSON.stringify({ results }))
         }

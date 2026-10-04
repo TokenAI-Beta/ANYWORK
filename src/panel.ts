@@ -128,6 +128,53 @@ export interface ConnectorInfo {
   detail: string
 }
 
+/** 消息平台（连接器面板）：状态来自 notify_routes；desc/hint 为配置引导文案。 */
+export interface PlatformInfo {
+  id: string
+  name: string
+  kind: string
+  desc: string
+  hint: string
+  connected: boolean
+  routes: number
+  routesEnabled: number
+}
+
+export function collectPlatforms(db: DatabaseSync, lang: string = 'zh'): PlatformInfo[] {
+  let routes: { name: string; kind: string; enabled: number }[] = []
+  try {
+    routes = db.prepare(`SELECT name, kind, enabled FROM notify_routes ORDER BY id`).all() as unknown as { name: string; kind: string; enabled: number }[]
+  } catch {
+    // 表缺失按空处理
+  }
+  const defs: { id: string; kind: string; name: string; desc: string; hint: string }[] = [
+    { id: 'wechat', kind: 'hermes', name: L(lang, '微信（Hermes 桥）', 'WeChat (Hermes bridge)'), desc: L(lang, '推到你的微信——经 Hermes 转送', 'Push to WeChat via the Hermes bridge'), hint: L(lang, '微信目标（如 weixin）——需宿主 Hermes 在岗', 'WeChat target (e.g. weixin) — needs Hermes on the host') },
+    { id: 'telegram', kind: 'telegram', name: 'Telegram', desc: L(lang, '群里 / 私聊直达（Bot API）', 'Bot API — direct to chats'), hint: L(lang, 'bot_token|chat_id（可加 |api_base）', 'bot_token|chat_id (optional |api_base)') },
+    { id: 'feishu', kind: 'feishu', name: L(lang, '飞书 Feishu', 'Feishu / Lark'), desc: L(lang, '群机器人 Webhook——贴一个地址就能推', 'Custom-bot webhook — paste the URL'), hint: L(lang, '飞书群机器人 Webhook 地址', 'Feishu bot webhook URL') },
+    { id: 'dingtalk', kind: 'dingtalk', name: L(lang, '钉钉', 'DingTalk'), desc: L(lang, '群机器人 Webhook，支持加签', 'Robot webhook with optional secret signing'), hint: L(lang, 'webhook地址[|加签Secret]', 'webhook URL[|secret]') },
+    { id: 'wecom', kind: 'wecom', name: L(lang, '企业微信', 'WeCom'), desc: L(lang, '群机器人 Webhook——公司群里发通知', 'Group-robot webhook — notify a company group'), hint: L(lang, '企微群机器人 Webhook 地址', 'WeCom bot webhook URL') },
+    { id: 'discord', kind: 'discord', name: 'Discord', desc: L(lang, '频道 Webhook——社区群里同步', 'Channel webhook — sync into a community server'), hint: L(lang, '频道 Webhook 地址', 'Channel webhook URL') },
+    { id: 'slack', kind: 'slack', name: 'Slack', desc: L(lang, 'Incoming Webhook', 'Incoming webhook'), hint: L(lang, 'Incoming Webhook 地址', 'Incoming webhook URL') },
+    { id: 'teams', kind: 'teams', name: 'Microsoft Teams', desc: L(lang, '频道 Incoming Webhook', 'Channel incoming webhook'), hint: L(lang, '频道 Webhook 地址', 'Channel webhook URL') },
+    { id: 'whatsapp', kind: 'whatsapp', name: 'WhatsApp', desc: L(lang, '经 CallMeBot / GreenAPI / UltraMsg', 'Via CallMeBot / GreenAPI / UltraMsg'), hint: L(lang, 'callmebot|apikey|手机号（或 greenapi / ultramsg 格式）', 'callmebot|apikey|phone (or greenapi / ultramsg format)') },
+    { id: 'ntfy', kind: 'ntfy', name: L(lang, 'ntfy 手机推送', 'ntfy push'), desc: L(lang, '手机装个 App 就收推送——最省事的兜底', 'Install the app and get phone push — the easiest fallback'), hint: L(lang, '主题名（如 anywork-bai）[|服务器[|Token]]', 'topic (e.g. anywork-bai) [|server[|token]]') },
+    { id: 'webhook', kind: 'webhook', name: L(lang, '自定义 Webhook', 'Custom webhook'), desc: L(lang, '接你自己的系统——给个地址就发 JSON', 'Post JSON to your own endpoint'), hint: L(lang, 'http(s):// 地址', 'http(s):// URL') },
+  ]
+  return defs.map((d) => {
+    const mine = routes.filter((r) => r.kind === d.kind)
+    return {
+      id: d.id,
+      name: d.name,
+      kind: d.kind,
+      desc: d.desc,
+      hint: d.hint,
+      connected: mine.some((r) => r.enabled === 1),
+      routes: mine.length,
+      routesEnabled: mine.filter((r) => r.enabled === 1).length,
+    }
+  })
+}
+
 /** 连接器状态（只读探测）：模型网关 / 通知 / Codex / GitHub / 共享区 */
 export function collectConnectors(db: DatabaseSync, lang: string = 'zh'): ConnectorInfo[] {
   const items: ConnectorInfo[] = []
@@ -145,35 +192,7 @@ export function collectConnectors(db: DatabaseSync, lang: string = 'zh'): Connec
     detail: L(lang, '默认 DeepSeek 网关在岗', 'Default DeepSeek gateway is up') + (chNames.length ? L(lang, `；外部通道 ${chNames.length} 个：${chNames.join('、')}`, `; ${chNames.length} external channel(s): ${chNames.join(', ')}`) : L(lang, '；当前无外部通道', '; no external channels yet')),
   })
 
-  let routes: { name: string; kind: string; enabled: number }[] = []
-  try {
-    routes = db.prepare(`SELECT name, kind, enabled FROM notify_routes ORDER BY id`).all() as unknown as { name: string; kind: string; enabled: number }[]
-  } catch {
-    // 表缺失按空处理
-  }
-  const en = routes.filter((r) => r.enabled)
-  items.push({
-    name: L(lang, '通知（微信 / Webhook）', 'Notifications (WeChat / Webhook)'),
-    ok: en.length > 0,
-    detail: routes.length ? L(lang, `路由 ${routes.length} 条，启用 ${en.length} 条`, `${routes.length} route${routes.length === 1 ? '' : 's'}, ${en.length} enabled`) + (en.length ? L(lang, '：', ': ') + en.map((r) => r.name).join(lang === 'en' ? ', ' : '、') : '') : L(lang, '未配置通知路由', 'No notification routes configured'),
-  })
-
-  const tg = routes.filter((r) => r.kind === 'telegram')
-  items.push({
-    name: L(lang, 'Telegram（连接器）', 'Telegram (connector)'),
-    ok: tg.length ? tg.some((r) => r.enabled === 1) : null,
-    detail: tg.length
-      ? L(lang, `Bot API · 路由 ${tg.length} 条（启用 ${tg.filter((r) => r.enabled === 1).length}）：${tg.map((r) => r.name).join('、')}`, `Bot API · ${tg.length} route(s) (${tg.filter((r) => r.enabled === 1).length} enabled): ${tg.map((r) => r.name).join(', ')}`)
-      : L(lang, '未配置 —— 设置 → 通知 添加：bot_token|chat_id（@BotFather 建机器人；直连不通可加 |api_base）', 'Not configured — add one in Settings → Notifications: bot_token|chat_id (create a bot via @BotFather; append |api_base when a direct connection fails)'),
-  })
-  const wa = routes.filter((r) => r.kind === 'whatsapp')
-  items.push({
-    name: L(lang, 'WhatsApp（连接器）', 'WhatsApp (connector)'),
-    ok: wa.length ? wa.some((r) => r.enabled === 1) : null,
-    detail: wa.length
-      ? L(lang, `路由 ${wa.length} 条（启用 ${wa.filter((r) => r.enabled === 1).length}）：${wa.map((r) => r.name).join('、')}`, `${wa.length} route(s) (${wa.filter((r) => r.enabled === 1).length} enabled): ${wa.map((r) => r.name).join(', ')}`)
-      : L(lang, '未配置 —— 支持 CallMeBot（免费个人）/ green-api / UltraMsg 任一网关', 'Not configured — supports CallMeBot (free, personal) / green-api / UltraMsg'),
-  })
+  // 通知类通道（微信 / Telegram / WhatsApp / 各平台机器人）已改由「消息平台」面板呈现（collectPlatforms）
 
   const codexCandidates = [
     join(homedir(), 'opt', 'node-v24.19.0-linux-x64', 'bin', 'codex'),
