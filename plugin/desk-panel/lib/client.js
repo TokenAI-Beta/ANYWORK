@@ -908,6 +908,9 @@ window.__ModuleLoader__.load({
 .ddp.fv .bd { flex:1; min-height:0; padding:20px 40px 96px; }
 .ddp.fv .bd > * { max-width:1080px; margin-left:auto; margin-right:auto; }
 .ddp.fv .it { padding:12px 10px; }
+.ddb .ic svg, .ddp .hd .ico svg { display:block; }
+.ddp.fv .hd .ico svg { width:22px; height:22px; }
+.ddb.on .ic { color:#4f7cf7; }
 body:has(.ddp.fv) #desk-usage-fab, body:has(.ddp.fv) #desk-usage-panel { display:none !important; }
 body.desk-panel-open #desk-usage-fab, body.desk-panel-open #desk-usage-panel { display:none !important; }
 @media (max-width: 820px) {
@@ -2469,6 +2472,32 @@ body.desk-panel-open [class*="sidebarCol"] { transform: none !important; }
       } catch (e) { /* 忽略 */ }
     })();
 
+    /* ═══ 侧栏入口线性图标（统一 24×24 描边风格，stroke=currentColor） ═══ */
+    var DESK_ICONS = {
+      hub: ["M20 20a2 2 0 0 0 2-2V8a2 2 0 0 0-2-2h-7.9a2 2 0 0 1-1.69-.9L9.6 3.9A2 2 0 0 0 7.93 3H4a2 2 0 0 0-2 2v13a2 2 0 0 0 2 2Z"],
+      announce: ["m3 11 18-5v12L3 14v-3z", "M11.6 16.8a3 3 0 1 1-5.8-1.6"],
+      assist: ["rect|4,8,16,12,2", "M12 8V4H8", "M2 14h2", "M20 14h2", "M15 13v2", "M9 13v2"],
+      skills: ["M12 22v-5", "M9 8V2", "M15 8V2", "M18 8v5a4 4 0 0 1-4 4h-4a4 4 0 0 1-4-4V8Z"],
+      auto: ["circle|12,12,10", "M12 6v6l4 2"],
+    };
+    function dicon(name, size) {
+      var list = DESK_ICONS[name] || [];
+      var kids = [];
+      for (var i = 0; i < list.length; i++) {
+        var d = list[i];
+        if (d.indexOf("rect|") === 0) {
+          var p = d.slice(5).split(",");
+          kids.push(h("rect", { key: i, x: Number(p[0]), y: Number(p[1]), width: Number(p[2]), height: Number(p[3]), rx: Number(p[4] || 0) }));
+        } else if (d.indexOf("circle|") === 0) {
+          var c = d.slice(7).split(",");
+          kids.push(h("circle", { key: i, cx: Number(c[0]), cy: Number(c[1]), r: Number(c[2]) }));
+        } else {
+          kids.push(h("path", { key: i, d: d }));
+        }
+      }
+      return h("svg", { viewBox: "0 0 24 24", width: size, height: size, fill: "none", stroke: "currentColor", strokeWidth: 1.8, strokeLinecap: "round", strokeLinejoin: "round", "aria-hidden": "true" }, kids);
+    }
+
     function TeamHub(props) {
       var wide = !!(props && props.wide);
       var openPair = React.useState(false);
@@ -2624,7 +2653,7 @@ body.desk-panel-open [class*="sidebarCol"] { transform: none !important; }
       }
 
       var trigger = h("button", { className: "ddb" + (wide ? "" : " rail") + (open ? " on" : ""), onClick: toggle, title: tr("th.tab") },
-        h("span", { className: "ic" }, "🗂"),
+        h("span", { className: "ic" }, dicon("hub", 15)),
         wide ? h("span", { className: "lbl" }, tr("th.tab")) : null
       );
       if (!open) return h("div", null, trigger);
@@ -2785,7 +2814,7 @@ body.desk-panel-open [class*="sidebarCol"] { transform: none !important; }
         trigger,
         h("div", { key: "panel", className: "ddp fv" },
           h("div", { className: "hd" },
-            h("span", { className: "ico" }, "🗂"),
+            h("span", { className: "ico" }, dicon("hub", 18)),
             h("div", null, h("div", { className: "t1" }, tr("th.tab")), h("div", { className: "t2" }, tr("th.sub"))),
             h("button", { className: "x", onClick: toggle }, tr("fv.back"))
           ),
@@ -2875,7 +2904,7 @@ body.desk-panel-open [class*="sidebarCol"] { transform: none !important; }
       var trigger = h(
         "button",
         { className: "ddb" + (wide ? "" : " rail") + (open ? " on" : ""), onClick: toggle, title: tr("ann.title") },
-        h("span", { className: "ic" }, "📢"),
+        h("span", { className: "ic" }, dicon("announce", 15)),
         wide ? h("span", { className: "lbl" }, tr("ann.tab")) : null,
         wide && unread > 0 ? h("span", { className: "badge" }, unread) : null
       );
@@ -3021,7 +3050,7 @@ body.desk-panel-open [class*="sidebarCol"] { transform: none !important; }
           h(
             "div",
             { className: "hd" },
-            h("span", { className: "ico" }, "📢"),
+            h("span", { className: "ico" }, dicon("announce", 18)),
             h("div", null, h("div", { className: "t1" }, tr("ann.titleShort")), h("div", { className: "t2" }, tr("ann.footerLabel"))),
             h("button", { className: "x", onClick: toggle }, tr("fv.back"))
           ),
@@ -3066,7 +3095,7 @@ body.desk-panel-open [class*="sidebarCol"] { transform: none !important; }
       var trigger = h(
         "button",
         { className: "ddb" + (wide ? "" : " rail") + (open ? " on" : ""), onClick: toggle, title: tr("asst.title") },
-        h("span", { className: "ic" }, "🧑‍💼"),
+        h("span", { className: "ic" }, dicon("assist", 15)),
         wide ? h("span", { className: "lbl" }, tr("asst.tab")) : null
       );
       if (!open) return h("div", null, trigger);
@@ -3109,7 +3138,7 @@ body.desk-panel-open [class*="sidebarCol"] { transform: none !important; }
           h(
             "div",
             { className: "hd" },
-            h("span", { className: "ico" }, "🧑‍💼"),
+            h("span", { className: "ico" }, dicon("assist", 18)),
             h("div", null, h("div", { className: "t1" }, tr("asst.team")), h("div", { className: "t2" }, tr("asst.panelTitle"))),
             h("button", { className: "x", onClick: toggle }, tr("fv.back"))
           ),
@@ -3181,7 +3210,7 @@ body.desk-panel-open [class*="sidebarCol"] { transform: none !important; }
       var trigger = h(
         "button",
         { className: "ddb" + (wide ? "" : " rail") + (open ? " on" : ""), onClick: toggle, title: tr("skl.title") },
-        h("span", { className: "ic" }, "🧩"),
+        h("span", { className: "ic" }, dicon("skills", 15)),
         wide ? h("span", { className: "lbl" }, tr("skl.tab")) : null
       );
       if (!open) return h("div", null, trigger);
@@ -3287,7 +3316,7 @@ body.desk-panel-open [class*="sidebarCol"] { transform: none !important; }
           h(
             "div",
             { className: "hd" },
-            h("span", { className: "ico" }, "🧩"),
+            h("span", { className: "ico" }, dicon("skills", 18)),
             h("div", null, h("div", { className: "t1" }, tr("skl.titleShort")), h("div", { className: "t2" }, tr("skl.panelTitle"))),
             h("button", { className: "x", onClick: toggle }, tr("fv.back"))
           ),
@@ -3407,7 +3436,7 @@ body.desk-panel-open [class*="sidebarCol"] { transform: none !important; }
       var trigger = h(
         "button",
         { className: "ddb" + (wide ? "" : " rail") + (open ? " on" : ""), onClick: toggle, title: tr("auto.title") },
-        h("span", { className: "ic" }, "⚡"),
+        h("span", { className: "ic" }, dicon("auto", 15)),
         wide ? h("span", { className: "lbl" }, tr("auto.tab")) : null
       );
       if (!open) return h("div", null, trigger);
@@ -3485,7 +3514,7 @@ body.desk-panel-open [class*="sidebarCol"] { transform: none !important; }
           h(
             "div",
             { className: "hd" },
-            h("span", { className: "ico" }, "⚡"),
+            h("span", { className: "ico" }, dicon("auto", 18)),
             h("div", null, h("div", { className: "t1" }, tr("auto.tab")), h("div", { className: "t2" }, tr("auto.panelTitle"))),
             h("button", { className: "x", onClick: toggle }, tr("fv.back"))
           ),
