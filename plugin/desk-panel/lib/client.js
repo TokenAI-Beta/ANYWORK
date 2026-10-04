@@ -59,6 +59,52 @@ window.__ModuleLoader__.load({
       "drive.uploading": "上传中：",
       "drive.uploadFail": "上传失败：",
       "sec.drive": "公司盘",
+      "th.tab": "团队资料",
+      "th.sub": "文件 + 笔记 · 放进来 = 全员可见",
+      "th.filesTab": "📁 文件",
+      "th.notesTab": "📝 笔记",
+      "th.hintFiles": "放原始文件；按项目或客户建文件夹，找起来最快",
+      "th.hintNotes": "记结论和经验，搜一下就能找到 —— AI 助理也能直接引用",
+      "th.newFolder": "＋ 新建文件夹",
+      "th.folderNamePh": "文件夹名字，比如「客户A」「2026报价」",
+      "th.create": "创建",
+      "th.upload": "⬆ 上传",
+      "th.uploading": "上传中：",
+      "th.uploadFail": "上传失败：",
+      "th.dropTitle": "⬆ 拖文件到这里上传",
+      "th.dropSub": "上传到当前文件夹 · 单个 ≤50MB",
+      "th.root": "根目录",
+      "th.download": "下载",
+      "th.openIt": "打开",
+      "th.moveBtn": "移动到…",
+      "th.del": "删除",
+      "th.cancel": "取消",
+      "th.confirmDelFolder": "删除文件夹「",
+      "th.confirmDelFile": "删除文件「",
+      "th.confirmDelTail": "」？此操作不可恢复。",
+      "th.mvTitle": "把「",
+      "th.mvTitle2": "」移动到：",
+      "th.mvHere": "移到这里",
+      "th.noSubFolder": "（没有子文件夹，可直接「移到这里」）",
+      "th.emptyTitleA": "① 建个文件夹，把文件传进来",
+      "th.emptyBodyA": "比如「客户A」「2026报价」—— 拖进去就行",
+      "th.emptyTitleB": "② 记第一条笔记",
+      "th.emptyBodyB": "今天有什么结论？写一句话也算",
+      "th.searchPh": "搜笔记，比如「印尼」「定价」…",
+      "th.searchBtn": "搜索",
+      "th.saveNote": "＋ 记一条",
+      "th.noteTitlePh": "标题（不填就用第一行）",
+      "th.noteBodyPh": "想到什么写什么…… 一句话也算",
+      "th.saveBtn": "保存 ✓",
+      "th.noteSaved": "已记下 ✓",
+      "th.noNotes": "还没有笔记 —— 点「＋ 记一条」写第一句",
+      "th.noNotesSub": "结论、口径、经验，一句话也算",
+      "th.hitsPrefix": "命中 ",
+      "th.noHits": "没有命中，换个短点的词试试",
+      "th.read": "查看",
+      "th.hide": "收起",
+      "th.backList": "返回笔记列表",
+      "th.folderWord": "文件夹",
       "common.refresh": "刷新",
       "drive.uploadBtn": "上传文件",
       "drive.failOpen": "读不到公司盘（",
@@ -411,6 +457,52 @@ window.__ModuleLoader__.load({
       "drive.uploading": "Uploading: ",
       "drive.uploadFail": "Upload failed: ",
       "sec.drive": "Company drive",
+      "th.tab": "Team files",
+      "th.sub": "Files + notes · visible to everyone",
+      "th.filesTab": "📁 Files",
+      "th.notesTab": "📝 Notes",
+      "th.hintFiles": "Original files — sort into folders by project or client",
+      "th.hintNotes": "Notes for conclusions & know-how — searchable, and the AI can cite them",
+      "th.newFolder": "+ New folder",
+      "th.folderNamePh": "Folder name, e.g. client-A or quotes-2026",
+      "th.create": "Create",
+      "th.upload": "⬆ Upload",
+      "th.uploading": "Uploading: ",
+      "th.uploadFail": "Upload failed: ",
+      "th.dropTitle": "⬆ Drop files here to upload",
+      "th.dropSub": "Goes into the current folder · ≤50MB per file",
+      "th.root": "Home",
+      "th.download": "Download",
+      "th.openIt": "Open",
+      "th.moveBtn": "Move to…",
+      "th.del": "Delete",
+      "th.cancel": "Cancel",
+      "th.confirmDelFolder": "Delete folder “",
+      "th.confirmDelFile": "Delete file “",
+      "th.confirmDelTail": "”? This cannot be undone.",
+      "th.mvTitle": "Move “",
+      "th.mvTitle2": "” to:",
+      "th.mvHere": "Move here",
+      "th.noSubFolder": "(No subfolders — just use “Move here”)",
+      "th.emptyTitleA": "① Create a folder and upload files",
+      "th.emptyBodyA": "e.g. client-A or quotes-2026 — just drag & drop them in",
+      "th.emptyTitleB": "② Write your first note",
+      "th.emptyBodyB": "Any conclusion today? One line is enough",
+      "th.searchPh": "Search notes, e.g. pricing…",
+      "th.searchBtn": "Search",
+      "th.saveNote": "+ New note",
+      "th.noteTitlePh": "Title (first line if left empty)",
+      "th.noteBodyPh": "Write anything… one line is fine",
+      "th.saveBtn": "Save ✓",
+      "th.noteSaved": "Note saved ✓",
+      "th.noNotes": "No notes yet — click “+ New note”",
+      "th.noNotesSub": "Conclusions, conventions, know-how — one line counts",
+      "th.hitsPrefix": "Hits: ",
+      "th.noHits": "No hits — try a shorter keyword",
+      "th.read": "View",
+      "th.hide": "Hide",
+      "th.backList": "Back to note list",
+      "th.folderWord": "Folder",
       "common.refresh": "Refresh",
       "drive.uploadBtn": "Upload file",
       "drive.failOpen": "Company drive unavailable (",
@@ -741,6 +833,16 @@ window.__ModuleLoader__.load({
       return pair[0];
     }
     var DESK_CSS = `
+    /* —— 团队资料面板（TeamHub） —— */
+.ddp .dropz { border:1.5px dashed var(--dsw-alias-border-l2, #ccd0d5); border-radius:12px; background:var(--dsw-alias-bg-base, #f7f8fa); text-align:center; padding:12px 10px; margin:8px 0 10px; cursor:pointer; }
+.ddp .dropz .a { font-size:13px; font-weight:600; color:var(--dsw-alias-state-business-primary, #4f7cf7); }
+.ddp .dropz .b { font-size:11px; opacity:.72; margin-top:3px; }
+.ddp .bigcard { border:1.5px dashed var(--dsw-alias-border-l2, #ccd0d5); border-radius:12px; background:var(--dsw-alias-bg-base, #f7f8fa); padding:14px; margin:0 0 10px; cursor:pointer; }
+.ddp .bigcard .bt { font-size:13.5px; font-weight:700; color:var(--dsw-alias-state-business-primary, #4f7cf7); }
+.ddp .bigcard .bs { font-size:11.5px; opacity:.72; margin-top:4px; line-height:1.5; }
+.ddp .bc { font-size:12px; opacity:.85; margin:2px 0 8px; }
+.ddp .bc .lk { color:var(--dsw-alias-state-business-primary, #4f7cf7); cursor:pointer; }
+.ddp .tbar { display:flex; align-items:center; gap:6px; margin-bottom:8px; }
 .ddb { display:flex; align-items:center; gap:10px; width:100%; padding:7px 10px; border:0; border-radius:10px; background:transparent; color:inherit; cursor:pointer; font-size:13px; text-align:left; transition:background .13s ease; }
 .ddb:hover { background:var(--dsw-alias-interactive-bg-hover-default, rgba(127,127,127,.12)); }
 .ddb.rail { justify-content:center; padding:7px 6px; }
@@ -2272,6 +2374,334 @@ body.desk-panel-open [class*="sidebarCol"] { overflow: visible !important; }
 
       kids.push(h("div", { key: "rf" }, h("button", { style: btnLight, onClick: load }, tr("common.refresh"))));
       return h("div", { style: Object.assign({}, wrap, { maxWidth: 640 }) }, kids);
+    }
+
+    function TeamHub(props) {
+      var wide = !!(props && props.wide);
+      var openPair = React.useState(false);
+      var open = openPair[0];
+      var setOpen = openPair[1];
+      var tabPair = React.useState("files");
+      var tab = tabPair[0];
+      var setTab = tabPair[1];
+
+      var fPair = React.useState({ phase: "loading", path: "", entries: [], message: "", menuFor: "", pick: null, newFolder: false });
+      var fs = fPair[0];
+      var setFs = fPair[1];
+      var fileRef = React.useRef(null);
+      var nfRef = React.useRef(null);
+
+      function fset(patch) {
+        setFs(function (prev) { var n = {}; for (var k in prev) n[k] = prev[k]; for (var k2 in patch) n[k2] = patch[k2]; return n; });
+      }
+      function fload(path) {
+        var p = String(path == null ? "" : path);
+        fset({ phase: "loading", path: p, entries: [], message: "", menuFor: "", pick: null, newFolder: false });
+        fetch("/portal/api/drive/list?path=" + encodeURIComponent(p), { headers: { accept: "application/json" } })
+          .then(function (r) { if (!r.ok) throw new Error("HTTP " + r.status); return r.json(); })
+          .then(function (d) { fset({ phase: "ready", path: d.path != null ? d.path : p, entries: d.entries || [], message: "" }); })
+          .catch(function (e) { fset({ phase: "error", message: String((e && e.message) || e) }); });
+      }
+      function fpost(url, body, tk) {
+        return fetch(url, { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify(body) })
+          .then(function (r) { return r.json().then(function (d) { return { s: r.status, d: d }; }); });
+      }
+      function fupload(files) {
+        var f = files && files[0];
+        if (!f) return;
+        fset({ message: tr("th.uploading") + f.name + " …" });
+        fetch("/portal/api/drive/upload?path=" + encodeURIComponent(fs.path) + "&name=" + encodeURIComponent(f.name), { method: "POST", body: f })
+          .then(function (r) { if (!r.ok) throw new Error("HTTP " + r.status); return r.json(); })
+          .then(function () { fload(fs.path); })
+          .catch(function (e) { fset({ message: tr("th.uploadFail") + String((e && e.message) || e) }); });
+      }
+      function fmkdir() {
+        var el = nfRef.current;
+        var name = el ? String(el.value || "").trim() : "";
+        if (!name) { if (el) el.focus(); return; }
+        fpost("/portal/api/drive/mkdir", { path: fs.path, name: name }).then(function (res) {
+          if (res.s !== 200) throw new Error((res.d && res.d.error) || "HTTP " + res.s);
+          fload(fs.path);
+        }).catch(function (e) { fset({ message: String((e && e.message) || e) }); });
+      }
+      function frm(path, isDir) {
+        var label = isDir ? tr("th.confirmDelFolder") : tr("th.confirmDelFile");
+        if (!window.confirm(label + path.split("/").pop() + tr("th.confirmDelTail"))) return;
+        fpost("/portal/api/drive/rm", { path: path }).then(function (res) {
+          if (res.s !== 200) throw new Error((res.d && res.d.error) || "HTTP " + res.s);
+          fload(fs.path);
+        }).catch(function (e) { fset({ message: String((e && e.message) || e) }); });
+      }
+      function fpick(name) {
+        fset({ pick: { name: name, path: "", entries: [] }, menuFor: "" });
+        fetch("/portal/api/drive/list?path=", { headers: { accept: "application/json" } })
+          .then(function (r) { return r.json(); })
+          .then(function (d) { fset({ pick: { name: name, path: d.path != null ? d.path : "", entries: d.entries || [] } }); })
+          .catch(function () { });
+      }
+      function fpickGo(path) {
+        fetch("/portal/api/drive/list?path=" + encodeURIComponent(path), { headers: { accept: "application/json" } })
+          .then(function (r) { return r.json(); })
+          .then(function (d) { fset({ pick: { name: fs.pick ? fs.pick.name : "", path: d.path != null ? d.path : path, entries: d.entries || [] } }); })
+          .catch(function () { });
+      }
+      function fmove(to) {
+        var name = fs.pick ? fs.pick.name : "";
+        var from = fs.path ? fs.path + "/" + name : name;
+        fpost("/portal/api/drive/mv", { from: from, to: to }).then(function (res) {
+          if (res.s !== 200) throw new Error((res.d && res.d.error) || "HTTP " + res.s);
+          fload(fs.path);
+        }).catch(function (e) { fset({ message: String((e && e.message) || e) }); });
+      }
+
+      var nPair = React.useState({ phase: "loading", role: "member", notes: [], q: "", hits: [], message: "", expanded: "", content: "", composing: false });
+      var ns = nPair[0];
+      var setNs = nPair[1];
+      var qRef = React.useRef(null);
+      var ntRef = React.useRef(null);
+      var nbRef = React.useRef(null);
+      function nset(patch) {
+        setNs(function (prev) { var n = {}; for (var k in prev) n[k] = prev[k]; for (var k2 in patch) n[k2] = patch[k2]; return n; });
+      }
+      function nload() {
+        fetch("/portal/api/kb/list", { headers: { accept: "application/json" } })
+          .then(function (r) { if (!r.ok) throw new Error("HTTP " + r.status); return r.json(); })
+          .then(function (d) { nset({ phase: "ready", role: d.role || "member", notes: d.notes || [], message: "" }); })
+          .catch(function (e) { nset({ phase: "error", message: String((e && e.message) || e) }); });
+      }
+      function nsearch() {
+        var q = qRef.current ? String(qRef.current.value || "").trim() : "";
+        if (!q) { nset({ q: "", hits: [] }); return; }
+        fetch("/portal/api/kb/search?q=" + encodeURIComponent(q))
+          .then(function (r) { if (!r.ok) throw new Error("HTTP " + r.status); return r.json(); })
+          .then(function (d) { nset({ q: q, hits: d.hits || [], message: "" }); })
+          .catch(function (e) { nset({ message: String((e && e.message) || e) }); });
+      }
+      function nopen(name) {
+        if (ns.expanded === name) { nset({ expanded: "", content: "" }); return; }
+        nset({ expanded: name, content: tr("common.loading") });
+        fetch("/portal/api/kb/note?name=" + encodeURIComponent(name), { headers: { accept: "application/json" } })
+          .then(function (r) { return r.json(); })
+          .then(function (d) { nset({ expanded: name, content: d.ok ? d.content : (d.error || tr("common.loadFailed")) }); })
+          .catch(function (e) { nset({ expanded: name, content: String((e && e.message) || e) }); });
+      }
+      function ndel(name) {
+        if (!window.confirm(tr("kb.delNote") + name + "?")) return;
+        fetch("/portal/api/kb/rm?lang=" + deskLang(), { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ name: name }) })
+          .then(function (r) { return r.json().then(function (d) { return { s: r.status, d: d }; }); })
+          .then(function (res) {
+            if (res.s !== 200) throw new Error((res.d && res.d.error) || "HTTP " + res.s);
+            nset({ expanded: "", content: "" });
+            nload();
+          })
+          .catch(function (e) { nset({ message: String((e && e.message) || e) }); });
+      }
+      function nsave() {
+        var title = ntRef.current ? String(ntRef.current.value || "").trim() : "";
+        var body = nbRef.current ? String(nbRef.current.value || "").trim() : "";
+        if (!body) { if (nbRef.current) nbRef.current.focus(); return; }
+        if (!title) title = body.split("\n")[0].slice(0, 36);
+        fetch("/portal/api/kb/save?lang=" + deskLang(), { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ title: title, tags: "", content: body }) })
+          .then(function (r) { return r.json().then(function (d) { return { s: r.status, d: d }; }); })
+          .then(function (res) {
+            if (res.s !== 200) throw new Error((res.d && res.d.error) || "HTTP " + res.s);
+            if (ntRef.current) ntRef.current.value = "";
+            if (nbRef.current) nbRef.current.value = "";
+            nset({ composing: false, message: tr("th.noteSaved"), q: "", hits: [] });
+            nload();
+          })
+          .catch(function (e) { nset({ message: String((e && e.message) || e) }); });
+      }
+      React.useEffect(function () {
+        if (open) { fload(""); nload(); }
+      }, [open]);
+
+      function toggle() {
+        var next = !open;
+        setOpen(next);
+      }
+      function hfileEmoji(name) {
+        var ext = String(name).split(".").pop().toLowerCase();
+        if (ext === "xlsx" || ext === "xls" || ext === "csv") return "📊";
+        if (ext === "pdf") return "📕";
+        if (ext === "png" || ext === "jpg" || ext === "jpeg" || ext === "gif" || ext === "webp") return "🖼";
+        if (ext === "zip" || ext === "7z" || ext === "rar" || ext === "tar" || ext === "gz") return "🗜";
+        return "📄";
+      }
+
+      var trigger = h("button", { className: "ddb" + (wide ? "" : " rail"), onClick: toggle, title: tr("th.tab") },
+        h("span", { className: "ic" }, "🗂"),
+        wide ? h("span", { className: "lbl" }, tr("th.tab")) : null
+      );
+      if (!open) return h("div", null, trigger);
+
+      var body = [];
+      if (tab === "files") {
+        body.push(h("div", { key: "hint", className: "ft" }, tr("th.hintFiles")));
+        var segs = String(fs.path || "").split("/").filter(function (x) { return x; });
+        var bc = [h("span", { key: "r0", className: "lk", onClick: function () { fload(""); } }, "🏠 " + tr("th.root"))];
+        var acc = "";
+        for (var i = 0; i < segs.length; i++) {
+          acc = acc ? acc + "/" + segs[i] : segs[i];
+          bc.push(h("span", { key: "sp" + i, style: { opacity: .5 } }, " / "));
+          (function (pp, nm) { bc.push(h("span", { key: "c" + pp, className: "lk", onClick: function () { fload(pp); } }, nm)); })(acc, segs[i]);
+        }
+        body.push(h("div", { key: "bc", className: "bc" }, bc));
+        body.push(h("div", { key: "bar", className: "tbar" },
+          h("button", { className: "btn gh", onClick: function () { fset({ newFolder: !fs.newFolder, menuFor: "", pick: null }); } }, tr("th.newFolder")),
+          h("button", { className: "btn", onClick: function () { if (fileRef.current) fileRef.current.click(); } }, tr("th.upload")),
+          h("input", { ref: fileRef, type: "file", style: { display: "none" }, onChange: function (e) { fupload(e.target.files); e.target.value = ""; } })
+        ));
+        if (fs.newFolder) {
+          body.push(h("div", { key: "nf", className: "row" },
+            h("input", { ref: nfRef, className: "inp", placeholder: tr("th.folderNamePh"), style: { flex: 1 }, onKeyDown: function (e) { if (e.key === "Enter") fmkdir(); } }),
+            h("button", { className: "btn", onClick: fmkdir }, tr("th.create")),
+            h("button", { className: "btn gh", onClick: function () { fset({ newFolder: false }); } }, tr("th.cancel"))
+          ));
+        }
+        if (fs.message) body.push(h("div", { key: "msg", className: "msg" }, fs.message));
+        if (fs.phase === "error") {
+          body.push(h("div", { key: "er", className: "msg err" }, tr("drive.failOpen") + fs.message + tr("drive.portalHint2")));
+        }
+        if (fs.pick) {
+          var pk = fs.pick;
+          var psegs = String(pk.path || "").split("/").filter(function (x) { return x; });
+          var pbc = [h("span", { key: "pr0", className: "lk", onClick: function () { fpickGo(""); } }, "🏠 " + tr("th.root"))];
+          var pacc = "";
+          for (var pi = 0; pi < psegs.length; pi++) {
+            pacc = pacc ? pacc + "/" + psegs[pi] : psegs[pi];
+            pbc.push(h("span", { key: "psp" + pi, style: { opacity: .5 } }, " / "));
+            (function (pp2, nm2) { pbc.push(h("span", { key: "pc" + pp2, className: "lk", onClick: function () { fpickGo(pp2); } }, nm2)); })(pacc, psegs[pi]);
+          }
+          var pfolders = [];
+          for (var pj = 0; pj < pk.entries.length; pj++) {
+            if (!pk.entries[pj].dir) continue;
+            (function (en2) {
+              var np = pk.path ? pk.path + "/" + en2.name : en2.name;
+              pfolders.push(h("div", { key: "pf" + en2.name, className: "it hv", onClick: function () { fpickGo(np); } },
+                h("span", { className: "ico2" }, "📁"),
+                h("div", { className: "gr" }, h("div", { className: "th" }, h("span", { className: "t" }, en2.name)))));
+            })(pk.entries[pj]);
+          }
+          body.push(h("div", { key: "pick", className: "fm" },
+            h("div", { className: "lb" }, tr("th.mvTitle") + pk.name + tr("th.mvTitle2")),
+            h("div", { className: "bc" }, pbc),
+            pfolders.length ? h("div", { className: "list" }, pfolders) : h("div", { className: "empty" }, tr("th.noSubFolder")),
+            h("div", { className: "row" },
+              h("button", { className: "btn", onClick: function () { fmove(pk.path); } }, tr("th.mvHere")),
+              h("button", { className: "btn gh", onClick: function () { fset({ pick: null }); } }, tr("th.cancel"))
+            )
+          ));
+        }
+        var rows = [];
+        var rootEmpty = fs.phase === "ready" && fs.path === "" && fs.entries.length === 0;
+        for (var j = 0; j < fs.entries.length; j++) {
+          (function (en) {
+            var full = fs.path ? fs.path + "/" + en.name : en.name;
+            var isOpenMenu = fs.menuFor === en.name;
+            var meta = en.dir ? tr("th.folderWord") : fmtSize(en.size) + (en.mtime ? " · " + String(en.mtime).slice(0, 10) : "");
+            var acts = [];
+            if (en.dir) {
+              acts.push(h("button", { key: "o", className: "mini", onClick: function () { fload(full); } }, tr("th.openIt")));
+            } else {
+              acts.push(h("a", { key: "d", className: "mini", style: { textDecoration: "none" }, href: "/portal/api/drive/download?path=" + encodeURIComponent(full) }, tr("th.download")));
+            }
+            acts.push(h("button", { key: "m", className: "mini", onClick: function () { fset({ menuFor: isOpenMenu ? "" : en.name }); } }, "⋯"));
+            rows.push(h("div", { key: "it" + en.name, className: "it" },
+              h("span", { className: "ico2" }, en.dir ? "📁" : hfileEmoji(en.name)),
+              h("div", { className: "gr" },
+                h("div", { className: "th" },
+                  h("span", { className: "t", style: en.dir ? { cursor: "pointer" } : null, onClick: en.dir ? function () { fload(full); } : null }, en.name),
+                  h("span", null, acts)
+                ),
+                h("div", { className: "d" }, meta),
+                isOpenMenu ? h("div", { className: "row", style: { marginTop: 6 } },
+                  en.dir ? null : h("button", { className: "mini", onClick: function () { fpick(en.name); } }, tr("th.moveBtn")),
+                  h("button", { className: "mini", onClick: function () { frm(full, en.dir); } }, tr("th.del"))
+                ) : null
+              )));
+          })(fs.entries[j]);
+        }
+        if (rootEmpty) {
+          body.push(h("div", { key: "ea", className: "bigcard", onClick: function () { if (fileRef.current) fileRef.current.click(); } },
+            h("div", { className: "bt" }, tr("th.emptyTitleA")), h("div", { className: "bs" }, tr("th.emptyBodyA"))));
+          body.push(h("div", { key: "eb", className: "bigcard", onClick: function () { setTab("notes"); nset({ composing: true }); } },
+            h("div", { className: "bt" }, tr("th.emptyTitleB")), h("div", { className: "bs" }, tr("th.emptyBodyB"))));
+        }
+        if (rows.length) body.push(h("div", { key: "rows", className: "list" }, rows));
+      } else {
+        body.push(h("div", { key: "hint", className: "ft" }, tr("th.hintNotes")));
+        body.push(h("div", { key: "sb", className: "row" },
+          h("input", { ref: qRef, className: "inp", placeholder: tr("th.searchPh"), style: { flex: 1 }, onKeyDown: function (e) { if (e.key === "Enter") nsearch(); } }),
+          h("button", { className: "btn gh", onClick: nsearch }, tr("th.searchBtn"))
+        ));
+        body.push(h("div", { key: "nb", className: "row" },
+          h("button", { className: "btn", onClick: function () { nset({ composing: !ns.composing }); } }, tr("th.saveNote"))
+        ));
+        if (ns.composing) {
+          body.push(h("div", { key: "cf", className: "fm" },
+            h("input", { ref: ntRef, className: "inp", placeholder: tr("th.noteTitlePh") }),
+            h("textarea", { ref: nbRef, className: "inp ta", placeholder: tr("th.noteBodyPh") }),
+            h("div", null,
+              h("button", { className: "btn", onClick: nsave }, tr("th.saveBtn")),
+              h("button", { className: "btn gh", onClick: function () { nset({ composing: false }); } }, tr("th.cancel"))
+            )
+          ));
+        }
+        if (ns.message) body.push(h("div", { key: "nm", className: "msg ok" }, ns.message));
+        if (ns.q) {
+          body.push(h("div", { key: "hc", className: "ft" }, tr("th.hitsPrefix") + ns.hits.length));
+          var hitNodes = [];
+          for (var hh = 0; hh < ns.hits.length; hh++) {
+            hitNodes.push(h("div", { key: "h" + hh, className: "it" },
+              h("span", { className: "ico2" }, "🔎"),
+              h("div", { className: "gr" },
+                h("div", { className: "d" }, ns.hits[hh].file + " : " + ns.hits[hh].line),
+                h("div", { className: "bd2" }, ns.hits[hh].text)
+              )));
+          }
+          body.push(h("div", { key: "hits", className: "list" }, hitNodes.length ? hitNodes : h("div", { className: "empty" }, tr("th.noHits"))));
+          body.push(h("div", { key: "hb", className: "row" },
+            h("button", { className: "btn gh", onClick: function () { if (qRef.current) qRef.current.value = ""; nset({ q: "", hits: [] }); } }, tr("th.backList"))
+          ));
+        } else {
+          var noteNodes = [];
+          for (var nn = 0; nn < ns.notes.length; nn++) {
+            (function (note) {
+              var isOpen = ns.expanded === note.name;
+              var nacts = [h("button", { key: "v", className: "mini", onClick: function () { nopen(note.name); } }, isOpen ? tr("th.hide") : tr("th.read"))];
+              if (ns.role === "admin") nacts.push(h("button", { key: "x", className: "mini", onClick: function () { ndel(note.name); } }, tr("th.del")));
+              noteNodes.push(h("div", { key: "n" + note.name, className: "it" },
+                h("span", { className: "ico2" }, "📝"),
+                h("div", { className: "gr" },
+                  h("div", { className: "th" }, h("span", { className: "t" }, note.title), h("span", null, nacts)),
+                  h("div", { className: "d" }, String(note.mtime || "") + (note.author ? " · " + note.author : "")),
+                  isOpen ? h("div", { className: "bd2", style: { whiteSpace: "pre-wrap" } }, ns.content) : null
+                )));
+            })(ns.notes[nn]);
+          }
+          body.push(h("div", { key: "notes", className: "list" },
+            noteNodes.length ? noteNodes : h("div", { className: "bigcard", onClick: function () { nset({ composing: true }); } },
+              h("div", { className: "bt" }, tr("th.noNotes")),
+              h("div", { className: "bs" }, tr("th.noNotesSub")))));
+        }
+      }
+
+      return h("div", null,
+        trigger,
+        h("div", { key: "panel", className: "ddp" },
+          h("div", { className: "hd" },
+            h("span", { className: "ico" }, "🗂"),
+            h("div", null, h("div", { className: "t1" }, tr("th.tab")), h("div", { className: "t2" }, tr("th.sub"))),
+            h("button", { className: "x", onClick: toggle }, "✕")
+          ),
+          h("div", { className: "tabs" },
+            h("button", { className: "tb" + (tab === "files" ? " on" : ""), onClick: function () { setTab("files"); } }, tr("th.filesTab")),
+            h("button", { className: "tb" + (tab === "notes" ? " on" : ""), onClick: function () { setTab("notes"); } }, tr("th.notesTab"))
+          ),
+          h("div", { className: "bd" }, body)
+        )
+      );
     }
 
     function AnnounceBoard(props) {
@@ -4107,32 +4537,6 @@ body.desk-panel-open [class*="sidebarCol"] { overflow: visible !important; }
         return ctx.slots.register(
           {
             name: "settings.section",
-            id: "desk-kb",
-            order: 60,
-            label: function () {
-              return tr("sec.kb");
-            },
-          },
-          KbSection
-        );
-      });
-      ctx.slots.inject("settings.section", function () {
-        return ctx.slots.register(
-          {
-            name: "settings.section",
-            id: "desk-drive",
-            order: 70,
-            label: function () {
-              return tr("sec.drive");
-            },
-          },
-          DriveSection
-        );
-      });
-      ctx.slots.inject("settings.section", function () {
-        return ctx.slots.register(
-          {
-            name: "settings.section",
             id: "desk-admin",
             order: 80,
             label: function () {
@@ -4153,6 +4557,19 @@ body.desk-panel-open [class*="sidebarCol"] { overflow: visible !important; }
             },
           },
           NotifySection
+        );
+      });
+      ctx.slots.inject("sidebar.footer.action", function () {
+        return ctx.slots.register(
+          {
+            name: "sidebar.footer.action",
+            id: "desk-hub",
+            order: 91,
+            label: function () {
+              return tr("th.tab");
+            },
+          },
+          TeamHub
         );
       });
       ctx.slots.inject("sidebar.footer.action", function () {

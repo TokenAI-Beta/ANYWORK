@@ -16,7 +16,7 @@ import { eventCost, monthStartUtc, prices } from './pricing.ts'
 import { addChannel, listChannels, removeChannel, setChannelEnabled } from './channel.ts'
 import { syncInstanceModels } from './models-sync.ts'
 import { kbSearch, listKbNotes, readKbNote, removeKbNote, saveKbNote } from './kb.ts'
-import { listDrive, resolveInDrive, saveToDrive, MAX_UPLOAD } from './drive.ts'
+import { listDrive, makeDir, movePath, removePath, resolveInDrive, saveToDrive, MAX_UPLOAD } from './drive.ts'
 import { addNotifyRoute, addReminder, dispatchNotify, listNotifyLog, listNotifyRoutes, listReminders, listRemindersSent, readOrCreateNotifyToken, removeNotifyRoute, removeReminder, toggleNotifyRoute } from './notify.ts'
 import { defaultDataDir } from './db.ts'
 import { collectConnectors, collectPresets, collectSkills, readSkill } from './panel.ts'
@@ -811,6 +811,55 @@ export function startPortal(opts: PortalOptions) {
           }
         })
         return
+      }
+      // —— 公司盘：文件夹与分类（2026-09-29 团队资料面板）——
+      if (path === '/portal/api/drive/mkdir' && req.method === 'POST') {
+        if (!user) {
+          res.writeHead(401, { 'content-type': 'application/json' })
+          return res.end(JSON.stringify({ error: 'login required' }))
+        }
+        let b: Record<string, unknown> = {}
+        try {
+          const v = JSON.parse(await readBody(req)) as unknown
+          if (v && typeof v === 'object') b = v as Record<string, unknown>
+        } catch {
+          b = {}
+        }
+        const r = makeDir(String(b.path ?? ''), String(b.name ?? ''))
+        res.writeHead('error' in r ? 400 : 200, { 'content-type': 'application/json; charset=utf-8' })
+        return res.end(JSON.stringify(r))
+      }
+      if (path === '/portal/api/drive/rm' && req.method === 'POST') {
+        if (!user) {
+          res.writeHead(401, { 'content-type': 'application/json' })
+          return res.end(JSON.stringify({ error: 'login required' }))
+        }
+        let b: Record<string, unknown> = {}
+        try {
+          const v = JSON.parse(await readBody(req)) as unknown
+          if (v && typeof v === 'object') b = v as Record<string, unknown>
+        } catch {
+          b = {}
+        }
+        const r = removePath(String(b.path ?? ''))
+        res.writeHead('error' in r ? 400 : 200, { 'content-type': 'application/json; charset=utf-8' })
+        return res.end(JSON.stringify(r))
+      }
+      if (path === '/portal/api/drive/mv' && req.method === 'POST') {
+        if (!user) {
+          res.writeHead(401, { 'content-type': 'application/json' })
+          return res.end(JSON.stringify({ error: 'login required' }))
+        }
+        let b: Record<string, unknown> = {}
+        try {
+          const v = JSON.parse(await readBody(req)) as unknown
+          if (v && typeof v === 'object') b = v as Record<string, unknown>
+        } catch {
+          b = {}
+        }
+        const r = movePath(String(b.from ?? ''), String(b.to ?? ''))
+        res.writeHead('error' in r ? 400 : 200, { 'content-type': 'application/json; charset=utf-8' })
+        return res.end(JSON.stringify(r))
       }
       // —— 通知桥：agent 侧入口（desk-notify 脚本；令牌认证，不走登录会话）——
       if (path === '/portal/api/notify' && req.method === 'POST') {
