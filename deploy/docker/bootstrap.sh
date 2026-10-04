@@ -138,6 +138,21 @@ while IFS=$'\t' read -r u p h; do
     "$home/desk-test/$u/profiles/web/node_modules/node-pty/build/Release/pty.node"
 done < "$home/.desk/run/instances.tsv"
 
+# ── 5c) desk-panel 前端副本强制同步（幂等，原地写保 inode）──
+# 坑（2026-10-04 云上实测）：file: 依赖装过一次后 pnpm 不会因镜像更新而重拷贝，
+# 且 install_plugin 对已装依赖直接 skip → 成员实例会一直跑旧 client.js（界面不更新，
+# 验收现象 = 组合包 grep 新标记 0 命中）。每次容器启动强制同步；实例启动时
+# boot HTML 据此生成新 rev，浏览器缓存自动失效。
+DESK_SRC="$repo/plugin/desk-panel/lib/client.js"
+if [ -f "$DESK_SRC" ]; then
+  for f in "$home"/desk-test/*/profiles/web/node_modules/dsh-desk-panel/lib/client.js; do
+    [ -f "$f" ] || continue
+    if ! cmp -s "$DESK_SRC" "$f"; then
+      cat "$DESK_SRC" > "$f" && log "刷新 desk-panel 副本：$f"
+    fi
+  done
+fi
+
 # 本脚本已完成配置的成员：置就绪标记（运行中新增成员由监督器配置）
 while IFS=$'\t' read -r _u _p _h; do
   [ -n "${_u:-}" ] && touch "$home/.desk/run/$_u.prov"
