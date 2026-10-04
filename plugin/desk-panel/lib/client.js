@@ -902,6 +902,10 @@ body.desk-panel-open [class*="sidebarCol"] { backdrop-filter: none !important; -
    两者叠加会把 .ddp 面板裁成侧边栏宽度——右边框与右上角 ✕ 被切掉。打开期间临时放开。 */
 body:has(.ddp) [class*="sidebarCol"] { overflow: visible !important; }
 body.desk-panel-open [class*="sidebarCol"] { overflow: visible !important; }
+/* 面板打开时同时压掉 aqua 的「光标追踪」matrix3d 变换：鼠标靠近/划过侧栏时倾斜角实时变化，
+   fixed 面板的包含块被锁在侧栏上 → 面板跟着鼠标漂移/跳动。打开期间禁用（与上面两条同族）。 */
+body:has(.ddp) [class*="sidebarCol"] { transform: none !important; }
+body.desk-panel-open [class*="sidebarCol"] { transform: none !important; }
 
 /* ── 移动端（≤820px）：四个侧栏面板改为「底部抽屉」形态（触控尺寸 ≥44px、字号 +1、安全区适配） ── */
 @media (max-width: 820px) {
