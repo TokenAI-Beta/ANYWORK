@@ -159,6 +159,12 @@ function migrate(db: DatabaseSync): void {
       decided_at TEXT
     );
 
+    CREATE TABLE IF NOT EXISTS platform_conns (
+      platform TEXT PRIMARY KEY,
+      config TEXT NOT NULL,
+      updated_at TEXT NOT NULL DEFAULT (datetime('now'))
+    );
+
     CREATE INDEX IF NOT EXISTS idx_usage_user_ts ON usage_events(user_id, ts);
     CREATE INDEX IF NOT EXISTS idx_keys_hash ON api_keys(token_hash);
     CREATE INDEX IF NOT EXISTS idx_sessions_hash ON login_sessions(token_hash);

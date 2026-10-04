@@ -128,16 +128,21 @@ export interface ConnectorInfo {
   detail: string
 }
 
-/** 消息平台（连接器面板）：状态来自 notify_routes；desc/hint 为配置引导文案。 */
+/** 连接器面板卡片：消息平台（notify_routes）+ 会议 / 工作平台（platform_conns）+ 规划中。 */
 export interface PlatformInfo {
   id: string
   name: string
   kind: string
   desc: string
   hint: string
+  group: 'msg' | 'meet' | 'work'
+  mode: 'notify' | 'conn' | 'plan'
+  type: string
   connected: boolean
   routes: number
   routesEnabled: number
+  display?: string
+  openUrl?: string
 }
 
 export function collectPlatforms(db: DatabaseSync, lang: string = 'zh'): PlatformInfo[] {
@@ -147,31 +152,63 @@ export function collectPlatforms(db: DatabaseSync, lang: string = 'zh'): Platfor
   } catch {
     // 表缺失按空处理
   }
-  const defs: { id: string; kind: string; name: string; desc: string; hint: string }[] = [
-    { id: 'wechat', kind: 'hermes', name: L(lang, '微信（Hermes 桥）', 'WeChat (Hermes bridge)'), desc: L(lang, '推到你的微信——经 Hermes 转送', 'Push to WeChat via the Hermes bridge'), hint: L(lang, '微信目标（如 weixin）——需宿主 Hermes 在岗', 'WeChat target (e.g. weixin) — needs Hermes on the host') },
-    { id: 'telegram', kind: 'telegram', name: 'Telegram', desc: L(lang, '群里 / 私聊直达（Bot API）', 'Bot API — direct to chats'), hint: L(lang, 'bot_token|chat_id（可加 |api_base）', 'bot_token|chat_id (optional |api_base)') },
-    { id: 'feishu', kind: 'feishu', name: L(lang, '飞书 Feishu', 'Feishu / Lark'), desc: L(lang, '群机器人 Webhook——贴一个地址就能推', 'Custom-bot webhook — paste the URL'), hint: L(lang, '飞书群机器人 Webhook 地址', 'Feishu bot webhook URL') },
-    { id: 'dingtalk', kind: 'dingtalk', name: L(lang, '钉钉', 'DingTalk'), desc: L(lang, '群机器人 Webhook，支持加签', 'Robot webhook with optional secret signing'), hint: L(lang, 'webhook地址[|加签Secret]', 'webhook URL[|secret]') },
-    { id: 'wecom', kind: 'wecom', name: L(lang, '企业微信', 'WeCom'), desc: L(lang, '群机器人 Webhook——公司群里发通知', 'Group-robot webhook — notify a company group'), hint: L(lang, '企微群机器人 Webhook 地址', 'WeCom bot webhook URL') },
-    { id: 'discord', kind: 'discord', name: 'Discord', desc: L(lang, '频道 Webhook——社区群里同步', 'Channel webhook — sync into a community server'), hint: L(lang, '频道 Webhook 地址', 'Channel webhook URL') },
-    { id: 'slack', kind: 'slack', name: 'Slack', desc: L(lang, 'Incoming Webhook', 'Incoming webhook'), hint: L(lang, 'Incoming Webhook 地址', 'Incoming webhook URL') },
-    { id: 'teams', kind: 'teams', name: 'Microsoft Teams', desc: L(lang, '频道 Incoming Webhook', 'Channel incoming webhook'), hint: L(lang, '频道 Webhook 地址', 'Channel webhook URL') },
-    { id: 'whatsapp', kind: 'whatsapp', name: 'WhatsApp', desc: L(lang, '经 CallMeBot / GreenAPI / UltraMsg', 'Via CallMeBot / GreenAPI / UltraMsg'), hint: L(lang, 'callmebot|apikey|手机号（或 greenapi / ultramsg 格式）', 'callmebot|apikey|phone (or greenapi / ultramsg format)') },
-    { id: 'ntfy', kind: 'ntfy', name: L(lang, 'ntfy 手机推送', 'ntfy push'), desc: L(lang, '手机装个 App 就收推送——最省事的兜底', 'Install the app and get phone push — the easiest fallback'), hint: L(lang, '主题名（如 anywork-bai）[|服务器[|Token]]', 'topic (e.g. anywork-bai) [|server[|token]]') },
-    { id: 'webhook', kind: 'webhook', name: L(lang, '自定义 Webhook', 'Custom webhook'), desc: L(lang, '接你自己的系统——给个地址就发 JSON', 'Post JSON to your own endpoint'), hint: L(lang, 'http(s):// 地址', 'http(s):// URL') },
+  let conns: { platform: string; config: string; updated_at: string }[] = []
+  try {
+    conns = db.prepare(`SELECT platform, config, updated_at FROM platform_conns`).all() as unknown as { platform: string; config: string; updated_at: string }[]
+  } catch {
+    // 表缺失按空处理
+  }
+  const defs: { id: string; kind: string; name: string; desc: string; hint: string; group: 'msg' | 'meet' | 'work'; mode: 'notify' | 'conn' | 'plan'; type: string }[] = [
+    { id: 'wechat', kind: 'hermes', name: L(lang, '微信（Hermes 桥）', 'WeChat (Hermes bridge)'), desc: L(lang, '推到你的微信——经 Hermes 转送', 'Push to WeChat via the Hermes bridge'), hint: L(lang, '微信目标（如 weixin）——需宿主 Hermes 在岗', 'WeChat target (e.g. weixin) — needs Hermes on the host'), group: 'msg', mode: 'notify', type: '' },
+    { id: 'telegram', kind: 'telegram', name: 'Telegram', desc: L(lang, '群里 / 私聊直达（Bot API）', 'Bot API — direct to chats'), hint: L(lang, 'bot_token|chat_id（可加 |api_base）', 'bot_token|chat_id (optional |api_base)'), group: 'msg', mode: 'notify', type: '' },
+    { id: 'feishu', kind: 'feishu', name: L(lang, '飞书 Feishu', 'Feishu / Lark'), desc: L(lang, '群机器人 Webhook——贴一个地址就能推', 'Custom-bot webhook — paste the URL'), hint: L(lang, '飞书群机器人 Webhook 地址', 'Feishu bot webhook URL'), group: 'msg', mode: 'notify', type: '' },
+    { id: 'dingtalk', kind: 'dingtalk', name: L(lang, '钉钉', 'DingTalk'), desc: L(lang, '群机器人 Webhook，支持加签', 'Robot webhook with optional secret signing'), hint: L(lang, 'webhook地址[|加签Secret]', 'webhook URL[|secret]'), group: 'msg', mode: 'notify', type: '' },
+    { id: 'wecom', kind: 'wecom', name: L(lang, '企业微信', 'WeCom'), desc: L(lang, '群机器人 Webhook——公司群里发通知', 'Group-robot webhook — notify a company group'), hint: L(lang, '企微群机器人 Webhook 地址', 'WeCom bot webhook URL'), group: 'msg', mode: 'notify', type: '' },
+    { id: 'discord', kind: 'discord', name: 'Discord', desc: L(lang, '频道 Webhook——社区群里同步', 'Channel webhook — sync into a community server'), hint: L(lang, '频道 Webhook 地址', 'Channel webhook URL'), group: 'msg', mode: 'notify', type: '' },
+    { id: 'slack', kind: 'slack', name: 'Slack', desc: L(lang, 'Incoming Webhook', 'Incoming webhook'), hint: L(lang, 'Incoming Webhook 地址', 'Incoming webhook URL'), group: 'msg', mode: 'notify', type: '' },
+    { id: 'teams', kind: 'teams', name: 'Microsoft Teams', desc: L(lang, '频道 Incoming Webhook', 'Channel incoming webhook'), hint: L(lang, '频道 Webhook 地址', 'Channel webhook URL'), group: 'msg', mode: 'notify', type: '' },
+    { id: 'whatsapp', kind: 'whatsapp', name: 'WhatsApp', desc: L(lang, '经 CallMeBot / GreenAPI / UltraMsg', 'Via CallMeBot / GreenAPI / UltraMsg'), hint: L(lang, 'callmebot|apikey|手机号（或 greenapi / ultramsg 格式）', 'callmebot|apikey|phone (or greenapi / ultramsg format)'), group: 'msg', mode: 'notify', type: '' },
+    { id: 'ntfy', kind: 'ntfy', name: L(lang, 'ntfy 手机推送', 'ntfy push'), desc: L(lang, '手机装个 App 就收推送——最省事的兜底', 'Install the app and get phone push — the easiest fallback'), hint: L(lang, '主题名（如 anywork-bai）[|服务器[|Token]]', 'topic (e.g. anywork-bai) [|server[|token]]'), group: 'msg', mode: 'notify', type: '' },
+    { id: 'webhook', kind: 'webhook', name: L(lang, '自定义 Webhook', 'Custom webhook'), desc: L(lang, '接你自己的系统——给个地址就发 JSON', 'Post JSON to your own endpoint'), hint: L(lang, 'http(s):// 地址', 'http(s):// URL'), group: 'msg', mode: 'notify', type: '' },
+    { id: 'meeting-tencent', kind: '', name: L(lang, '腾讯会议', 'Tencent Meeting'), desc: L(lang, '存好会议链接 / 会议号——提醒和公告可以带上它', 'Keep your meeting link / number — reminders and notices can carry it'), hint: L(lang, '会议链接（https://meeting.tencent.com/dm/…）或 9~11 位会议号', 'Meeting link (https://meeting.tencent.com/dm/…) or a 9–11 digit number'), group: 'meet', mode: 'conn', type: 'link' },
+    { id: 'zoom', kind: 'zoom', name: 'Zoom', desc: L(lang, '推到 Zoom 聊天（Incoming Webhook，付费版可用）', 'Push to Zoom Team Chat (incoming webhook; paid plans)'), hint: L(lang, 'Zoom 客户端 → 聊天 → 应用 → Incoming Webhook → 添加 → 复制地址', 'Zoom app → Chat → Apps → Incoming Webhook → add → copy the URL'), group: 'meet', mode: 'notify', type: '' },
+    { id: 'github', kind: '', name: 'GitHub', desc: L(lang, '团队仓库联动——验证并保存令牌，为「AI 代提 issue / 看仓库」打底', 'Team repo link — store a token as groundwork for AI filing issues'), hint: L(lang, 'Personal Access Token（github.com → Settings → Developer settings → Tokens）', 'Personal access token (github.com → Settings → Developer settings → Tokens)'), group: 'work', mode: 'conn', type: 'token' },
+    { id: 'notion', kind: '', name: 'Notion', desc: L(lang, '把通知 / 笔记写进 Notion——验证并保存集成 Token', 'Write notes into Notion — store an integration token'), hint: L(lang, '集成 Token（notion.so/my-integrations 新建集成后复制）', 'Integration token (create one at notion.so/my-integrations)'), group: 'work', mode: 'conn', type: 'token' },
+    { id: 'wps', kind: '', name: L(lang, 'WPS / 金山文档', 'WPS / Kingsoft Docs'), desc: L(lang, '规划中——开放平台可做在线编辑 / 转换，需申请接入', 'Planned — the open platform does online edit/convert, needs onboarding'), hint: '', group: 'work', mode: 'plan', type: '' },
+    { id: 'canva', kind: '', name: L(lang, 'Canva 可画', 'Canva'), desc: L(lang, '规划中——需要 Canva 开发者应用 + OAuth 授权', 'Planned — needs a Canva developer app + OAuth'), hint: '', group: 'work', mode: 'plan', type: '' },
+    { id: 'tiktok', kind: '', name: 'TikTok', desc: L(lang, '规划中——内容发布 API 需开发者应用审核', 'Planned — the content-posting API needs app review'), hint: '', group: 'work', mode: 'plan', type: '' },
   ]
   return defs.map((d) => {
-    const mine = routes.filter((r) => r.kind === d.kind)
-    return {
+    const base: PlatformInfo = {
       id: d.id,
       name: d.name,
       kind: d.kind,
       desc: d.desc,
       hint: d.hint,
-      connected: mine.some((r) => r.enabled === 1),
-      routes: mine.length,
-      routesEnabled: mine.filter((r) => r.enabled === 1).length,
+      group: d.group,
+      mode: d.mode,
+      type: d.type,
+      connected: false,
+      routes: 0,
+      routesEnabled: 0,
     }
+    if (d.mode === 'notify') {
+      const mine = routes.filter((r) => r.kind === d.kind)
+      base.connected = mine.some((r) => r.enabled === 1)
+      base.routes = mine.length
+      base.routesEnabled = mine.filter((r) => r.enabled === 1).length
+    } else if (d.mode === 'conn') {
+      const row = conns.find((c) => c.platform === d.id)
+      if (row) {
+        base.connected = true
+        if (d.type === 'link') {
+          base.display = row.config
+          const c = row.config.trim()
+          if (/^https?:\/\//.test(c)) base.openUrl = c
+        }
+      }
+    }
+    return base
   })
 }
 

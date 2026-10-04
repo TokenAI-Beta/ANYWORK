@@ -13,7 +13,7 @@ const HERMES_CLI = process.env.DESK_HERMES_CLI || '/mnt/d/hermes/hermes-agent/ve
 export interface NotifyRoute {
   id: number
   name: string
-  kind: string // webhook | hermes | telegram | whatsapp | feishu | dingtalk | wecom | discord | slack | teams | ntfy
+  kind: string // webhook | hermes | telegram | whatsapp | feishu | dingtalk | wecom | discord | slack | teams | ntfy | zoom
   target: string
   enabled: number
   created_at: string
@@ -41,11 +41,11 @@ export function addNotifyRoute(db: DatabaseSync, r: { name: string; kind: string
   const kind = r.kind.trim()
   const target = r.target.trim()
   if (!/^[a-z0-9][a-z0-9_-]{0,31}$/.test(name)) return { error: '名称请用英文小写（如 wechat-me / wecom-group）' }
-  const KINDS = ['webhook', 'hermes', 'telegram', 'whatsapp', 'feishu', 'dingtalk', 'wecom', 'discord', 'slack', 'teams', 'ntfy']
-  if (!KINDS.includes(kind)) return { error: 'kind 只支持 webhook / hermes / telegram / whatsapp / feishu / dingtalk / wecom / discord / slack / teams / ntfy' }
+  const KINDS = ['webhook', 'hermes', 'telegram', 'whatsapp', 'feishu', 'dingtalk', 'wecom', 'discord', 'slack', 'teams', 'ntfy', 'zoom']
+  if (!KINDS.includes(kind)) return { error: 'kind 只支持 webhook / hermes / telegram / whatsapp / feishu / dingtalk / wecom / discord / slack / teams / ntfy / zoom' }
   if (!target) return { error: '目标不能为空' }
   if (kind === 'webhook' && !/^https?:\/\//.test(target)) return { error: 'webhook 目标需为 http(s):// 开头的 URL' }
-  if ((kind === 'feishu' || kind === 'wecom' || kind === 'discord' || kind === 'slack' || kind === 'teams') && !/^https?:\/\//.test(target.split('|')[0].trim()))
+  if ((kind === 'feishu' || kind === 'wecom' || kind === 'discord' || kind === 'slack' || kind === 'teams' || kind === 'zoom') && !/^https?:\/\//.test(target.split('|')[0].trim()))
     return { error: kind + ' 目标需为 http(s):// Webhook 地址' }
   if (kind === 'dingtalk' && !/^https?:\/\//.test(target.split('|')[0].trim()))
     return { error: 'dingtalk 目标格式：webhook地址[|加签Secret]' }
@@ -343,6 +343,16 @@ async function sendViaNtfy(target: string, msg: NotifyMsg): Promise<string> {
   return 'ok ntfy'
 }
 
+// Zoom Team Chat Incoming Webhook（Zoom 客户端 → 聊天 → 应用 → Incoming Webhook，付费版）
+async function sendViaZoom(target: string, msg: NotifyMsg): Promise<string> {
+  const url = target.split('|')[0].trim()
+  const text = (msg.title ? '【' + msg.title + '】\n' : '') + msg.text
+  const r = await postPlatform(url, { content: { head: { text: msg.title || 'DSH-ANYWORK' }, body: [{ type: 'message', text }] } })
+  const f = httpFail(r.status, r.body)
+  if (f) return f
+  return 'ok zoom'
+}
+
 // 微信（hermes 通道）失败重试：阶梯退避（iLink 上游限流带 30s 冷却；被拒时 CLI 非零退出）
 // 逐次把结果回填 notify_log：某次成功则置 ok=1；全部失败则保留最后一次错误
 const HERMES_RETRY_DELAYS_MS = [45_000, 180_000, 600_000]
@@ -378,6 +388,7 @@ const SENDERS: Record<string, (target: string, msg: NotifyMsg) => Promise<string
   slack: sendViaSlack,
   teams: sendViaTeams,
   ntfy: sendViaNtfy,
+  zoom: sendViaZoom,
 }
 
 export async function dispatchNotify(db: DatabaseSync, msg: NotifyMsg, opts?: { kind?: string }): Promise<NotifyResult[]> {

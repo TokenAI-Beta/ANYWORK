@@ -29,6 +29,15 @@ window.__ModuleLoader__.load({
       "skl.needNameTarget": "名称和内容都要填",
       "skl.routeSaved": "已保存，通道即刻生效",
       "skl.adminOnly": "通道配置仅管理员可操作——成员可看状态。",
+      "skl.grpMeet": "会议",
+      "skl.grpWork": "工作平台",
+      "skl.planTag": "规划中",
+      "skl.reconfig": "改配置",
+      "skl.remove": "删除",
+      "skl.open": "打开",
+      "skl.confirmRm": "确定删除这个连接？",
+      "skl.connSaved": "已保存，点「测试」验证一下",
+      "skl.connNeedConfig": "先把内容填上",
       "asst.groupBuiltin": "引擎自带模式",
       "asst.builtinTag": "自带",
       "usage.loading": "读取用量中…",
@@ -249,6 +258,8 @@ window.__ModuleLoader__.load({
       "notify.phSlack": "https://hooks.slack.com/services/…",
       "notify.phTeams": "https://….webhook.office.com/webhookb2/…",
       "notify.phNtfy": "主题名（如 anywork-bai）[|服务器[|Token]]",
+      "notify.kindZoom": "zoom —— Zoom 聊天 Incoming Webhook（付费版）",
+      "notify.phZoom": "https://…/webhook/…（Zoom 客户端 → 聊天 → 应用 → Incoming Webhook）",
       "notify.phName": "名称（英文小写，如 wecom-group / wechat-me）",
       "notify.phTelegram": "bot_token|chat_id（可选 |api_base 反代）",
       "notify.phWhatsapp": "callmebot|apikey|手机号 或 greenapi|id|token|chatId 或 ultramsg|id|token|to",
@@ -459,6 +470,15 @@ window.__ModuleLoader__.load({
       "skl.needNameTarget": "Name and target are both required",
       "skl.routeSaved": "Saved — the route is live",
       "skl.adminOnly": "Only admins can configure routes — members can view status.",
+      "skl.grpMeet": "Meetings",
+      "skl.grpWork": "Work platforms",
+      "skl.planTag": "Planned",
+      "skl.reconfig": "Update",
+      "skl.remove": "Remove",
+      "skl.open": "Open",
+      "skl.confirmRm": "Remove this connection?",
+      "skl.connSaved": "Saved — hit Test to verify",
+      "skl.connNeedConfig": "Fill in the value first",
       "asst.groupBuiltin": "Built-in modes",
       "asst.builtinTag": "Built-in",
       "usage.loading": "Loading usage…",
@@ -679,6 +699,8 @@ window.__ModuleLoader__.load({
       "notify.phSlack": "https://hooks.slack.com/services/…",
       "notify.phTeams": "https://….webhook.office.com/webhookb2/…",
       "notify.phNtfy": "topic (e.g. anywork-bai) [|server[|token]]",
+      "notify.kindZoom": "zoom — Zoom Team Chat incoming webhook (paid plans)",
+      "notify.phZoom": "https://…/webhook/… (Zoom app → Chat → Apps → Incoming Webhook)",
       "notify.phName": "Name (lowercase, e.g. wecom-group / wechat-me)",
       "notify.phTelegram": "bot_token|chat_id (optional |api_base proxy)",
       "notify.phWhatsapp": "callmebot|apikey|phone or greenapi|id|token|chatId or ultramsg|id|token|to",
@@ -1002,6 +1024,9 @@ window.__ModuleLoader__.load({
 .ddp .msg { font-size:12.5px; margin:8px 0; padding:8px 10px; border-radius:9px; background:rgba(127,127,127,.09); }
 .ddp .msg.ok { color:#31a24c; background:rgba(49,162,76,.10); }
 .ddp .msg.err { color:#d9534f; background:rgba(217,83,79,.10); }
+.ddp .ptag { font-size:11px; padding:1px 7px; border-radius:6px; background:rgba(127,127,127,.14); color:var(--dsw-alias-label-tertiary, #8a8f98); margin-left:auto; }
+.ddp .pcard.plan { opacity:.68; }
+.ddp .pdl { font-size:12px; color:var(--dsw-alias-label-secondary, #5f6570); word-break:break-all; margin:4px 0 0; }
 body:has(.ddp.fv) #desk-usage-fab, body:has(.ddp.fv) #desk-usage-panel { display:none !important; }
 body.desk-panel-open #desk-usage-fab, body.desk-panel-open #desk-usage-panel { display:none !important; }
 @media (max-width: 820px) {
@@ -2246,7 +2271,8 @@ body.desk-panel-open [class*="sidebarCol"] { transform: none !important; }
             h("option", { value: "discord" }, tr("notify.kindDiscord")),
             h("option", { value: "slack" }, tr("notify.kindSlack")),
             h("option", { value: "teams" }, tr("notify.kindTeams")),
-            h("option", { value: "ntfy" }, tr("notify.kindNtfy"))
+            h("option", { value: "ntfy" }, tr("notify.kindNtfy")),
+            h("option", { value: "zoom" }, tr("notify.kindZoom"))
           ),
           h("input", { ref: nRef, placeholder: tr("notify.phName"), style: field }),
           h("input", {
@@ -2274,7 +2300,9 @@ body.desk-panel-open [class*="sidebarCol"] { transform: none !important; }
                                   ? tr("notify.phTeams")
                                   : kind === "ntfy"
                                     ? tr("notify.phNtfy")
-                                    : tr("notify.phWhatsapp"),
+                                    : kind === "zoom"
+                                      ? tr("notify.phZoom")
+                                      : tr("notify.phWhatsapp"),
             style: field,
           }),
           kind === "telegram" || kind === "whatsapp"
@@ -2607,6 +2635,9 @@ body.desk-panel-open [class*="sidebarCol"] { transform: none !important; }
       msq: ["M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"],
       bell: ["M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9", "M10.3 21a1.94 1.94 0 0 0 3.4 0"],
       pin: ["M12 17v5", "M9 10.76a2 2 0 0 1-1.11 1.79l-1.78.9A2 2 0 0 0 5 15.24V16a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1v-.76a2 2 0 0 0-1.11-1.79l-1.78-.9A2 2 0 0 1 15 10.76V6h1a2 2 0 0 0 0-4H8a2 2 0 0 0 0 4h1z"],
+      video: ["rect|2,7,20,11,2", "M22 9.5 17 13l5 3.5z"],
+      music: ["M9 18V5l12-2v13", "circle|6,18,3", "circle|18,16,3"],
+      doc: ["M15 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7Z", "M14 2v4a2 2 0 0 0 2 2h4"],
       hash: ["M4 9h16", "M4 15h16", "M10 3 8 21", "M16 3l-2 18"],
       gamepad: ["M6 12h4", "M8 10v4", "M15 11h.01", "M18 11h.01", "M17.32 5H6.68a4 4 0 0 0-3.978 3.59c-.006.052-.01.101-.017.152C2.604 9.416 2 14.456 2 16a3 3 0 0 0 3 3c1 0 1.5-.5 2-1l1.414-1.414A2 2 0 0 1 9.828 16h4.344a2 2 0 0 1 1.414.586L17 18c.5.5 1 1 2 1a3 3 0 0 0 3-3c0-1.545-.604-6.584-.685-7.258-.007-.05-.011-.1-.017-.151A4 4 0 0 0 17.32 5z"],
       grid: ["rect|3,3,7,7,1", "rect|14,3,7,7,1", "rect|3,14,7,7,1", "rect|14,14,7,7,1"],
@@ -2649,6 +2680,13 @@ body.desk-panel-open [class*="sidebarCol"] { transform: none !important; }
       whatsapp: { i: "phone", c: "#5fe08f" },
       ntfy: { i: "bell", c: "#e8b44a" },
       webhook: { i: "link", c: "#aeb7c6" },
+      "meeting-tencent": { i: "video", c: "#3a9bff" },
+      zoom: { i: "video", c: "#6aa8ff" },
+      github: { i: "code", c: "#aab4c0" },
+      notion: { i: "msq", c: "#c8ccd4" },
+      wps: { i: "doc", c: "#e05b5b" },
+      canva: { i: "pen", c: "#28c3cf" },
+      tiktok: { i: "music", c: "#ff4d6d" },
     };
 
     function TeamHub(props) {
@@ -3369,6 +3407,41 @@ body.desk-panel-open [class*="sidebarCol"] { transform: none !important; }
           })
           .catch(function (e) { cset({ busy: false, msg: String((e && e.message) || e), msgKind: "err" }); });
       }
+      function cConnSave() {
+        var target = String(cs.target || "").trim();
+        if (!target) {
+          cset({ msg: tr("skl.connNeedConfig"), msgKind: "err" });
+          return;
+        }
+        cset({ busy: true, msg: tr("common.processing"), msgKind: "" });
+        fetch("/portal/api/admin/conn/add", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ platform: cs.form, config: target }) })
+          .then(function (r) { return r.json().then(function (d) { return { s: r.status, d: d }; }); })
+          .then(function (res) {
+            if (res.s !== 200) throw new Error((res.d && res.d.error) || "HTTP " + res.s);
+            cset({ busy: false, form: "", name: "", target: "", msg: tr("skl.connSaved"), msgKind: "ok" });
+            load();
+          })
+          .catch(function (e) { cset({ busy: false, msg: String((e && e.message) || e), msgKind: "err" }); });
+      }
+      function cConnTest(platform) {
+        cset({ busy: true, msg: tr("common.processing"), msgKind: "" });
+        fetch("/portal/api/admin/conn/test", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ platform: platform }) })
+          .then(function (r) { return r.json(); })
+          .then(function (d) {
+            var ok = !!(d && d.ok && d.result && d.result.ok);
+            var info = (d && d.result && d.result.info) || (d && d.error) || "?";
+            cset({ busy: false, msg: info, msgKind: ok ? "ok" : "err" });
+          })
+          .catch(function (e) { cset({ busy: false, msg: String((e && e.message) || e), msgKind: "err" }); });
+      }
+      function cConnRm(platform) {
+        if (!window.confirm(tr("skl.confirmRm"))) return;
+        cset({ busy: true, msg: tr("common.processing"), msgKind: "" });
+        fetch("/portal/api/admin/conn/rm", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ platform: platform }) })
+          .then(function (r) { return r.json(); })
+          .then(function () { cset({ busy: false, msg: "", msgKind: "" }); load(); })
+          .catch(function (e) { cset({ busy: false, msg: String((e && e.message) || e), msgKind: "err" }); });
+      }
 
       function load() {
         Promise.all([
@@ -3498,40 +3571,61 @@ body.desk-panel-open [class*="sidebarCol"] { transform: none !important; }
         }
       } else {
         var isAdmin = st.role === "admin";
-        var pcards = [];
-        (st.platforms || []).forEach(function (p) {
+        var plat = st.platforms || [];
+        var formKey = function (p) { return p.mode === "notify" ? p.kind : p.id; };
+        var cardOf = function (p) {
           var meta = PLAT_META[p.id] || { i: "link", c: "#aeb7c6" };
           var acts = [];
-          if (isAdmin) {
-            if (cs.form === p.kind) {
-              acts.push(h("button", { key: "a", className: "bbtn pri", onClick: cAdd, disabled: cs.busy }, tr("skl.save")));
+          var editing = isAdmin && p.mode !== "plan" && cs.form === formKey(p);
+          if (isAdmin && p.mode !== "plan") {
+            if (editing) {
+              acts.push(h("button", { key: "a", className: "bbtn pri", onClick: p.mode === "notify" ? cAdd : cConnSave, disabled: cs.busy }, tr("skl.save")));
               acts.push(h("button", { key: "c", className: "bbtn", onClick: function () { cset({ form: "", name: "", target: "", msg: "", msgKind: "" }); } }, tr("th.cancel")));
             } else {
-              acts.push(h("button", { key: "a", className: "bbtn" + (p.connected ? "" : " pri"), onClick: function () { cset({ form: p.kind, name: p.id, target: "", msg: "", msgKind: "" }); } }, p.connected ? tr("skl.addMore") : tr("skl.connect")));
+              var lbl = p.mode === "conn" ? (p.connected ? tr("skl.reconfig") : tr("skl.connect")) : p.connected ? tr("skl.addMore") : tr("skl.connect");
+              acts.push(h("button", { key: "a", className: "bbtn" + (p.connected ? "" : " pri"), onClick: function () { cset({ form: formKey(p), name: p.mode === "notify" ? p.id : "", target: "", msg: "", msgKind: "" }); } }, lbl));
             }
-            if (p.connected) acts.push(h("button", { key: "t", className: "bbtn", onClick: function () { cTest(p.kind); }, disabled: cs.busy }, tr("skl.test")));
+            if (p.connected && p.mode === "notify") acts.push(h("button", { key: "t", className: "bbtn", onClick: function () { cTest(p.kind); }, disabled: cs.busy }, tr("skl.test")));
+            if (p.connected && p.mode === "conn") {
+              acts.push(h("button", { key: "t", className: "bbtn", onClick: function () { cConnTest(p.id); }, disabled: cs.busy }, tr("skl.test")));
+              if (p.openUrl) acts.push(h("button", { key: "o", className: "bbtn", onClick: function () { window.open(p.openUrl, "_blank"); } }, tr("skl.open")));
+              acts.push(h("button", { key: "d", className: "bbtn", onClick: function () { cConnRm(p.id); }, disabled: cs.busy }, tr("skl.remove")));
+            }
           }
-          var stat = isAdmin && p.connected && p.routes > 0 ? p.routesEnabled + tr("skl.routesUnit") + " · " + tr("skl.connected") : p.connected ? tr("skl.connected") : tr("skl.notConnected");
-          pcards.push(
+          var stat;
+          if (p.mode === "plan") stat = tr("skl.planTag");
+          else if (p.mode === "conn") stat = p.connected ? tr("skl.connected") : tr("skl.notConnected");
+          else stat = isAdmin && p.connected && p.routes > 0 ? p.routesEnabled + tr("skl.routesUnit") + " · " + tr("skl.connected") : p.connected ? tr("skl.connected") : tr("skl.notConnected");
+          return h(
+            "div",
+            { key: "pl" + p.id, className: "pcard" + (p.connected ? " on" : "") + (p.mode === "plan" ? " plan" : "") },
             h(
               "div",
-              { key: "pl" + p.id, className: "pcard" + (p.connected ? " on" : "") },
-              h("div", { className: "ptop" }, h("span", { className: "ptile", style: { background: meta.c + "26", color: meta.c } }, dicon(meta.i, 17)), h("span", { className: "pname" }, p.name)),
-              h("div", { className: "pd" }, p.desc || ""),
-              cs.form === p.kind && isAdmin
-                ? h(
-                    "div",
-                    { className: "pform" },
-                    h("input", { className: "inp", placeholder: tr("skl.namePh"), value: cs.name, onChange: function (e) { cset({ name: e.target.value }); } }),
-                    h("input", { className: "inp", placeholder: p.hint || "", value: cs.target, onChange: function (e) { cset({ target: e.target.value }); } })
-                  )
-                : null,
-              h("div", { className: "pfoot" }, h("span", { className: "pst" + (p.connected ? " ok" : "") }, "● " + stat), h("span", { className: "pbtns" }, acts))
-            )
+              { className: "ptop" },
+              h("span", { className: "ptile", style: { background: meta.c + "26", color: meta.c } }, dicon(meta.i, 17)),
+              h("span", { className: "pname" }, p.name),
+              p.mode === "plan" ? h("span", { className: "ptag" }, tr("skl.planTag")) : null
+            ),
+            h("div", { className: "pd" }, p.desc || ""),
+            p.connected && p.display ? h("div", { className: "pdl" }, p.display) : null,
+            editing
+              ? h(
+                  "div",
+                  { className: "pform" },
+                  p.mode === "notify" ? h("input", { className: "inp", placeholder: tr("skl.namePh"), value: cs.name, onChange: function (e) { cset({ name: e.target.value }); } }) : null,
+                  h("input", { className: "inp", placeholder: p.hint || "", value: cs.target, onChange: function (e) { cset({ target: e.target.value }); } })
+                )
+              : null,
+            h("div", { className: "pfoot" }, h("span", { className: "pst" + (p.connected ? " ok" : "") }, "● " + stat), h("span", { className: "pbtns" }, acts))
           );
+        };
+        var groups = [["msg", "skl.platforms"], ["meet", "skl.grpMeet"], ["work", "skl.grpWork"]];
+        groups.forEach(function (g) {
+          var list = plat.filter(function (p) { return p.group === g[0]; });
+          if (!list.length) return;
+          kids.push(h("div", { key: "lb-" + g[0], className: "lb" }, tr(g[1])));
+          kids.push(h("div", { key: "grid-" + g[0], className: "pgrid" }, list.map(cardOf)));
         });
-        kids.push(h("div", { key: "pl-lb", className: "lb" }, tr("skl.platforms")));
-        kids.push(h("div", { key: "plgrid", className: "pgrid" }, pcards.length ? pcards : h("div", { className: "empty" }, tr("skl.noConn"))));
         if (cs.msg) kids.push(h("div", { key: "cmsg", className: "msg" + (cs.msgKind === "err" ? " err" : cs.msgKind === "ok" ? " ok" : "") }, cs.msg));
         if (!isAdmin) kids.push(h("div", { key: "crole", className: "ft" }, tr("skl.adminOnly")));
 

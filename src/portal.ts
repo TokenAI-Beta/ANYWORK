@@ -20,6 +20,7 @@ import { listDrive, makeDir, movePath, removePath, resolveInDrive, saveToDrive, 
 import { addNotifyRoute, addReminder, dispatchNotify, listNotifyLog, listNotifyRoutes, listReminders, listRemindersSent, readOrCreateNotifyToken, removeNotifyRoute, removeReminder, toggleNotifyRoute } from './notify.ts'
 import { defaultDataDir } from './db.ts'
 import { collectConnectors, collectPlatforms, collectPresets, collectSkills, readSkill } from './panel.ts'
+import { CONN_PLATFORMS, getConn, removeConn, setConn, testConn, validateConnConfig } from './conns.ts'
 import { collectOps } from './ops.ts'
 
 /** 请求语言：?lang=en 时为英文（由工作台客户端带过来），默认中文 */
@@ -1822,6 +1823,41 @@ export function startPortal(opts: PortalOptions) {
           const results = await dispatchNotify(db, { title, text, source: 'admin-test' }, kind ? { kind } : undefined)
           res.writeHead(200, { 'content-type': 'application/json; charset=utf-8' })
           return res.end(JSON.stringify({ results }))
+        }
+        if (req.method === 'POST' && path === '/portal/api/admin/conn/add') {
+          const body = await readJsonBody()
+          const platform = String(body.platform ?? '').trim()
+          const config = String(body.config ?? '').trim()
+          if (!CONN_PLATFORMS.has(platform)) {
+            res.writeHead(400, { 'content-type': 'application/json; charset=utf-8' })
+            return res.end(JSON.stringify({ error: '未知平台' }))
+          }
+          const err = validateConnConfig(platform, config)
+          if (err) {
+            res.writeHead(400, { 'content-type': 'application/json; charset=utf-8' })
+            return res.end(JSON.stringify({ error: err }))
+          }
+          setConn(db, platform, config)
+          res.writeHead(200, { 'content-type': 'application/json; charset=utf-8' })
+          return res.end(JSON.stringify({ ok: true }))
+        }
+        if (req.method === 'POST' && path === '/portal/api/admin/conn/rm') {
+          const body = await readJsonBody()
+          removeConn(db, String(body.platform ?? '').trim())
+          res.writeHead(200, { 'content-type': 'application/json; charset=utf-8' })
+          return res.end(JSON.stringify({ ok: true }))
+        }
+        if (req.method === 'POST' && path === '/portal/api/admin/conn/test') {
+          const body = await readJsonBody()
+          const platform = String(body.platform ?? '').trim()
+          const row = getConn(db, platform)
+          if (!row) {
+            res.writeHead(400, { 'content-type': 'application/json; charset=utf-8' })
+            return res.end(JSON.stringify({ error: '这个平台还没有连接' }))
+          }
+          const result = await testConn(platform, row.config)
+          res.writeHead(200, { 'content-type': 'application/json; charset=utf-8' })
+          return res.end(JSON.stringify({ ok: true, result }))
         }
         if (req.method === 'POST' && path === '/portal/api/admin/reminders/add') {
           const body = await readJsonBody()
