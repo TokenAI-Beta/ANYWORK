@@ -3386,7 +3386,7 @@ body.desk-panel-open [class*="sidebarCol"] { transform: none !important; }
           return;
         }
         cset({ busy: true, msg: tr("common.processing"), msgKind: "" });
-        fetch("/portal/api/admin/notify/route-add", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ name: name, kind: cs.form, target: target }) })
+        fetch("/portal/api/admin/notify/route-add?lang=" + deskLang(), { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ name: name, kind: cs.form, target: target }) })
           .then(function (r) { return r.json().then(function (d) { return { s: r.status, d: d }; }); })
           .then(function (res) {
             if (res.s !== 200) throw new Error((res.d && res.d.error) || "HTTP " + res.s);
@@ -3397,7 +3397,7 @@ body.desk-panel-open [class*="sidebarCol"] { transform: none !important; }
       }
       function cTest(kind) {
         cset({ busy: true, msg: tr("common.processing"), msgKind: "" });
-        fetch("/portal/api/admin/notify-test", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ kind: kind }) })
+        fetch("/portal/api/admin/notify-test?lang=" + deskLang(), { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ kind: kind }) })
           .then(function (r) { return r.json(); })
           .then(function (d) {
             var rs = (d && d.results) || [];
@@ -3414,7 +3414,7 @@ body.desk-panel-open [class*="sidebarCol"] { transform: none !important; }
           return;
         }
         cset({ busy: true, msg: tr("common.processing"), msgKind: "" });
-        fetch("/portal/api/admin/conn/add", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ platform: cs.form, config: target }) })
+        fetch("/portal/api/admin/conn/add?lang=" + deskLang(), { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ platform: cs.form, config: target }) })
           .then(function (r) { return r.json().then(function (d) { return { s: r.status, d: d }; }); })
           .then(function (res) {
             if (res.s !== 200) throw new Error((res.d && res.d.error) || "HTTP " + res.s);
@@ -3425,7 +3425,7 @@ body.desk-panel-open [class*="sidebarCol"] { transform: none !important; }
       }
       function cConnTest(platform) {
         cset({ busy: true, msg: tr("common.processing"), msgKind: "" });
-        fetch("/portal/api/admin/conn/test", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ platform: platform }) })
+        fetch("/portal/api/admin/conn/test?lang=" + deskLang(), { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ platform: platform }) })
           .then(function (r) { return r.json(); })
           .then(function (d) {
             var ok = !!(d && d.ok && d.result && d.result.ok);
@@ -3437,7 +3437,7 @@ body.desk-panel-open [class*="sidebarCol"] { transform: none !important; }
       function cConnRm(platform) {
         if (!window.confirm(tr("skl.confirmRm"))) return;
         cset({ busy: true, msg: tr("common.processing"), msgKind: "" });
-        fetch("/portal/api/admin/conn/rm", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ platform: platform }) })
+        fetch("/portal/api/admin/conn/rm?lang=" + deskLang(), { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ platform: platform }) })
           .then(function (r) { return r.json(); })
           .then(function () { cset({ busy: false, msg: "", msgKind: "" }); load(); })
           .catch(function (e) { cset({ busy: false, msg: String((e && e.message) || e), msgKind: "err" }); });

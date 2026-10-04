@@ -23,6 +23,7 @@ export interface NotifyMsg {
   title?: string
   text: string
   source?: string
+  lang?: string
 }
 
 export interface NotifyResult {
@@ -36,26 +37,37 @@ export function listNotifyRoutes(db: DatabaseSync): NotifyRoute[] {
   return db.prepare(`SELECT id, name, kind, target, enabled, created_at FROM notify_routes ORDER BY id`).all() as unknown as NotifyRoute[]
 }
 
-export function addNotifyRoute(db: DatabaseSync, r: { name: string; kind: string; target: string }): { ok: true } | { error: string } {
+/** 服务端双语（简易） */
+function Ln(lang: string | undefined, zh: string, en: string): string {
+  return lang === 'en' ? en : zh
+}
+
+/** 失败前缀（按消息语言） */
+function pfail(msg: NotifyMsg): string {
+  return msg.lang === 'en' ? 'Failed: ' : '失败：'
+}
+
+export function addNotifyRoute(db: DatabaseSync, r: { name: string; kind: string; target: string; lang?: string }): { ok: true } | { error: string } {
   const name = r.name.trim()
   const kind = r.kind.trim()
   const target = r.target.trim()
-  if (!/^[a-z0-9][a-z0-9_-]{0,31}$/.test(name)) return { error: '名称请用英文小写（如 wechat-me / wecom-group）' }
+  const lang = r.lang
+  if (!/^[a-z0-9][a-z0-9_-]{0,31}$/.test(name)) return { error: Ln(lang, '名称请用英文小写（如 wechat-me / wecom-group）', 'Name must be lowercase (e.g. wechat-me / wecom-group)') }
   const KINDS = ['webhook', 'hermes', 'telegram', 'whatsapp', 'feishu', 'dingtalk', 'wecom', 'discord', 'slack', 'teams', 'ntfy', 'zoom']
-  if (!KINDS.includes(kind)) return { error: 'kind 只支持 webhook / hermes / telegram / whatsapp / feishu / dingtalk / wecom / discord / slack / teams / ntfy / zoom' }
-  if (!target) return { error: '目标不能为空' }
-  if (kind === 'webhook' && !/^https?:\/\//.test(target)) return { error: 'webhook 目标需为 http(s):// 开头的 URL' }
+  if (!KINDS.includes(kind)) return { error: Ln(lang, 'kind 只支持 webhook / hermes / telegram / whatsapp / feishu / dingtalk / wecom / discord / slack / teams / ntfy / zoom', 'kind must be one of webhook / hermes / telegram / whatsapp / feishu / dingtalk / wecom / discord / slack / teams / ntfy / zoom') }
+  if (!target) return { error: Ln(lang, '目标不能为空', 'Target cannot be empty') }
+  if (kind === 'webhook' && !/^https?:\/\//.test(target)) return { error: Ln(lang, 'webhook 目标需为 http(s):// 开头的 URL', 'webhook target must be an http(s):// URL') }
   if ((kind === 'feishu' || kind === 'wecom' || kind === 'discord' || kind === 'slack' || kind === 'teams' || kind === 'zoom') && !/^https?:\/\//.test(target.split('|')[0].trim()))
-    return { error: kind + ' 目标需为 http(s):// Webhook 地址' }
+    return { error: kind + Ln(lang, ' 目标需为 http(s):// Webhook 地址', ' target must be an http(s):// webhook URL') }
   if (kind === 'dingtalk' && !/^https?:\/\//.test(target.split('|')[0].trim()))
-    return { error: 'dingtalk 目标格式：webhook地址[|加签Secret]' }
+    return { error: Ln(lang, 'dingtalk 目标格式：webhook地址[|加签Secret]', 'dingtalk target: webhook URL[|secret]') }
   if (kind === 'ntfy') {
     const pn = target.split('|').map((x) => x.trim())
-    if (!pn[0]) return { error: 'ntfy 目标格式：主题名[|服务器地址[|Token]]' }
+    if (!pn[0]) return { error: Ln(lang, 'ntfy 目标格式：主题名[|服务器地址[|Token]]', 'ntfy target: topic[|server[|token]]') }
   }
   if (kind === 'telegram') {
     const p = target.split('|')
-    if (!p[0] || !p[1]) return { error: 'telegram 目标格式：bot_token|chat_id（可加 |api_base）' }
+    if (!p[0] || !p[1]) return { error: Ln(lang, 'telegram 目标格式：bot_token|chat_id（可加 |api_base）', 'telegram target: bot_token|chat_id (optional |api_base)') }
   }
   if (kind === 'whatsapp') {
     const p = target.split('|').map((x) => x.trim())
@@ -63,9 +75,9 @@ export function addNotifyRoute(db: DatabaseSync, r: { name: string; kind: string
       (p[0] === 'callmebot' && !!p[1] && !!p[2]) ||
       (p[0] === 'greenapi' && !!p[1] && !!p[2] && !!p[3]) ||
       (p[0] === 'ultramsg' && !!p[1] && !!p[2] && !!p[3])
-    if (!shapeOk) return { error: 'whatsapp 格式：callmebot|apikey|手机号 或 greenapi|id|token|chatId 或 ultramsg|id|token|to' }
+    if (!shapeOk) return { error: Ln(lang, 'whatsapp 格式：callmebot|apikey|手机号 或 greenapi|id|token|chatId 或 ultramsg|id|token|to', 'whatsapp target: callmebot|apikey|phone or greenapi|id|token|chatId or ultramsg|id|token|to') }
   }
-  if (db.prepare(`SELECT id FROM notify_routes WHERE name = ?`).get(name)) return { error: '同名通道已存在' }
+  if (db.prepare(`SELECT id FROM notify_routes WHERE name = ?`).get(name)) return { error: Ln(lang, '同名通道已存在', 'A route with this name already exists') }
   db.prepare(`INSERT INTO notify_routes (name, kind, target) VALUES (?, ?, ?)`).run(name, kind, target)
   return { ok: true }
 }
@@ -90,7 +102,7 @@ function sendViaWebhook(url: string, msg: NotifyMsg): Promise<string> {
       signal: ctrl.signal,
     })
       .then((r) => r.text().then((b) => resolve(`HTTP ${r.status}${b ? ' ' + b.slice(0, 80) : ''}`)))
-      .catch((e) => resolve(`失败：${String((e && (e as Error).message) || e).slice(0, 120)}`))
+      .catch((e) => resolve(pfail(msg) + String((e && (e as Error).message) || e).slice(0, 120)))
       .finally(() => clearTimeout(t))
   })
 }
@@ -100,7 +112,7 @@ function sendViaHermes(target: string, msg: NotifyMsg): Promise<string> {
     const text = (msg.title ? `【${msg.title}】\n` : '') + msg.text
     execFile(HERMES_CLI, ['send', '-t', target, '-q', text], { timeout: 60000 }, (err, stdout, stderr) => {
       if (err) {
-        resolve(`失败：${String(err.message).slice(0, 140)}${stderr ? ' / ' + String(stderr).slice(0, 80) : ''}`)
+        resolve(pfail(msg) + String(err.message).slice(0, 140) + (stderr ? ' / ' + String(stderr).slice(0, 80) : ''))
         return
       }
       resolve(`ok${stdout ? ' ' + String(stdout).trim().slice(0, 60) : ''}`)
@@ -114,7 +126,7 @@ async function sendViaTelegram(target: string, msg: NotifyMsg): Promise<string> 
   const token = (parts[0] || '').trim()
   const chat = (parts[1] || '').trim()
   const base = (parts[2] || 'https://api.telegram.org').trim().replace(/\/+$/, '')
-  if (!token || !chat) return '失败：telegram 目标格式应为 bot_token|chat_id[|api_base]'
+  if (!token || !chat) return Ln(msg.lang, '失败：telegram 目标格式应为 bot_token|chat_id[|api_base]', 'Failed: telegram target should be bot_token|chat_id[|api_base]')
   const text = (msg.title ? `【${msg.title}】\n` : '') + msg.text
   const ctrl = new AbortController()
   const t = setTimeout(() => ctrl.abort(), 12000)
@@ -126,11 +138,11 @@ async function sendViaTelegram(target: string, msg: NotifyMsg): Promise<string> 
       signal: ctrl.signal,
     })
     const b = await r.text()
-    if (!r.ok) return `失败：HTTP ${r.status} ${b.slice(0, 120)}`
+    if (!r.ok) return pfail(msg) + 'HTTP ' + r.status + ' ' + b.slice(0, 120)
     return `ok tg:${chat}`
   } catch (e) {
     const cause = (e as { cause?: { message?: string } })?.cause?.message
-    return `失败：${String(cause || (e as Error)?.message || e).slice(0, 120)}`
+    return pfail(msg) + String(cause || (e as Error)?.message || e).slice(0, 120)
   } finally {
     clearTimeout(t)
   }
@@ -148,13 +160,13 @@ async function sendViaWhatsapp(target: string, msg: NotifyMsg): Promise<string> 
       const key = parts[1] || ''
       const phone = parts[2] || ''
       const base = (parts[3] || 'https://api.callmebot.com').replace(/\/+$/, '')
-      if (!key || !phone) return '失败：whatsapp 目标格式应为 callmebot|apikey|手机号[|base]'
+      if (!key || !phone) return Ln(msg.lang, '失败：whatsapp 目标格式应为 callmebot|apikey|手机号[|base]', 'Failed: whatsapp target should be callmebot|apikey|phone[|base]')
       const r = await fetch(
         `${base}/whatsapp.php?phone=${encodeURIComponent(phone)}&text=${encodeURIComponent(text)}&apikey=${encodeURIComponent(key)}`,
         { signal: ctrl.signal },
       )
       const b = await r.text()
-      if (!r.ok || /error/i.test(b.slice(0, 400))) return `失败：HTTP ${r.status} ${b.slice(0, 100)}`
+      if (!r.ok || /error/i.test(b.slice(0, 400))) return pfail(msg) + 'HTTP ' + r.status + ' ' + b.slice(0, 100)
       return `ok wa:${provider}:${phone}`
     }
     if (provider === 'greenapi') {
@@ -162,7 +174,7 @@ async function sendViaWhatsapp(target: string, msg: NotifyMsg): Promise<string> 
       const token = parts[2] || ''
       const chat = parts[3] || ''
       const base = (parts[4] || 'https://api.green-api.com').replace(/\/+$/, '')
-      if (!id || !token || !chat) return '失败：whatsapp 目标格式应为 greenapi|idInstance|apiToken|chatId[|base]'
+      if (!id || !token || !chat) return Ln(msg.lang, '失败：whatsapp 目标格式应为 greenapi|idInstance|apiToken|chatId[|base]', 'Failed: whatsapp target should be greenapi|idInstance|apiToken|chatId[|base]')
       const r = await fetch(`${base}/waInstance${id}/sendMessage/${token}`, {
         method: 'POST',
         headers: { 'content-type': 'application/json' },
@@ -178,7 +190,7 @@ async function sendViaWhatsapp(target: string, msg: NotifyMsg): Promise<string> 
       const token = parts[2] || ''
       const to = parts[3] || ''
       const base = (parts[4] || 'https://api.ultramsg.com').replace(/\/+$/, '')
-      if (!id || !token || !to) return '失败：whatsapp 目标格式应为 ultramsg|instanceId|token|to[|base]'
+      if (!id || !token || !to) return Ln(msg.lang, '失败：whatsapp 目标格式应为 ultramsg|instanceId|token|to[|base]', 'Failed: whatsapp target should be ultramsg|instanceId|token|to[|base]')
       const form = new URLSearchParams({ token, to, body: text })
       const r = await fetch(`${base}/instance${id}/messages/chat`, {
         method: 'POST',
@@ -190,10 +202,10 @@ async function sendViaWhatsapp(target: string, msg: NotifyMsg): Promise<string> 
       if (!r.ok) return `失败：HTTP ${r.status} ${b.slice(0, 120)}`
       return `ok wa:${provider}:${to}`
     }
-    return '失败：whatsapp provider 仅支持 callmebot / greenapi / ultramsg'
+    return Ln(msg.lang, '失败：whatsapp provider 仅支持 callmebot / greenapi / ultramsg', 'Failed: whatsapp provider must be callmebot / greenapi / ultramsg')
   } catch (e) {
     const cause = (e as { cause?: { message?: string } })?.cause?.message
-    return `失败：${String(cause || (e as Error)?.message || e).slice(0, 120)}`
+    return pfail(msg) + String(cause || (e as Error)?.message || e).slice(0, 120)
   } finally {
     clearTimeout(t)
   }
@@ -201,7 +213,7 @@ async function sendViaWhatsapp(target: string, msg: NotifyMsg): Promise<string> 
 
 // —— 平台群机器人 / Webhook（飞书 / 钉钉 / 企业微信 / Discord / Slack / Teams / ntfy）——
 // 共同特征：贴一个 Webhook 地址（或主题名）就能推，属于"消息出口"。
-async function postPlatform(url: string, body: unknown, headers?: Record<string, string>): Promise<{ status: number; body: string }> {
+async function postPlatform(url: string, body: unknown, headers?: Record<string, string>, en = false): Promise<{ status: number; body: string }> {
   const ctrl = new AbortController()
   const t = setTimeout(() => ctrl.abort(), 12000)
   try {
@@ -215,28 +227,29 @@ async function postPlatform(url: string, body: unknown, headers?: Record<string,
     return { status: r.status, body: b }
   } catch (e) {
     const cause = (e as { cause?: { message?: string } })?.cause?.message
-    return { status: 0, body: '失败：' + String(cause || (e as Error)?.message || e).slice(0, 120) }
+    return { status: 0, body: (en ? 'Failed: ' : '失败：') + String(cause || (e as Error)?.message || e).slice(0, 120) }
   } finally {
     clearTimeout(t)
   }
 }
 
-function httpFail(status: number, body: string): string | null {
+function httpFail(status: number, body: string, en = false): string | null {
   if (status === 0) return body
-  if (status >= 400) return '失败：HTTP ' + status + ' ' + body.slice(0, 100)
+  if (status >= 400) return (en ? 'Failed: HTTP ' : '失败：HTTP ') + status + ' ' + body.slice(0, 100)
   return null
 }
 
 // 飞书自定义机器人：{"code":0} 为成功
 async function sendViaFeishu(target: string, msg: NotifyMsg): Promise<string> {
+  const en = msg.lang === 'en'
   const url = target.split('|')[0].trim()
   const text = (msg.title ? '【' + msg.title + '】\n' : '') + msg.text
-  const r = await postPlatform(url, { msg_type: 'text', content: { text } })
-  const f = httpFail(r.status, r.body)
+  const r = await postPlatform(url, { msg_type: 'text', content: { text } }, undefined, en)
+  const f = httpFail(r.status, r.body, en)
   if (f) return f
   try {
     const d = JSON.parse(r.body) as { code?: number; msg?: string }
-    if (d.code !== undefined && Number(d.code) !== 0) return ('失败：飞书 code=' + d.code + ' ' + String(d.msg || '')).slice(0, 160)
+    if (d.code !== undefined && Number(d.code) !== 0) return ((en ? 'Failed: Feishu code=' : '失败：飞书 code=') + d.code + ' ' + String(d.msg || '')).slice(0, 160)
   } catch {
     // 非 JSON 视为 ok
   }
@@ -245,6 +258,7 @@ async function sendViaFeishu(target: string, msg: NotifyMsg): Promise<string> {
 
 // 钉钉自定义机器人：{errcode:0} 为成功；可选加签（target = url|SEC…）
 async function sendViaDingtalk(target: string, msg: NotifyMsg): Promise<string> {
+  const en = msg.lang === 'en'
   const parts = target.split('|').map((x) => x.trim())
   let url = parts[0]
   const secret = parts[1] || ''
@@ -254,12 +268,12 @@ async function sendViaDingtalk(target: string, msg: NotifyMsg): Promise<string> 
     url += (url.includes('?') ? '&' : '?') + 'timestamp=' + ts + '&sign=' + sign
   }
   const text = (msg.title ? '【' + msg.title + '】\n' : '') + msg.text
-  const r = await postPlatform(url, { msgtype: 'text', text: { content: text } })
-  const f = httpFail(r.status, r.body)
+  const r = await postPlatform(url, { msgtype: 'text', text: { content: text } }, undefined, en)
+  const f = httpFail(r.status, r.body, en)
   if (f) return f
   try {
     const d = JSON.parse(r.body) as { errcode?: number; errmsg?: string }
-    if (d.errcode !== undefined && Number(d.errcode) !== 0) return ('失败：钉钉 errcode=' + d.errcode + ' ' + String(d.errmsg || '')).slice(0, 160)
+    if (d.errcode !== undefined && Number(d.errcode) !== 0) return ((en ? 'Failed: DingTalk errcode=' : '失败：钉钉 errcode=') + d.errcode + ' ' + String(d.errmsg || '')).slice(0, 160)
   } catch {
     // ignore
   }
@@ -268,14 +282,15 @@ async function sendViaDingtalk(target: string, msg: NotifyMsg): Promise<string> 
 
 // 企业微信群机器人：{errcode:0} 为成功
 async function sendViaWecom(target: string, msg: NotifyMsg): Promise<string> {
+  const en = msg.lang === 'en'
   const url = target.split('|')[0].trim()
   const text = (msg.title ? '【' + msg.title + '】\n' : '') + msg.text
-  const r = await postPlatform(url, { msgtype: 'text', text: { content: text } })
-  const f = httpFail(r.status, r.body)
+  const r = await postPlatform(url, { msgtype: 'text', text: { content: text } }, undefined, en)
+  const f = httpFail(r.status, r.body, en)
   if (f) return f
   try {
     const d = JSON.parse(r.body) as { errcode?: number; errmsg?: string }
-    if (d.errcode !== undefined && Number(d.errcode) !== 0) return ('失败：企微 errcode=' + d.errcode + ' ' + String(d.errmsg || '')).slice(0, 160)
+    if (d.errcode !== undefined && Number(d.errcode) !== 0) return ((en ? 'Failed: WeCom errcode=' : '失败：企微 errcode=') + d.errcode + ' ' + String(d.errmsg || '')).slice(0, 160)
   } catch {
     // ignore
   }
@@ -284,9 +299,10 @@ async function sendViaWecom(target: string, msg: NotifyMsg): Promise<string> {
 
 // Discord 频道 Webhook（成功 = 204 无正文）
 async function sendViaDiscord(target: string, msg: NotifyMsg): Promise<string> {
+  const en = msg.lang === 'en'
   const url = target.split('|')[0].trim()
   const text = ((msg.title ? '【' + msg.title + '】\n' : '') + msg.text).slice(0, 1900)
-  const r = await postPlatform(url, { content: text })
+  const r = await postPlatform(url, { content: text }, undefined, en)
   if (r.status === 0) return r.body
   if (r.status >= 400) {
     let m = ''
@@ -295,60 +311,64 @@ async function sendViaDiscord(target: string, msg: NotifyMsg): Promise<string> {
     } catch {
       // ignore
     }
-    return '失败：HTTP ' + r.status + ' ' + (m || r.body.slice(0, 80))
+    return (en ? 'Failed: HTTP ' : '失败：HTTP ') + r.status + ' ' + (m || r.body.slice(0, 80))
   }
   return 'ok discord'
 }
 
 // Slack Incoming Webhook（成功正文为 ok）
 async function sendViaSlack(target: string, msg: NotifyMsg): Promise<string> {
+  const en = msg.lang === 'en'
   const url = target.split('|')[0].trim()
   const text = (msg.title ? '【' + msg.title + '】\n' : '') + msg.text
-  const r = await postPlatform(url, { text })
-  const f = httpFail(r.status, r.body)
+  const r = await postPlatform(url, { text }, undefined, en)
+  const f = httpFail(r.status, r.body, en)
   if (f) return f
-  if (!/^ok/i.test(r.body.trim())) return ('失败：Slack 返回 ' + r.body.slice(0, 100))
+  if (!/^ok/i.test(r.body.trim())) return ((en ? 'Failed: Slack returned ' : '失败：Slack 返回 ') + r.body.slice(0, 100))
   return 'ok slack'
 }
 
 // Microsoft Teams 频道 Incoming Webhook
 async function sendViaTeams(target: string, msg: NotifyMsg): Promise<string> {
+  const en = msg.lang === 'en'
   const url = target.split('|')[0].trim()
   const text = (msg.title ? '【' + msg.title + '】\n' : '') + msg.text
-  const r = await postPlatform(url, { text })
-  const f = httpFail(r.status, r.body)
+  const r = await postPlatform(url, { text }, undefined, en)
+  const f = httpFail(r.status, r.body, en)
   if (f) return f
-  if (/error/i.test(r.body.slice(0, 200))) return ('失败：Teams 返回 ' + r.body.slice(0, 100))
+  if (/error/i.test(r.body.slice(0, 200))) return ((en ? 'Failed: Teams returned ' : '失败：Teams 返回 ') + r.body.slice(0, 100))
   return 'ok teams'
 }
 
 // ntfy（target = 主题名[|服务器地址[|Token]]；默认公共服务器 ntfy.sh）
 async function sendViaNtfy(target: string, msg: NotifyMsg): Promise<string> {
+  const en = msg.lang === 'en'
   const parts = target.split('|').map((x) => x.trim())
   const topic = parts[0]
   const server = (parts[1] || 'https://ntfy.sh').replace(/\/+$/, '')
   const token = parts[2] || ''
-  if (!topic) return '失败：ntfy 目标格式应为 主题名[|服务器地址[|Token]]'
+  if (!topic) return Ln(msg.lang, '失败：ntfy 目标格式应为 主题名[|服务器地址[|Token]]', 'Failed: ntfy target should be topic[|server[|token]]')
   const headers: Record<string, string> = {}
   if (token) headers.authorization = 'Bearer ' + token
-  const r = await postPlatform(server, { topic, title: msg.title || '', message: msg.text, tags: [] }, headers)
-  const f = httpFail(r.status, r.body)
+  const r = await postPlatform(server, { topic, title: msg.title || '', message: msg.text, tags: [] }, headers, en)
+  const f = httpFail(r.status, r.body, en)
   if (f) return f
   try {
     const d = JSON.parse(r.body) as { id?: string }
-    if (!d.id) return ('失败：ntfy 返回 ' + r.body.slice(0, 100))
+    if (!d.id) return ((en ? 'Failed: ntfy returned ' : '失败：ntfy 返回 ') + r.body.slice(0, 100))
   } catch {
-    return ('失败：ntfy 返回 ' + r.body.slice(0, 100))
+    return ((en ? 'Failed: ntfy returned ' : '失败：ntfy 返回 ') + r.body.slice(0, 100))
   }
   return 'ok ntfy'
 }
 
 // Zoom Team Chat Incoming Webhook（Zoom 客户端 → 聊天 → 应用 → Incoming Webhook，付费版）
 async function sendViaZoom(target: string, msg: NotifyMsg): Promise<string> {
+  const en = msg.lang === 'en'
   const url = target.split('|')[0].trim()
   const text = (msg.title ? '【' + msg.title + '】\n' : '') + msg.text
-  const r = await postPlatform(url, { content: { head: { text: msg.title || 'DSH-ANYWORK' }, body: [{ type: 'message', text }] } })
-  const f = httpFail(r.status, r.body)
+  const r = await postPlatform(url, { content: { head: { text: msg.title || 'DSH-ANYWORK' }, body: [{ type: 'message', text }] } }, undefined, en)
+  const f = httpFail(r.status, r.body, en)
   if (f) return f
   return 'ok zoom'
 }
@@ -362,8 +382,8 @@ function scheduleHermesRetry(db: DatabaseSync, logId: number, target: string, ms
     void (async () => {
       try {
         const info = await sendViaHermes(target, msg)
-        if (!/^(失败|未知)/.test(info)) {
-          db.prepare(`UPDATE notify_log SET ok = 1, info = ? WHERE id = ?`).run(`ok（第 ${attempt + 1} 次重试成功）`, logId)
+        if (!/^(失败|未知|Failed|Unknown)/.test(info)) {
+          db.prepare(`UPDATE notify_log SET ok = 1, info = ? WHERE id = ?`).run(Ln(msg.lang, `ok（第 ${attempt + 1} 次重试成功）`, `ok (retry #${attempt + 1} succeeded)`), logId)
         } else {
           db.prepare(`UPDATE notify_log SET info = ? WHERE id = ?`).run(info.slice(0, 200), logId)
           scheduleHermesRetry(db, logId, target, msg, attempt + 1)
@@ -391,14 +411,15 @@ const SENDERS: Record<string, (target: string, msg: NotifyMsg) => Promise<string
   zoom: sendViaZoom,
 }
 
-export async function dispatchNotify(db: DatabaseSync, msg: NotifyMsg, opts?: { kind?: string }): Promise<NotifyResult[]> {
+export async function dispatchNotify(db: DatabaseSync, msg: NotifyMsg, opts?: { kind?: string; lang?: string }): Promise<NotifyResult[]> {
+  if (opts && opts.lang && !msg.lang) msg.lang = opts.lang
   let routes = listNotifyRoutes(db).filter((r) => r.enabled === 1)
   if (opts && opts.kind) routes = routes.filter((r) => r.kind === opts.kind)
   const results: NotifyResult[] = []
   for (const r of routes) {
     const sender = SENDERS[r.kind]
-    const info = sender ? await sender(r.target, msg) : '未知通道类型'
-    const ok = !/^(失败|未知)/.test(info)
+    const info = sender ? await sender(r.target, msg) : Ln(msg.lang, '未知通道类型', 'Unknown channel type')
+    const ok = !/^(失败|未知|Failed|Unknown)/.test(info)
     const ins = db.prepare(`INSERT INTO notify_log (route_id, route_name, title, text, ok, info) VALUES (?, ?, ?, ?, ?, ?)`).run(
       r.id,
       r.name,
@@ -413,8 +434,8 @@ export async function dispatchNotify(db: DatabaseSync, msg: NotifyMsg, opts?: { 
   if (!routes.length) {
     results.push(
       opts && opts.kind
-        ? { route: '(' + opts.kind + ' 未配置)', kind: opts.kind, ok: false, info: '该平台还没有配置通道——先在连接器页「连接」一个' }
-        : { route: '(无启用的通知通道)', kind: '-', ok: false, info: '请先在 设置 →「通知」里添加一个通道' },
+        ? { route: '(' + opts.kind + Ln(msg.lang, ' 未配置)', ' not configured)'), kind: opts.kind, ok: false, info: Ln(msg.lang, '该平台还没有配置通道——先在连接器页「连接」一个', 'No route for this platform yet — connect one on the Connectors page') }
+        : { route: Ln(msg.lang, '(无启用的通知通道)', '(no enabled routes)'), kind: '-', ok: false, info: Ln(msg.lang, '请先在 设置 →「通知」里添加一个通道', 'Add a route in Settings → Notifications first') },
     )
   }
   return results

@@ -1795,7 +1795,7 @@ export function startPortal(opts: PortalOptions) {
         }
         if (req.method === 'POST' && path === '/portal/api/admin/notify/route-add') {
           const body = await readJsonBody()
-          const r = addNotifyRoute(db, { name: String(body.name ?? ''), kind: String(body.kind ?? ''), target: String(body.target ?? '') })
+          const r = addNotifyRoute(db, { name: String(body.name ?? ''), kind: String(body.kind ?? ''), target: String(body.target ?? ''), lang: langOf(req) })
           if ('error' in r) {
             res.writeHead(400, { 'content-type': 'application/json; charset=utf-8' })
             return res.end(JSON.stringify({ error: r.error }))
@@ -1817,10 +1817,11 @@ export function startPortal(opts: PortalOptions) {
         }
         if (req.method === 'POST' && path === '/portal/api/admin/notify-test') {
           const body = await readJsonBody()
-          const title = String(body.title ?? '工作台通知测试').trim()
-          const text = String(body.text ?? '这是一条来自 DSH-ANYWORK 的测试通知，收到即通。').trim()
+          const tlang = langOf(req)
+          const title = String(body.title ?? L(tlang, '工作台通知测试', 'Workbench test notice')).trim()
+          const text = String(body.text ?? L(tlang, '这是一条来自 DSH-ANYWORK 的测试通知，收到即通。', 'A test notification from DSH-ANYWORK — if you can read this, it works.')).trim()
           const kind = String(body.kind ?? '').trim()
-          const results = await dispatchNotify(db, { title, text, source: 'admin-test' }, kind ? { kind } : undefined)
+          const results = await dispatchNotify(db, { title, text, source: 'admin-test' }, { ...(kind ? { kind } : {}), lang: tlang })
           res.writeHead(200, { 'content-type': 'application/json; charset=utf-8' })
           return res.end(JSON.stringify({ results }))
         }
@@ -1830,9 +1831,9 @@ export function startPortal(opts: PortalOptions) {
           const config = String(body.config ?? '').trim()
           if (!CONN_PLATFORMS.has(platform)) {
             res.writeHead(400, { 'content-type': 'application/json; charset=utf-8' })
-            return res.end(JSON.stringify({ error: '未知平台' }))
+            return res.end(JSON.stringify({ error: L(langOf(req), '未知平台', 'Unknown platform') }))
           }
-          const err = validateConnConfig(platform, config)
+          const err = validateConnConfig(platform, config, langOf(req))
           if (err) {
             res.writeHead(400, { 'content-type': 'application/json; charset=utf-8' })
             return res.end(JSON.stringify({ error: err }))
@@ -1853,9 +1854,9 @@ export function startPortal(opts: PortalOptions) {
           const row = getConn(db, platform)
           if (!row) {
             res.writeHead(400, { 'content-type': 'application/json; charset=utf-8' })
-            return res.end(JSON.stringify({ error: '这个平台还没有连接' }))
+            return res.end(JSON.stringify({ error: L(langOf(req), '这个平台还没有连接', 'This platform is not connected yet') }))
           }
-          const result = await testConn(platform, row.config)
+          const result = await testConn(platform, row.config, langOf(req))
           res.writeHead(200, { 'content-type': 'application/json; charset=utf-8' })
           return res.end(JSON.stringify({ ok: true, result }))
         }
