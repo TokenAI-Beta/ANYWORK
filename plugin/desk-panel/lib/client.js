@@ -13,6 +13,7 @@ window.__ModuleLoader__.load({
     // —— i18n：接入官方 locale 服务（设置 → 语言 中英实时切换；缺服务时退回中文）—— //
     var DESK_NS = "desk-panel";
     var LOC_ZH = {
+      "fv.back": "← 返回对话",
       "usage.loading": "读取用量中…",
       "usage.failOpen": "暂时读不到用量数据（",
       "usage.portalHint": "本面板通过门户读取账本：请从门户地址打开工作台（例如 http://192.168.0.171:8080）再查看；直连实例端口时不可用。",
@@ -411,6 +412,7 @@ window.__ModuleLoader__.load({
       "sec.tasks": "任务板",
     };
     var LOC_EN = {
+      "fv.back": "← Back to chat",
       "usage.loading": "Loading usage…",
       "usage.failOpen": "Usage data is temporarily unavailable (",
       "usage.portalHint": "This panel reads the ledger through the portal — open the workbench from the portal address (e.g. http://192.168.0.171:8080). Not available over the raw instance port.",
@@ -892,6 +894,30 @@ window.__ModuleLoader__.load({
 .ddp .msg.err { color:#d64545; } .ddp .msg.ok { color:#31a24c; }
 .ddp .empty { color:var(--dsw-alias-label-tertiary, #8a8f98); font-size:12.5px; padding:10px 2px; }
 .ddp .sub { font-size:12px; color:var(--dsw-alias-label-tertiary, #8a8f98); margin:6px 0 2px; }
+/* ── 整页视图（FullView）：五个侧栏入口点开 = 整页界面，侧栏常驻、可切换 ── */
+.ddb.on { background: rgba(79,124,247,.13); }
+.ddb.on .ic { background: rgba(79,124,247,.16); }
+.ddp.fv { left: var(--desk-fv-left, 12px); top:0; right:0; bottom:0; width:auto; max-width:none; max-height:none; border-radius:0; border:0; border-left:1px solid var(--dsw-alias-border-l2, #e8eaed); box-shadow:none; background:var(--dsw-alias-bg-base, #fff); }
+.ddp.fv .hd { padding:17px 40px 15px; }
+.ddp.fv .hd .ico { width:44px; height:44px; border-radius:13px; font-size:22px; }
+.ddp.fv .hd .t1 { font-size:19px; }
+.ddp.fv .hd .t2 { font-size:12.5px; margin-top:3px; }
+.ddp.fv .hd .x { width:auto; height:34px; padding:0 15px; border:1px solid var(--dsw-alias-border-l2, #d4d7dc); border-radius:999px; font-size:12.5px; opacity:.92; white-space:nowrap; }
+.ddp.fv .hd .x:hover { background:rgba(127,127,127,.10); opacity:1; }
+.ddp.fv .tabs { width:min(1080px, calc(100% - 80px)); margin:16px auto 0; }
+.ddp.fv .bd { flex:1; min-height:0; padding:20px 40px 96px; }
+.ddp.fv .bd > * { max-width:1080px; margin-left:auto; margin-right:auto; }
+.ddp.fv .it { padding:12px 10px; }
+body:has(.ddp.fv) #desk-usage-fab, body:has(.ddp.fv) #desk-usage-panel { display:none !important; }
+body.desk-panel-open #desk-usage-fab, body.desk-panel-open #desk-usage-panel { display:none !important; }
+@media (max-width: 820px) {
+  .ddp.fv { left:0; border-left:0; }
+  .ddp.fv::before { display:none; }
+  .ddp.fv .hd { padding:12px 16px 11px; }
+  .ddp.fv .tabs { width:auto; margin:12px 0 0; }
+  .ddp.fv .bd { padding:12px 16px calc(20px + env(safe-area-inset-bottom)); }
+  .ddp.fv .hd .x { height:42px; padding:0 16px; border-radius:12px; font-size:14px; }
+}
 /* 侧栏底部动作区：壳默认为「横排不换行」，多个带文字入口会溢出被挤掉 —— 强制纵向堆叠成菜单 */
 [class*="footerActions"] { flex-direction: column !important; align-items: stretch !important; gap: 2px !important; }
 [class*="footerActions"] > div { width: 100%; }
@@ -2380,11 +2406,75 @@ body.desk-panel-open [class*="sidebarCol"] { transform: none !important; }
       return h("div", { style: Object.assign({}, wrap, { maxWidth: 640 }) }, kids);
     }
 
+    /* ═══ 整页视图（FullView）总线：五个侧栏入口共用（互斥打开 / 点外关闭 / Esc / 左对齐侧栏） ═══ */
+    var FV_SEQ = 0;
+    var _fvObs = null;
+    var _fvObsEl = null;
+    function fvMeasure() {
+      var left = 0;
+      try {
+        if (!(window.matchMedia && window.matchMedia("(max-width: 820px)").matches)) {
+          var sc = document.querySelector('[class*="sidebarCol"]');
+          if (sc) {
+            var r = sc.getBoundingClientRect();
+            if (r && r.right > 40 && r.right < window.innerWidth * 0.6) left = Math.round(r.right);
+          }
+        }
+      } catch (e) { /* 忽略 */ }
+      try { document.documentElement.style.setProperty("--desk-fv-left", left + "px"); } catch (e) { /* 忽略 */ }
+      try {
+        var sc2 = document.querySelector('[class*="sidebarCol"]');
+        if (sc2 && sc2 !== _fvObsEl && window.ResizeObserver) {
+          if (_fvObs) _fvObs.disconnect();
+          _fvObs = new ResizeObserver(function () { fvMeasure(); });
+          _fvObsEl = sc2;
+          _fvObs.observe(sc2);
+        }
+      } catch (e) { /* 忽略 */ }
+    }
+    function fvNotify(id) {
+      try { window.dispatchEvent(new CustomEvent("desk-fv", { detail: { id: id } })); } catch (e) { /* 忽略 */ }
+    }
+    function useFvSync(open, setOpen) {
+      var idRef = React.useRef(null);
+      if (!idRef.current) idRef.current = "fv" + (++FV_SEQ);
+      React.useEffect(function () {
+        if (open) { fvMeasure(); fvNotify(idRef.current); }
+      }, [open]);
+      React.useEffect(function () {
+        function onFv(e) {
+          var who = e && e.detail ? e.detail.id : null;
+          if (who !== idRef.current) setOpen(function (p) { return p ? false : p; });
+        }
+        window.addEventListener("desk-fv", onFv);
+        return function () { window.removeEventListener("desk-fv", onFv); };
+      }, []);
+      return idRef.current;
+    }
+    (function () {
+      try {
+        window.addEventListener("resize", fvMeasure);
+        document.addEventListener("keydown", function (e) {
+          if (e.key === "Escape" && document.querySelector(".ddp.fv")) fvNotify(null);
+        }, true);
+        document.addEventListener("pointerdown", function (e) {
+          try {
+            if (!document.querySelector(".ddp.fv")) return;
+            var t = e.target;
+            if (t && t.closest && (t.closest(".ddp.fv") || t.closest(".ddb"))) return;
+            fvNotify(null);
+          } catch (err) { /* 忽略 */ }
+        }, true);
+        fvMeasure();
+      } catch (e) { /* 忽略 */ }
+    })();
+
     function TeamHub(props) {
       var wide = !!(props && props.wide);
       var openPair = React.useState(false);
       var open = openPair[0];
       var setOpen = openPair[1];
+      useFvSync(open, setOpen);
       var tabPair = React.useState("files");
       var tab = tabPair[0];
       var setTab = tabPair[1];
@@ -2533,7 +2623,7 @@ body.desk-panel-open [class*="sidebarCol"] { transform: none !important; }
         return "📄";
       }
 
-      var trigger = h("button", { className: "ddb" + (wide ? "" : " rail"), onClick: toggle, title: tr("th.tab") },
+      var trigger = h("button", { className: "ddb" + (wide ? "" : " rail") + (open ? " on" : ""), onClick: toggle, title: tr("th.tab") },
         h("span", { className: "ic" }, "🗂"),
         wide ? h("span", { className: "lbl" }, tr("th.tab")) : null
       );
@@ -2693,11 +2783,11 @@ body.desk-panel-open [class*="sidebarCol"] { transform: none !important; }
 
       return h("div", null,
         trigger,
-        h("div", { key: "panel", className: "ddp" },
+        h("div", { key: "panel", className: "ddp fv" },
           h("div", { className: "hd" },
             h("span", { className: "ico" }, "🗂"),
             h("div", null, h("div", { className: "t1" }, tr("th.tab")), h("div", { className: "t2" }, tr("th.sub"))),
-            h("button", { className: "x", onClick: toggle }, "✕")
+            h("button", { className: "x", onClick: toggle }, tr("fv.back"))
           ),
           h("div", { className: "tabs" },
             h("button", { className: "tb" + (tab === "files" ? " on" : ""), onClick: function () { setTab("files"); } }, tr("th.filesTab")),
@@ -2716,6 +2806,7 @@ body.desk-panel-open [class*="sidebarCol"] { transform: none !important; }
       var openPair = React.useState(false);
       var open = openPair[0];
       var setOpen = openPair[1];
+      useFvSync(open, setOpen);
       var unreadPair = React.useState(0);
       var unread = unreadPair[0];
       var setUnread = unreadPair[1];
@@ -2783,7 +2874,7 @@ body.desk-panel-open [class*="sidebarCol"] { transform: none !important; }
 
       var trigger = h(
         "button",
-        { className: "ddb" + (wide ? "" : " rail"), onClick: toggle, title: tr("ann.title") },
+        { className: "ddb" + (wide ? "" : " rail") + (open ? " on" : ""), onClick: toggle, title: tr("ann.title") },
         h("span", { className: "ic" }, "📢"),
         wide ? h("span", { className: "lbl" }, tr("ann.tab")) : null,
         wide && unread > 0 ? h("span", { className: "badge" }, unread) : null
@@ -2926,13 +3017,13 @@ body.desk-panel-open [class*="sidebarCol"] { transform: none !important; }
         trigger,
         h(
           "div",
-          { key: "panel", className: "ddp" },
+          { key: "panel", className: "ddp fv" },
           h(
             "div",
             { className: "hd" },
             h("span", { className: "ico" }, "📢"),
             h("div", null, h("div", { className: "t1" }, tr("ann.titleShort")), h("div", { className: "t2" }, tr("ann.footerLabel"))),
-            h("button", { className: "x", onClick: toggle }, "✕")
+            h("button", { className: "x", onClick: toggle }, tr("fv.back"))
           ),
           h("div", { className: "bd" }, kids)
         )
@@ -2947,6 +3038,7 @@ body.desk-panel-open [class*="sidebarCol"] { transform: none !important; }
       var oPair = React.useState(false);
       var open = oPair[0];
       var setOpen = oPair[1];
+      useFvSync(open, setOpen);
 
       function load() {
         fetch("/portal/api/panel/presets", { headers: { accept: "application/json" } })
@@ -2973,7 +3065,7 @@ body.desk-panel-open [class*="sidebarCol"] { transform: none !important; }
 
       var trigger = h(
         "button",
-        { className: "ddb" + (wide ? "" : " rail"), onClick: toggle, title: tr("asst.title") },
+        { className: "ddb" + (wide ? "" : " rail") + (open ? " on" : ""), onClick: toggle, title: tr("asst.title") },
         h("span", { className: "ic" }, "🧑‍💼"),
         wide ? h("span", { className: "lbl" }, tr("asst.tab")) : null
       );
@@ -3013,13 +3105,13 @@ body.desk-panel-open [class*="sidebarCol"] { transform: none !important; }
         trigger,
         h(
           "div",
-          { key: "panel", className: "ddp" },
+          { key: "panel", className: "ddp fv" },
           h(
             "div",
             { className: "hd" },
             h("span", { className: "ico" }, "🧑‍💼"),
             h("div", null, h("div", { className: "t1" }, tr("asst.team")), h("div", { className: "t2" }, tr("asst.panelTitle"))),
-            h("button", { className: "x", onClick: toggle }, "✕")
+            h("button", { className: "x", onClick: toggle }, tr("fv.back"))
           ),
           h("div", { className: "bd" }, kids)
         )
@@ -3037,6 +3129,7 @@ body.desk-panel-open [class*="sidebarCol"] { transform: none !important; }
       var oPair = React.useState(false);
       var open = oPair[0];
       var setOpen = oPair[1];
+      useFvSync(open, setOpen);
       var dPair = React.useState({ phase: "none", id: "", name: "", content: "" });
       var langTick = useLocaleSignal();
       var det = dPair[0];
@@ -3087,7 +3180,7 @@ body.desk-panel-open [class*="sidebarCol"] { transform: none !important; }
 
       var trigger = h(
         "button",
-        { className: "ddb" + (wide ? "" : " rail"), onClick: toggle, title: tr("skl.title") },
+        { className: "ddb" + (wide ? "" : " rail") + (open ? " on" : ""), onClick: toggle, title: tr("skl.title") },
         h("span", { className: "ic" }, "🧩"),
         wide ? h("span", { className: "lbl" }, tr("skl.tab")) : null
       );
@@ -3190,13 +3283,13 @@ body.desk-panel-open [class*="sidebarCol"] { transform: none !important; }
         trigger,
         h(
           "div",
-          { key: "panel", className: "ddp" },
+          { key: "panel", className: "ddp fv" },
           h(
             "div",
             { className: "hd" },
             h("span", { className: "ico" }, "🧩"),
             h("div", null, h("div", { className: "t1" }, tr("skl.titleShort")), h("div", { className: "t2" }, tr("skl.panelTitle"))),
-            h("button", { className: "x", onClick: toggle }, "✕")
+            h("button", { className: "x", onClick: toggle }, tr("fv.back"))
           ),
           h("div", { className: "bd" }, kids)
         )
@@ -3211,6 +3304,7 @@ body.desk-panel-open [class*="sidebarCol"] { transform: none !important; }
       var oPair = React.useState(false);
       var open = oPair[0];
       var setOpen = oPair[1];
+      useFvSync(open, setOpen);
       var mPair = React.useState({ kind: "", text: "" });
       var msg = mPair[0];
       var setMsg = mPair[1];
@@ -3312,7 +3406,7 @@ body.desk-panel-open [class*="sidebarCol"] { transform: none !important; }
 
       var trigger = h(
         "button",
-        { className: "ddb" + (wide ? "" : " rail"), onClick: toggle, title: tr("auto.title") },
+        { className: "ddb" + (wide ? "" : " rail") + (open ? " on" : ""), onClick: toggle, title: tr("auto.title") },
         h("span", { className: "ic" }, "⚡"),
         wide ? h("span", { className: "lbl" }, tr("auto.tab")) : null
       );
@@ -3387,13 +3481,13 @@ body.desk-panel-open [class*="sidebarCol"] { transform: none !important; }
         trigger,
         h(
           "div",
-          { key: "panel", className: "ddp" },
+          { key: "panel", className: "ddp fv" },
           h(
             "div",
             { className: "hd" },
             h("span", { className: "ico" }, "⚡"),
             h("div", null, h("div", { className: "t1" }, tr("auto.tab")), h("div", { className: "t2" }, tr("auto.panelTitle"))),
-            h("button", { className: "x", onClick: toggle }, "✕")
+            h("button", { className: "x", onClick: toggle }, tr("fv.back"))
           ),
           h("div", { className: "bd" }, kids)
         )
