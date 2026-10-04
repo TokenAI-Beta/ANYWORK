@@ -9,6 +9,7 @@ import { defaultDataDir } from './db.ts'
 const L = (lang: string, zh: string, en: string): string => (lang === 'en' ? en : zh)
 
 const PRESETS_DIR = join(defaultDataDir(), 'presets')
+const SYSTEM_PRESETS_DIR = process.env.DESK_SYSTEM_PRESETS || '/opt/deepseek-harness/packages/preset/agent-presets/presets'
 const SKILLS_DIR = join(defaultDataDir(), 'skills')
 
 export interface PresetInfo {
@@ -17,6 +18,8 @@ export interface PresetInfo {
   description: string
   order: number
   codex: boolean
+  defaultHint: boolean
+  trust: 'system' | 'user'
 }
 
 export interface SkillInfo {
@@ -57,12 +60,12 @@ function frontmatter(src: string): Record<string, string> {
   return out
 }
 
-export function collectPresets(): PresetInfo[] {
+function scanPresetDir(dir: string, trust: 'system' | 'user'): PresetInfo[] {
   let ids: string[] = []
   try {
-    ids = readdirSync(PRESETS_DIR).filter((n) => {
+    ids = readdirSync(dir).filter((n) => {
       try {
-        return statSync(join(PRESETS_DIR, n)).isDirectory()
+        return statSync(join(dir, n)).isDirectory()
       } catch {
         return false
       }
@@ -72,18 +75,28 @@ export function collectPresets(): PresetInfo[] {
   }
   const out: PresetInfo[] = []
   for (const id of ids) {
-    const meta = flatYaml(readText(join(PRESETS_DIR, id, 'preset.yml')))
-    const agent = readText(join(PRESETS_DIR, id, 'agent.cordis.yml'))
+    const meta = flatYaml(readText(join(dir, id, 'preset.yml')))
+    const agent = readText(join(dir, id, 'agent.cordis.yml'))
     out.push({
       id,
       name: meta.name || id,
       description: meta.description || '',
       order: Number(meta.order ?? 100) || 100,
-      codex: /codex/i.test(agent),
+      codex: meta.codex === 'true',
+      defaultHint: meta.defaultHint === 'true',
+      trust,
     })
   }
   out.sort((a, b) => a.order - b.order || a.id.localeCompare(b.id))
   return out
+}
+
+/** 团队角色（共享目录）在前 + 引擎自带模式（系统目录）在后；同名以共享目录为准。 */
+export function collectPresets(): PresetInfo[] {
+  const user = scanPresetDir(PRESETS_DIR, 'user')
+  const seen = new Set(user.map((p) => p.id))
+  const sys = scanPresetDir(SYSTEM_PRESETS_DIR, 'system').filter((p) => !seen.has(p.id))
+  return [...user, ...sys]
 }
 
 export function collectSkills(): SkillInfo[] {

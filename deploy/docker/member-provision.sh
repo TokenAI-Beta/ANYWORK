@@ -25,6 +25,11 @@ if ! grep -q "llm-deepseek" "$sf" 2>/dev/null; then
   { cat "$sf" 2>/dev/null || true; printf 'llm-deepseek:\n  baseURL: http://127.0.0.1:8100\n'; } > "$sf.tmp"
   mv "$sf.tmp" "$sf"
 fi
+# 新会话默认角色 = 团队助理
+if ! grep -q "agent-presets" "$sf" 2>/dev/null; then
+  { cat "$sf" 2>/dev/null || true; printf 'agent-presets:\n  default: team-assistant\n'; } > "$sf.tmp"
+  mv "$sf.tmp" "$sf"
+fi
 
 # 3) 插件：优先从既有成员复制 profile（秒级、免网络）；无模板才在线安装
 prof="$h/profiles"

@@ -4,7 +4,12 @@ dsh 的「Agent 预设」= 一个目录（`preset.yml` + `agent.cordis.yml`）�
 
 ## 已包含
 
-- `team-assistant/`（**团队助理**）：`standard` 模式 + 团队版 persona
+- `team-assistant/`（**团队助理**，默认）：`standard` 模式 + 团队版 persona
+- `research-assistant/`（**研究助理**）：一手信源优先、来源带链接、影响分层
+- `doc-writer/`（**文档写手**）：公文口吻、数字逐项核对、中英对照
+- `data-organizer/`（**数据整理**）：表格清洗、口径核对、报表排版
+- `dev-partner/`（**开发搭档**）：代码流程 + Codex 并行（`codex: true`）
+- `meeting-secretary/`（**会议秘书**）：纪要 + 待办 + 责任人
 
 ## 怎么生效
 

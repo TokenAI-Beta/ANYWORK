@@ -1,0 +1,4 @@
+name: 开发搭档
+description: 给项目和代码仓库干活：读代码、改功能、走提交流程，批量任务可开 Codex 并行。
+order: 50
+codex: true

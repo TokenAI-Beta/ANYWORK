@@ -14,6 +14,10 @@ window.__ModuleLoader__.load({
     var DESK_NS = "desk-panel";
     var LOC_ZH = {
       "fv.back": "← 返回对话",
+      "asst.groupTeam": "团队角色",
+      "asst.defaultTag": "默认",
+      "asst.groupBuiltin": "引擎自带模式",
+      "asst.builtinTag": "自带",
       "usage.loading": "读取用量中…",
       "usage.failOpen": "暂时读不到用量数据（",
       "usage.portalHint": "本面板通过门户读取账本：请从门户地址打开工作台（例如 http://192.168.0.171:8080）再查看；直连实例端口时不可用。",
@@ -413,6 +417,10 @@ window.__ModuleLoader__.load({
     };
     var LOC_EN = {
       "fv.back": "← Back to chat",
+      "asst.groupTeam": "Team roles",
+      "asst.defaultTag": "Default",
+      "asst.groupBuiltin": "Built-in modes",
+      "asst.builtinTag": "Built-in",
       "usage.loading": "Loading usage…",
       "usage.failOpen": "Usage data is temporarily unavailable (",
       "usage.portalHint": "This panel reads the ledger through the portal — open the workbench from the portal address (e.g. http://192.168.0.171:8080). Not available over the raw instance port.",
@@ -908,9 +916,16 @@ window.__ModuleLoader__.load({
 .ddp.fv .bd { flex:1; min-height:0; padding:20px 40px 96px; }
 .ddp.fv .bd > * { max-width:1080px; margin-left:auto; margin-right:auto; }
 .ddp.fv .it { padding:12px 10px; }
-.ddb .ic svg, .ddp .hd .ico svg { display:block; }
+.ddb .ic svg, .ddp .hd .ico svg, .ddp .rc-ico svg, .ddp .it .ico2 svg { display:block; }
 .ddp.fv .hd .ico svg { width:22px; height:22px; }
 .ddb.on .ic { color:#4f7cf7; }
+/* 助理页：团队角色卡片 */
+.ddp .rolegrid { display:grid; grid-template-columns:repeat(auto-fill, minmax(240px, 1fr)); gap:10px; }
+.ddp .rolecard { border:1px solid var(--dsw-alias-border-l2, #e8eaed); border-radius:12px; padding:12px 13px; background:var(--dsw-alias-bg-layer-2, #fff); }
+.ddp .rc-top { display:flex; align-items:center; gap:8px; margin-bottom:6px; flex-wrap:wrap; }
+.ddp .rc-ico { width:30px; height:30px; border-radius:9px; display:flex; align-items:center; justify-content:center; background:var(--dsw-alias-bg-base, #f2f3f5); flex:0 0 auto; }
+.ddp .rc-name { font-weight:640; font-size:13.5px; }
+.ddp .rc-d { font-size:12.5px; color:var(--dsw-alias-label-secondary, #5f6570); line-height:1.65; }
 body:has(.ddp.fv) #desk-usage-fab, body:has(.ddp.fv) #desk-usage-panel { display:none !important; }
 body.desk-panel-open #desk-usage-fab, body.desk-panel-open #desk-usage-panel { display:none !important; }
 @media (max-width: 820px) {
@@ -2479,6 +2494,15 @@ body.desk-panel-open [class*="sidebarCol"] { transform: none !important; }
       assist: ["rect|4,8,16,12,2", "M12 8V4H8", "M2 14h2", "M20 14h2", "M15 13v2", "M9 13v2"],
       skills: ["M12 22v-5", "M9 8V2", "M15 8V2", "M18 8v5a4 4 0 0 1-4 4h-4a4 4 0 0 1-4-4V8Z"],
       auto: ["circle|12,12,10", "M12 6v6l4 2"],
+      search: ["circle|11,11,8", "m21 21-4.3-4.3"],
+      pen: ["M12 20h9", "M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4Z"],
+      table: ["rect|3,3,18,18,2", "M3 9h18", "M9 3v18"],
+      code: ["m16 18 6-6-6-6", "m8 6-6 6 6 6"],
+      clipboard: ["rect|8,2,8,4,1", "M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2", "m9 14 2 2 4-4"],
+      package: ["m7.5 4.27 9 5.15", "M21 8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16Z", "m3.3 7 8.7 5 8.7-5", "M12 22V12"],
+      terminal: ["m4 17 6-6-6-6", "M12 19h8"],
+      braces: ["M8 3H7a2 2 0 0 0-2 2v5a2 2 0 0 1-2 2 2 2 0 0 1 2 2v5a2 2 0 0 0 2 2h1", "M16 3h1a2 2 0 0 1 2 2v5a2 2 0 0 0 2 2 2 2 0 0 0-2 2v5a2 2 0 0 1-2 2h-1"],
+      sparkle: ["M12 3l1.9 5.8a2 2 0 0 0 1.3 1.3L21 12l-5.8 1.9a2 2 0 0 0-1.3 1.3L12 21l-1.9-5.8a2 2 0 0 0-1.3-1.3L3 12l5.8-1.9a2 2 0 0 0 1.3-1.3Z"],
     };
     function dicon(name, size) {
       var list = DESK_ICONS[name] || [];
@@ -2497,6 +2521,12 @@ body.desk-panel-open [class*="sidebarCol"] { transform: none !important; }
       }
       return h("svg", { viewBox: "0 0 24 24", width: size, height: size, fill: "none", stroke: "currentColor", strokeWidth: 1.8, strokeLinecap: "round", strokeLinejoin: "round", "aria-hidden": "true" }, kids);
     }
+    var ROLE_ICON = {
+      "team-assistant": "assist", "research-assistant": "search", "doc-writer": "pen",
+      "data-organizer": "table", "dev-partner": "code", "meeting-secretary": "clipboard",
+      standard: "package", minimal: "terminal", ptc: "braces", cordis: "sparkle",
+    };
+    function roleIcon(id) { return ROLE_ICON[id] || "assist"; }
 
     function TeamHub(props) {
       var wide = !!(props && props.wide);
@@ -3107,24 +3137,37 @@ body.desk-panel-open [class*="sidebarCol"] { transform: none !important; }
         if (!st.presets.length) {
           kids.push(h("div", { key: "none", className: "empty" }, tr("asst.empty")));
         } else {
-          var rows = [];
-          st.presets.forEach(function (p) {
-            rows.push(
-              h(
-                "div",
-                { key: "p" + p.id, className: "it" },
-                h("span", { className: "ico2" }, "🤖"),
-                h(
-                  "div",
-                  { className: "gr" },
-                  h("div", { className: "th" }, h("span", { className: "t" }, p.name), p.codex ? h("span", { className: "bdg" }, tr("asst.codex")) : null),
+          var team = [];
+          var builtin = [];
+          st.presets.forEach(function (p) { (p.trust === "system" ? builtin : team).push(p); });
+          if (team.length) {
+            kids.push(h("div", { key: "lb-t", className: "lb" }, tr("asst.groupTeam")));
+            var cards = team.map(function (p) {
+              return h("div", { key: "p" + p.id, className: "rolecard" },
+                h("div", { className: "rc-top" },
+                  h("span", { className: "rc-ico" }, dicon(roleIcon(p.id), 16)),
+                  h("span", { className: "rc-name" }, p.name),
+                  p.defaultHint ? h("span", { className: "bdg" }, tr("asst.defaultTag")) : null,
+                  p.codex ? h("span", { className: "bdg" }, tr("asst.codex")) : null
+                ),
+                h("div", { className: "rc-d" }, p.description || p.id)
+              );
+            });
+            kids.push(h("div", { key: "cards", className: "rolegrid" }, cards));
+          }
+          if (builtin.length) {
+            kids.push(h("div", { key: "lb-b", className: "lb" }, tr("asst.groupBuiltin")));
+            var brows = builtin.map(function (p) {
+              return h("div", { key: "b" + p.id, className: "it" },
+                h("span", { className: "ico2" }, dicon(roleIcon(p.id), 15)),
+                h("div", { className: "gr" },
+                  h("div", { className: "th" }, h("span", { className: "t" }, p.name), h("span", { className: "tag" }, tr("asst.builtinTag"))),
                   h("div", { className: "d" }, p.description || p.id)
                 )
-              )
-            );
-          });
-          kids.push(h("div", { key: "lb", className: "lb" }, tr("asst.available")));
-          kids.push(h("div", { key: "rows", className: "list" }, rows));
+              );
+            });
+            kids.push(h("div", { key: "brows", className: "list" }, brows));
+          }
         }
         kids.push(h("div", { key: "tip", className: "ft" }, tr("asst.note")));
       }

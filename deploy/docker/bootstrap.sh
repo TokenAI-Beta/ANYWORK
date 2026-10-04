@@ -98,6 +98,11 @@ while IFS=$'\t' read -r u p h; do
       { cat "$sf" 2>/dev/null || true; printf 'llm-deepseek:\n  baseURL: http://127.0.0.1:8100\n'; } > "$sf.tmp"
       mv "$sf.tmp" "$sf"
     fi
+    # 新会话默认角色 = 团队助理（成员不选也落在团队规范上）
+    if ! grep -q "agent-presets" "$sf" 2>/dev/null; then
+      { cat "$sf" 2>/dev/null || true; printf 'agent-presets:\n  default: team-assistant\n'; } > "$sf.tmp"
+      mv "$sf.tmp" "$sf"
+    fi
   fi
 done < "$home/.desk/run/instances.tsv"
 
