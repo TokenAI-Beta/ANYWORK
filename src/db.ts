@@ -165,9 +165,37 @@ function migrate(db: DatabaseSync): void {
       updated_at TEXT NOT NULL DEFAULT (datetime('now'))
     );
 
+    CREATE TABLE IF NOT EXISTS automations (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      owner TEXT NOT NULL DEFAULT '',
+      scope TEXT NOT NULL DEFAULT 'user',
+      name TEXT NOT NULL,
+      type TEXT NOT NULL DEFAULT 'timer',
+      schedule TEXT,
+      trigger TEXT,
+      action TEXT NOT NULL DEFAULT '{}',
+      enabled INTEGER NOT NULL DEFAULT 1,
+      created_at TEXT NOT NULL DEFAULT (datetime('now')),
+      last_run_at TEXT,
+      last_result TEXT,
+      next_run_at INTEGER,
+      runs INTEGER NOT NULL DEFAULT 0,
+      UNIQUE(type, trigger, scope)
+    );
+
+    CREATE TABLE IF NOT EXISTS auto_log (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      auto_id INTEGER,
+      auto_name TEXT,
+      ts TEXT NOT NULL DEFAULT (datetime('now')),
+      ok INTEGER NOT NULL DEFAULT 0,
+      info TEXT
+    );
+
     CREATE INDEX IF NOT EXISTS idx_usage_user_ts ON usage_events(user_id, ts);
     CREATE INDEX IF NOT EXISTS idx_keys_hash ON api_keys(token_hash);
     CREATE INDEX IF NOT EXISTS idx_sessions_hash ON login_sessions(token_hash);
+    CREATE INDEX IF NOT EXISTS idx_auto_next ON automations(next_run_at);
   `)
 
   // 增量列：SQLite 没有 ADD COLUMN IF NOT EXISTS，先查再加

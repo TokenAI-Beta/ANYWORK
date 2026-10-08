@@ -22,6 +22,7 @@ import { defaultDataDir } from './db.ts'
 import { collectConnectors, collectPlatforms, collectPresets, collectSkills, readSkill } from './panel.ts'
 import { CONN_PLATFORMS, getConn, removeConn, setConn, testConn, validateConnConfig } from './conns.ts'
 import { collectOps } from './ops.ts'
+import { addTimer, autoStats, ensureRuleRows, listAutoLog, listAutos, removeAuto, toggleAuto, RULE_CATALOG } from './auto.ts'
 
 /** 请求语言：?lang=en 时为英文（由工作台客户端带过来），默认中文 */
 const langOf = (req: { url?: string }): string => {
@@ -1203,6 +1204,59 @@ export function startPortal(opts: PortalOptions) {
         }
         res.writeHead(200, { 'content-type': 'application/json; charset=utf-8' })
         return res.end(JSON.stringify({ ok: true, role: user.role, reminders: listReminders(db), recent: listRemindersSent(db, 5) }))
+      }
+      // —— 自动化（成员自建定时任务 + 团队规则卡）——
+      if (req.method === 'GET' && path === '/portal/api/auto') {
+        if (!user) {
+          res.writeHead(401, { 'content-type': 'application/json' })
+          return res.end(JSON.stringify({ error: 'login required' }))
+        }
+        ensureRuleRows(db)
+        res.writeHead(200, { 'content-type': 'application/json; charset=utf-8' })
+        return res.end(
+          JSON.stringify({
+            ok: true,
+            role: user.role,
+            items: listAutos(db, { username: user.username, role: String(user.role) }),
+            logs: listAutoLog(db, 20),
+            stats: autoStats(db),
+            rules: RULE_CATALOG,
+          }),
+        )
+      }
+      if (
+        req.method === 'POST' &&
+        (path === '/portal/api/auto/add' || path === '/portal/api/auto/rm' || path === '/portal/api/auto/toggle')
+      ) {
+        if (!user) {
+          res.writeHead(401, { 'content-type': 'application/json' })
+          return res.end(JSON.stringify({ error: 'login required' }))
+        }
+        let ab: Record<string, unknown> = {}
+        try {
+          const v = JSON.parse(await readBody(req)) as unknown
+          if (v && typeof v === 'object') ab = v as Record<string, unknown>
+        } catch {
+          ab = {}
+        }
+        const viewer = { username: user.username, role: String(user.role) }
+        if (path === '/portal/api/auto/add') {
+          const r = addTimer(db, user.username, {
+            name: String(ab.name ?? ''),
+            schedule: String(ab.schedule ?? ''),
+            action: ab.action,
+          })
+          res.writeHead(200, { 'content-type': 'application/json; charset=utf-8' })
+          return res.end(JSON.stringify('error' in r ? { error: r.error } : { ok: true, id: r.id, next_run_at: r.nextRunAt }))
+        }
+        if (path === '/portal/api/auto/rm') {
+          const r = removeAuto(db, viewer, Number(ab.id ?? 0))
+          res.writeHead(200, { 'content-type': 'application/json; charset=utf-8' })
+          return res.end(JSON.stringify(r))
+        }
+        const r = toggleAuto(db, viewer, Number(ab.id ?? 0))
+        res.writeHead(200, { 'content-type': 'application/json; charset=utf-8' })
+        return res.end(JSON.stringify(r))
       }
       // —— 会话管理（成员：申请删除 / 撤销；管理员审批见 /admin 区）——
       if (req.method === 'GET' && path === '/portal/api/session-mgr/mine') {
