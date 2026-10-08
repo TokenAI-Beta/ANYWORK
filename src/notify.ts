@@ -54,8 +54,8 @@ export function addNotifyRoute(db: DatabaseSync, r: { name: string; kind: string
   const target = r.target.trim()
   const lang = r.lang
   if (!/^[a-z0-9][a-z0-9_-]{0,31}$/.test(name)) return { error: Ln(lang, '名称请用英文小写（如 wechat-me / wecom-group）', 'Name must be lowercase (e.g. wechat-me / wecom-group)') }
-  const KINDS = ['webhook', 'hermes', 'telegram', 'whatsapp', 'feishu', 'dingtalk', 'wecom', 'discord', 'slack', 'teams', 'ntfy', 'zoom']
-  if (!KINDS.includes(kind)) return { error: Ln(lang, 'kind 只支持 webhook / hermes / telegram / whatsapp / feishu / dingtalk / wecom / discord / slack / teams / ntfy / zoom', 'kind must be one of webhook / hermes / telegram / whatsapp / feishu / dingtalk / wecom / discord / slack / teams / ntfy / zoom') }
+  const KINDS = ['webhook', 'hermes', 'weixin', 'telegram', 'whatsapp', 'feishu', 'dingtalk', 'wecom', 'discord', 'slack', 'teams', 'ntfy', 'zoom']
+  if (!KINDS.includes(kind)) return { error: Ln(lang, 'kind 只支持 webhook / hermes / weixin / telegram / whatsapp / feishu / dingtalk / wecom / discord / slack / teams / ntfy / zoom', 'kind must be one of webhook / hermes / weixin / telegram / whatsapp / feishu / dingtalk / wecom / discord / slack / teams / ntfy / zoom') }
   if (!target) return { error: Ln(lang, '目标不能为空', 'Target cannot be empty') }
   if (kind === 'webhook' && !/^https?:\/\//.test(target)) return { error: Ln(lang, 'webhook 目标需为 http(s):// 开头的 URL', 'webhook target must be an http(s):// URL') }
   if ((kind === 'feishu' || kind === 'wecom' || kind === 'discord' || kind === 'slack' || kind === 'teams' || kind === 'zoom') && !/^https?:\/\//.test(target.split('|')[0].trim()))
@@ -397,9 +397,70 @@ function scheduleHermesRetry(db: DatabaseSync, logId: number, target: string, ms
   if (typeof timer.unref === 'function') timer.unref()
 }
 
+// 微信（iLink 官方机器人 API）直发：target = <openid>@im.wechat|<bot_token>[|<base_url>]
+// 通知场景走 tokenless 发送（iLink 对未刷新会话的推送降级通道；明确报「未就绪」时提示先给机器人发条消息）
+async function sendViaWeixin(target: string, msg: NotifyMsg): Promise<string> {
+  const en = msg.lang === 'en'
+  const parts = target.split('|').map((x) => x.trim())
+  const to = parts[0] || ''
+  const token = parts[1] || ''
+  const base = (parts[2] || 'https://ilinkai.weixin.qq.com').replace(/\/+$/, '')
+  if (!to || !token) return Ln(msg.lang, '失败：weixin 目标格式应为 <openid>@im.wechat|<bot_token>[|base_url]', 'Failed: weixin target should be <openid>@im.wechat|<bot_token>[|base_url]')
+  const text = (msg.title ? '【' + msg.title + '】\n' : '') + msg.text
+  const uin = Buffer.from(String(Math.floor(Math.random() * 4294967296))).toString('base64')
+  const clientId = 'dsh-anywork-' + Date.now() + '-' + Math.random().toString(16).slice(2, 10)
+  const body = {
+    msg: {
+      from_user_id: '',
+      to_user_id: to,
+      client_id: clientId,
+      message_type: 2,
+      message_state: 2,
+      item_list: [{ type: 1, text_item: { text } }],
+    },
+  }
+  const ctrl = new AbortController()
+  const t = setTimeout(() => ctrl.abort(), 15000)
+  try {
+    const r = await fetch(base + '/ilink/bot/sendmessage', {
+      method: 'POST',
+      headers: {
+        'content-type': 'application/json',
+        AuthorizationType: 'ilink_bot_token',
+        Authorization: 'Bearer ' + token,
+        'iLink-App-Id': 'bot',
+        'iLink-App-ClientVersion': '131584',
+        'X-WECHAT-UIN': uin,
+      },
+      body: JSON.stringify(body),
+      signal: ctrl.signal,
+    })
+    const raw = await r.text()
+    if (r.status !== 200) return pfail(msg) + 'HTTP ' + r.status + ' ' + raw.slice(0, 100)
+    let j: { ret?: number; errcode?: number; errmsg?: string; msg?: string } | null = null
+    try {
+      j = JSON.parse(raw) as typeof j
+    } catch {
+      j = null
+    }
+    if (j && (j.ret ?? 0) === 0 && (j.errcode ?? 0) === 0) return 'ok weixin'
+    const em = String(j?.errmsg || j?.msg || raw).trim()
+    if ((j?.ret ?? 0) === -14 || (j?.errcode ?? 0) === -14 || /prepare failed|会话未就绪/i.test(em)) {
+      return Ln(msg.lang, '失败：iLink 会话未就绪——请先在微信里给机器人发一条消息后重试', 'Failed: iLink session not ready — message the bot in WeChat once, then retry')
+    }
+    return pfail(msg) + 'iLink ret=' + String(j?.ret ?? '?') + ' errcode=' + String(j?.errcode ?? '?') + ' ' + em.slice(0, 100)
+  } catch (e) {
+    const cause = (e as { cause?: { message?: string } })?.cause?.message
+    return pfail(msg) + String(cause || (e as Error)?.message || e).slice(0, 120)
+  } finally {
+    clearTimeout(t)
+  }
+}
+
 const SENDERS: Record<string, (target: string, msg: NotifyMsg) => Promise<string>> = {
   webhook: sendViaWebhook,
   hermes: sendViaHermes,
+  weixin: sendViaWeixin,
   telegram: sendViaTelegram,
   whatsapp: sendViaWhatsapp,
   feishu: sendViaFeishu,
