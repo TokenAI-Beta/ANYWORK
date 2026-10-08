@@ -23,6 +23,7 @@ import { collectConnectors, collectPlatforms, collectPresets, collectSkills, rea
 import { CONN_PLATFORMS, getConn, removeConn, setConn, testConn, validateConnConfig } from './conns.ts'
 import { collectOps } from './ops.ts'
 import { addTimer, autoStats, ensureRuleRows, listAutoLog, listAutos, removeAuto, toggleAuto, RULE_CATALOG } from './auto.ts'
+import { runAutoNow } from './auto-exec.ts'
 
 /** 请求语言：?lang=en 时为英文（由工作台客户端带过来），默认中文 */
 const langOf = (req: { url?: string }): string => {
@@ -1226,7 +1227,10 @@ export function startPortal(opts: PortalOptions) {
       }
       if (
         req.method === 'POST' &&
-        (path === '/portal/api/auto/add' || path === '/portal/api/auto/rm' || path === '/portal/api/auto/toggle')
+        (path === '/portal/api/auto/add' ||
+          path === '/portal/api/auto/rm' ||
+          path === '/portal/api/auto/toggle' ||
+          path === '/portal/api/auto/run')
       ) {
         if (!user) {
           res.writeHead(401, { 'content-type': 'application/json' })
@@ -1251,6 +1255,11 @@ export function startPortal(opts: PortalOptions) {
         }
         if (path === '/portal/api/auto/rm') {
           const r = removeAuto(db, viewer, Number(ab.id ?? 0))
+          res.writeHead(200, { 'content-type': 'application/json; charset=utf-8' })
+          return res.end(JSON.stringify(r))
+        }
+        if (path === '/portal/api/auto/run') {
+          const r = runAutoNow(db, viewer, Number(ab.id ?? 0))
           res.writeHead(200, { 'content-type': 'application/json; charset=utf-8' })
           return res.end(JSON.stringify(r))
         }

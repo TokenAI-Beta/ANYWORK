@@ -5,6 +5,7 @@ import { join } from 'node:path'
 import { defaultDataDir, openDb } from './db.ts'
 import { startGateway } from './gateway.ts'
 import { checkReminders, readOrCreateNotifyToken } from './notify.ts'
+import { checkAutos } from './auto-exec.ts'
 import { startPortal } from './portal.ts'
 
 function loadRealKey(): string {
@@ -33,5 +34,10 @@ startPortal({ db, port: portalPort, host: portalHost })
 checkReminders(db).catch(() => {})
 setInterval(() => {
   checkReminders(db).catch(() => {})
+}, 30000)
+// 自动化定时任务巡查：启动时补跑错过的，之后每 30 秒扫一次
+checkAutos(db).catch(() => {})
+setInterval(() => {
+  checkAutos(db).catch(() => {})
 }, 30000)
 console.log(`[desk] portal on http://${portalHost}:${portalPort} · gateway on http://127.0.0.1:${gatewayPort} · data=${defaultDataDir()}`)

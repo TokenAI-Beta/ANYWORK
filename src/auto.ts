@@ -201,3 +201,12 @@ export function markAutoRun(db: DatabaseSync, id: number, ok: boolean, info: str
     id,
   )
 }
+
+/** 只追加一条执行记录（不增 runs / 不动计划） */
+export function appendAutoLog(db: DatabaseSync, id: number, ok: boolean, info: string): void {
+  db.prepare(`INSERT INTO auto_log (auto_id, auto_name, ok, info) SELECT id, name, ?, ? FROM automations WHERE id = ?`).run(
+    ok ? 1 : 0,
+    String(info).slice(0, 300),
+    id,
+  )
+}

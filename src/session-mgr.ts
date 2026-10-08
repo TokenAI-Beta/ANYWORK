@@ -52,7 +52,7 @@ export function userPort(db: DatabaseSync, username: string): number | null {
 }
 
 /** 调一次实例 RPC（loopback；0.1.5+ 引擎需带实例会话 cookie，旧引擎忽略之） */
-async function callInstanceRpc(
+export async function callInstanceRpc(
   port: number,
   authCookie: string | undefined,
   method: string,
