@@ -24,6 +24,7 @@ import { CONN_PLATFORMS, getConn, removeConn, setConn, testConn, validateConnCon
 import { collectOps } from './ops.ts'
 import { addTimer, autoStats, ensureRuleRows, listAutoLog, listAutos, removeAuto, toggleAuto, RULE_CATALOG, ruleEnabled } from './auto.ts'
 import { runAutoNow, runQuickAgent, runQuickNotify } from './auto-exec.ts'
+import { startWxBind, checkWxBind } from './wx-bind.ts'
 
 /** 请求语言：?lang=en 时为英文（由工作台客户端带过来），默认中文 */
 const langOf = (req: { url?: string }): string => {
@@ -1203,7 +1204,40 @@ export function startPortal(opts: PortalOptions) {
           return res.end(JSON.stringify({ error: 'login required' }))
         }
         res.writeHead(200, { 'content-type': 'application/json; charset=utf-8' })
-        return res.end(JSON.stringify({ ok: true, role: user.role, items: collectConnectors(db, langOf(req)), platforms: collectPlatforms(db, langOf(req)) }))
+        return res.end(JSON.stringify({ ok: true, role: user.role, items: collectConnectors(db, langOf(req)), platforms: collectPlatforms(db, langOf(req), user.username) }))
+      }
+      // —— 我的微信（成员自助绑定：出码 → 扫码确认 → 自动接入微信桥与通知）——
+      if (req.method === 'POST' && path === '/portal/api/wx/bind-start') {
+        if (!user) {
+          res.writeHead(401, { 'content-type': 'application/json' })
+          return res.end(JSON.stringify({ error: 'login required' }))
+        }
+        const r = await startWxBind(user.username)
+        res.writeHead(200, { 'content-type': 'application/json; charset=utf-8' })
+        return res.end(JSON.stringify(r))
+      }
+      if (req.method === 'GET' && path === '/portal/api/wx/bind-status') {
+        if (!user) {
+          res.writeHead(401, { 'content-type': 'application/json' })
+          return res.end(JSON.stringify({ error: 'login required' }))
+        }
+        const r = await checkWxBind(db, user.username, url.searchParams.get('id') || '')
+        res.writeHead(200, { 'content-type': 'application/json; charset=utf-8' })
+        return res.end(JSON.stringify(r))
+      }
+      if (req.method === 'GET' && path === '/portal/api/wx/mine') {
+        if (!user) {
+          res.writeHead(401, { 'content-type': 'application/json' })
+          return res.end(JSON.stringify({ error: 'login required' }))
+        }
+        let bound = false
+        try {
+          bound = !!db.prepare(`SELECT id FROM wx_chat WHERE account = ? AND enabled = 1`).get(user.username)
+        } catch {
+          bound = false
+        }
+        res.writeHead(200, { 'content-type': 'application/json; charset=utf-8' })
+        return res.end(JSON.stringify({ ok: true, bound }))
       }
       if (req.method === 'GET' && path === '/portal/api/panel/auto') {
         if (!user) {

@@ -136,7 +136,7 @@ export interface PlatformInfo {
   desc: string
   hint: string
   group: 'msg' | 'meet' | 'work'
-  mode: 'notify' | 'conn' | 'plan'
+  mode: 'notify' | 'conn' | 'plan' | 'wxmine'
   type: string
   connected: boolean
   routes: number
@@ -145,7 +145,7 @@ export interface PlatformInfo {
   openUrl?: string
 }
 
-export function collectPlatforms(db: DatabaseSync, lang: string = 'zh'): PlatformInfo[] {
+export function collectPlatforms(db: DatabaseSync, lang: string = 'zh', username?: string): PlatformInfo[] {
   let routes: { name: string; kind: string; enabled: number }[] = []
   try {
     routes = db.prepare(`SELECT name, kind, enabled FROM notify_routes ORDER BY id`).all() as unknown as { name: string; kind: string; enabled: number }[]
@@ -158,8 +158,9 @@ export function collectPlatforms(db: DatabaseSync, lang: string = 'zh'): Platfor
   } catch {
     // 表缺失按空处理
   }
-  const defs: { id: string; kind: string; name: string; desc: string; hint: string; group: 'msg' | 'meet' | 'work'; mode: 'notify' | 'conn' | 'plan'; type: string }[] = [
-    { id: 'wechat', kind: 'hermes', name: L(lang, '微信（Hermes 桥）', 'WeChat (Hermes bridge)'), desc: L(lang, '推到你的微信——经 Hermes 转送', 'Push to WeChat via the Hermes bridge'), hint: L(lang, '微信目标（如 weixin）——需宿主 Hermes 在岗', 'WeChat target (e.g. weixin) — needs Hermes on the host'), group: 'msg', mode: 'notify', type: '' },
+  const defs: { id: string; kind: string; name: string; desc: string; hint: string; group: 'msg' | 'meet' | 'work'; mode: 'notify' | 'conn' | 'plan' | 'wxmine'; type: string }[] = [
+    { id: 'wx-mine', kind: '', name: L(lang, '我的微信', 'My WeChat'), desc: L(lang, '把工作台接到你的微信：团队通知直接进微信，也能像聊天一样指挥你的助理', 'Connect your WeChat: team notifications right in WeChat — and chat with your workbench assistant'), hint: '', group: 'msg', mode: 'wxmine', type: '' },
+        { id: 'wechat', kind: 'hermes', name: L(lang, '微信（Hermes 桥）', 'WeChat (Hermes bridge)'), desc: L(lang, '推到你的微信——经 Hermes 转送', 'Push to WeChat via the Hermes bridge'), hint: L(lang, '微信目标（如 weixin）——需宿主 Hermes 在岗', 'WeChat target (e.g. weixin) — needs Hermes on the host'), group: 'msg', mode: 'notify', type: '' },
     { id: 'telegram', kind: 'telegram', name: 'Telegram', desc: L(lang, '群里 / 私聊直达（Bot API）', 'Bot API — direct to chats'), hint: L(lang, 'bot_token|chat_id（可加 |api_base）', 'bot_token|chat_id (optional |api_base)'), group: 'msg', mode: 'notify', type: '' },
     { id: 'feishu', kind: 'feishu', name: L(lang, '飞书 Feishu', 'Feishu / Lark'), desc: L(lang, '群机器人 Webhook——贴一个地址就能推', 'Custom-bot webhook — paste the URL'), hint: L(lang, '飞书群机器人 Webhook 地址', 'Feishu bot webhook URL'), group: 'msg', mode: 'notify', type: '' },
     { id: 'dingtalk', kind: 'dingtalk', name: L(lang, '钉钉', 'DingTalk'), desc: L(lang, '群机器人 Webhook，支持加签', 'Robot webhook with optional secret signing'), hint: L(lang, 'webhook地址[|加签Secret]', 'webhook URL[|secret]'), group: 'msg', mode: 'notify', type: '' },
@@ -192,7 +193,13 @@ export function collectPlatforms(db: DatabaseSync, lang: string = 'zh'): Platfor
       routes: 0,
       routesEnabled: 0,
     }
-    if (d.mode === 'notify') {
+    if (d.mode === 'wxmine') {
+      try {
+        base.connected = !!(username && db.prepare(`SELECT id FROM wx_chat WHERE account = ? AND enabled = 1`).get(username))
+      } catch {
+        base.connected = false
+      }
+    } else if (d.mode === 'notify') {
       const mine = routes.filter((r) => r.kind === d.kind)
       base.connected = mine.some((r) => r.enabled === 1)
       base.routes = mine.length

@@ -28,7 +28,7 @@ window.__ModuleLoader__.load({
       "skl.namePh": "通道名称（小写英文，如 feishu-team）",
       "skl.needNameTarget": "名称和内容都要填",
       "skl.routeSaved": "已保存，通道即刻生效",
-      "skl.adminOnly": "通道配置仅管理员可操作——成员可看状态。",
+      "skl.adminOnly": "Channel setup is admin-only — My WeChat is self-serve.",
       "skl.grpMeet": "会议",
       "skl.grpWork": "工作平台",
       "skl.planTag": "规划中",
@@ -37,6 +37,16 @@ window.__ModuleLoader__.load({
       "skl.open": "打开",
       "skl.confirmRm": "确定删除这个连接？",
       "skl.connSaved": "已保存，点「测试」验证一下",
+      "wxq.connect": "连接微信",
+      "wxq.reconnect": "重新连接",
+      "wxq.title": "连接你的微信",
+      "wxq.hint": "扫完码在微信里点「确认」——之后团队通知直接进微信，还能把工作台助理当成微信好友一样对话。",
+      "wxq.waiting": "等待扫码…",
+      "wxq.scaned": "已扫码——请在微信里点「确认」",
+      "wxq.done": "完成！已接入",
+      "wxq.expired": "二维码已过期",
+      "wxq.refresh": "刷新二维码",
+      "wxq.close": "关闭",
       "skl.connNeedConfig": "先把内容填上",
       "asst.groupBuiltin": "引擎自带模式",
       "asst.builtinTag": "自带",
@@ -530,6 +540,16 @@ window.__ModuleLoader__.load({
       "skl.open": "Open",
       "skl.confirmRm": "Remove this connection?",
       "skl.connSaved": "Saved — hit Test to verify",
+      "wxq.connect": "Connect WeChat",
+      "wxq.reconnect": "Reconnect",
+      "wxq.title": "Connect your WeChat",
+      "wxq.hint": "After scanning, tap Confirm in WeChat — team notifications will reach you, and you can chat with your workbench assistant right in WeChat.",
+      "wxq.waiting": "Waiting for scan…",
+      "wxq.scaned": "Scanned — please tap Confirm in WeChat",
+      "wxq.done": "Done — connected!",
+      "wxq.expired": "QR code expired",
+      "wxq.refresh": "Refresh QR code",
+      "wxq.close": "Close",
       "skl.connNeedConfig": "Fill in the value first",
       "asst.groupBuiltin": "Built-in modes",
       "asst.builtinTag": "Built-in",
@@ -1130,6 +1150,15 @@ window.__ModuleLoader__.load({
 .ddp .msg.err { color:#d9534f; background:rgba(217,83,79,.10); }
 .ddp .ptag { font-size:11px; padding:1px 7px; border-radius:6px; background:rgba(127,127,127,.14); color:var(--dsw-alias-label-tertiary, #8a8f98); margin-left:auto; }
 .ddp .pcard.plan { opacity:.68; }
+.ddp .wxq-ov { position:fixed; inset:0; background:rgba(15,18,26,.45); display:flex; align-items:center; justify-content:center; z-index:60; }
+.ddp .wxq-box { width:min(86vw,320px); background:var(--dsw-alias-bg-layer-2, #fff); border-radius:14px; padding:16px; box-shadow:0 12px 40px rgba(0,0,0,.22); display:flex; flex-direction:column; gap:8px; align-items:center; }
+.ddp .wxq-hd { font-weight:600; font-size:14px; }
+.ddp .wxq-sub { font-size:12px; color:var(--dsw-alias-text-3, #8a93a3); text-align:center; line-height:1.5; }
+.ddp .wxq-qr { width:200px; height:200px; display:flex; align-items:center; justify-content:center; background:#fff; border-radius:10px; padding:6px; }
+.ddp .wxq-qr svg { width:100%; height:100%; }
+.ddp .wxq-msg { font-size:12.5px; text-align:center; }
+.ddp .wxq-msg.err { color:#e05b5b; }
+.ddp .wxq-msg.ok { color:#3ecf8e; font-weight:600; }
 .ddp .pdl { font-size:12px; color:var(--dsw-alias-label-secondary, #5f6570); word-break:break-all; margin:4px 0 0; }
 body:has(.ddp.fv) #desk-usage-fab, body:has(.ddp.fv) #desk-usage-panel { display:none !important; }
 body.desk-panel-open #desk-usage-fab, body.desk-panel-open #desk-usage-panel { display:none !important; }
@@ -2831,6 +2860,7 @@ body.desk-panel-open [class*="sidebarCol"] { transform: none !important; }
     };
     function roleIcon(id) { return ROLE_ICON[id] || "assist"; }
     var PLAT_META = {
+      "wx-mine": { i: "bubble", c: "#07c160" },
       wechat: { i: "bubble", c: "#3ecf8e" },
       telegram: { i: "send", c: "#5cc8f7" },
       feishu: { i: "msq", c: "#7fa3ff" },
@@ -3532,6 +3562,18 @@ body.desk-panel-open [class*="sidebarCol"] { transform: none !important; }
       var cPair = React.useState({ form: "", name: "", target: "", busy: false, msg: "", msgKind: "" });
       var cs = cPair[0];
       var setCs = cPair[1];
+      var wPair = React.useState(null);
+      var wxq = wPair[0];
+      var setWxq = wPair[1];
+      var wxTimer = React.useRef(null);
+      function wxset(patch) {
+        setWxq(function (prev) {
+          var n = {};
+          if (prev) { for (var k in prev) n[k] = prev[k]; }
+          for (var k2 in patch) n[k2] = patch[k2];
+          return n;
+        });
+      }
       function cset(patch) {
         setCs(function (prev) {
           var n = {};
@@ -3605,6 +3647,85 @@ body.desk-panel-open [class*="sidebarCol"] { transform: none !important; }
           .catch(function (e) { cset({ busy: false, msg: String((e && e.message) || e), msgKind: "err" }); });
       }
 
+      function stopWxPoll() { if (wxTimer.current) { clearInterval(wxTimer.current); wxTimer.current = null; } }
+      function wxClose() { stopWxPoll(); setWxq(null); }
+      function startWxPoll(id, tries) {
+        stopWxPoll();
+        wxTimer.current = setInterval(function () {
+          fetch("/portal/api/wx/bind-status?id=" + encodeURIComponent(id), { headers: { accept: "application/json" } })
+            .then(function (r) { return r.json(); })
+            .then(function (d) {
+              var st = d && d.status;
+              if (st === "confirmed") {
+                stopWxPoll();
+                setWxq({ phase: "done" });
+                load();
+                setTimeout(function () { setWxq(null); }, 2000);
+              } else if (st === "expired") {
+                if (tries < 2) {
+                  stopWxPoll();
+                  setWxq({ phase: "loading" });
+                  fetch("/portal/api/wx/bind-start", { method: "POST", headers: { "content-type": "application/json" }, body: "{}" })
+                    .then(function (r) { return r.json(); })
+                    .then(function (d2) {
+                      if (!d2 || d2.error) { setWxq({ phase: "error", msg: (d2 && d2.error) || tr("common.failHint") }); return; }
+                      setWxq({ phase: "wait", id: d2.id, svg: d2.svg || "", tries: tries + 1 });
+                      startWxPoll(d2.id, tries + 1);
+                    })
+                    .catch(function (e) { setWxq({ phase: "error", msg: String((e && e.message) || e) }); });
+                } else {
+                  stopWxPoll();
+                  setWxq({ phase: "expired" });
+                }
+              } else if (st === "scaned") {
+                wxset({ phase: "scaned" });
+              } else if (st === "error") {
+                stopWxPoll();
+                setWxq({ phase: "error", msg: (d && d.error) || tr("common.failHint") });
+              }
+            })
+            .catch(function () {});
+        }, 2500);
+      }
+      function openWxBind() {
+        stopWxPoll();
+        setWxq({ phase: "loading" });
+        fetch("/portal/api/wx/bind-start", { method: "POST", headers: { "content-type": "application/json" }, body: "{}" })
+          .then(function (r) { return r.json(); })
+          .then(function (d) {
+            if (!d || d.error) { setWxq({ phase: "error", msg: (d && d.error) || tr("common.failHint") }); return; }
+            setWxq({ phase: "wait", id: d.id, svg: d.svg || "", tries: 0 });
+            startWxPoll(d.id, 0);
+          })
+          .catch(function (e) { setWxq({ phase: "error", msg: String((e && e.message) || e) }); });
+      }
+      function wxqModal() {
+        var q = wxq || {};
+        var body;
+        if (q.phase === "loading") body = h("div", { className: "wxq-msg" }, tr("common.loading"));
+        else if (q.phase === "error") body = h("div", { className: "wxq-msg err" }, q.msg || tr("common.failHint"));
+        else if (q.phase === "done") body = h("div", { className: "wxq-msg ok" }, tr("wxq.done"));
+        else if (q.phase === "expired") body = h("div", { className: "wxq-msg" }, h("button", { className: "bbtn pri", onClick: openWxBind }, tr("wxq.refresh")));
+        else
+          body = h(
+            "div",
+            null,
+            h("div", { className: "wxq-qr", dangerouslySetInnerHTML: { __html: q.svg || "" } }),
+            h("div", { className: "wxq-msg" }, q.phase === "scaned" ? tr("wxq.scaned") : tr("wxq.waiting"))
+          );
+        return h(
+          "div",
+          { key: "wxq", className: "wxq-ov", onClick: function (e) { if (e.target === e.currentTarget) wxClose(); } },
+          h(
+            "div",
+            { className: "wxq-box" },
+            h("div", { className: "wxq-hd" }, tr("wxq.title")),
+            h("div", { className: "wxq-sub" }, tr("wxq.hint")),
+            body,
+            h("button", { className: "bbtn", style: { marginTop: 2 }, onClick: wxClose }, tr("wxq.close"))
+          )
+        );
+      }
       function load() {
         Promise.all([
           fetch("/portal/api/panel/skills", { headers: { accept: "application/json" } }).then(function (r) {
@@ -3630,7 +3751,10 @@ body.desk-panel-open [class*="sidebarCol"] { transform: none !important; }
       function toggle() {
         var next = !open;
         setOpen(next);
-        if (!next) setDet({ phase: "none", id: "", name: "", content: "" });
+        if (!next) {
+          setDet({ phase: "none", id: "", name: "", content: "" });
+          wxClose();
+        }
       }
 
       function viewSkill(sh) {
@@ -3739,7 +3863,10 @@ body.desk-panel-open [class*="sidebarCol"] { transform: none !important; }
           var meta = PLAT_META[p.id] || { i: "link", c: "#aeb7c6" };
           var acts = [];
           var editing = isAdmin && p.mode !== "plan" && cs.form === formKey(p);
-          if (isAdmin && p.mode !== "plan") {
+          var isWxMine = p.id === "wx-mine";
+          if (isWxMine) {
+            acts.push(h("button", { key: "a", className: "bbtn" + (p.connected ? "" : " pri"), onClick: openWxBind, disabled: cs.busy }, p.connected ? tr("wxq.reconnect") : tr("wxq.connect")));
+          } else if (isAdmin && p.mode !== "plan") {
             if (editing) {
               acts.push(h("button", { key: "a", className: "bbtn pri", onClick: p.mode === "notify" ? cAdd : cConnSave, disabled: cs.busy }, tr("skl.save")));
               acts.push(h("button", { key: "c", className: "bbtn", onClick: function () { cset({ form: "", name: "", target: "", msg: "", msgKind: "" }); } }, tr("th.cancel")));
@@ -3755,7 +3882,8 @@ body.desk-panel-open [class*="sidebarCol"] { transform: none !important; }
             }
           }
           var stat;
-          if (p.mode === "plan") stat = tr("skl.planTag");
+          if (isWxMine) stat = p.connected ? tr("skl.connected") : tr("skl.notConnected");
+          else if (p.mode === "plan") stat = tr("skl.planTag");
           else if (p.mode === "conn") stat = p.connected ? tr("skl.connected") : tr("skl.notConnected");
           else stat = isAdmin && p.connected && p.routes > 0 ? p.routesEnabled + tr("skl.routesUnit") + " · " + tr("skl.connected") : p.connected ? tr("skl.connected") : tr("skl.notConnected");
           return h(
@@ -3807,6 +3935,7 @@ body.desk-panel-open [class*="sidebarCol"] { transform: none !important; }
         kids.push(h("div", { key: "crows", className: "list" }, crows.length ? crows : h("div", { className: "empty" }, tr("skl.noConn"))));
         kids.push(h("div", { key: "ctip", className: "ft" }, tr("skl.legend")));
       }
+      if (wxq) kids.push(wxqModal());
       return h(
         "div",
         null,
