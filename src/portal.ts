@@ -23,7 +23,7 @@ import { collectConnectors, collectPlatforms, collectPresets, collectSkills, rea
 import { CONN_PLATFORMS, getConn, removeConn, setConn, testConn, validateConnConfig } from './conns.ts'
 import { collectOps } from './ops.ts'
 import { addTimer, autoStats, ensureRuleRows, listAutoLog, listAutos, removeAuto, toggleAuto, RULE_CATALOG, ruleEnabled } from './auto.ts'
-import { runAutoNow } from './auto-exec.ts'
+import { runAutoNow, runQuickAgent, runQuickNotify } from './auto-exec.ts'
 
 /** 请求语言：?lang=en 时为英文（由工作台客户端带过来），默认中文 */
 const langOf = (req: { url?: string }): string => {
@@ -1237,7 +1237,8 @@ export function startPortal(opts: PortalOptions) {
         (path === '/portal/api/auto/add' ||
           path === '/portal/api/auto/rm' ||
           path === '/portal/api/auto/toggle' ||
-          path === '/portal/api/auto/run')
+          path === '/portal/api/auto/run' ||
+          path === '/portal/api/auto/quick')
       ) {
         if (!user) {
           res.writeHead(401, { 'content-type': 'application/json' })
@@ -1269,6 +1270,54 @@ export function startPortal(opts: PortalOptions) {
           const r = runAutoNow(db, viewer, Number(ab.id ?? 0))
           res.writeHead(200, { 'content-type': 'application/json; charset=utf-8' })
           return res.end(JSON.stringify(r))
+        }
+        if (path === '/portal/api/auto/quick') {
+          const kind = String(ab.kind ?? '')
+          const reply = (obj: Record<string, unknown>): void => {
+            res.writeHead(200, { 'content-type': 'application/json; charset=utf-8' })
+            res.end(JSON.stringify(obj))
+          }
+          if (kind === 'briefing') {
+            const r = await runQuickAgent(
+              db,
+              user.username,
+              L(langOf(req), '今日简报', 'Daily briefing'),
+              L(
+                langOf(req),
+                '把今天（截至现在）我在工作台里的会话要点与进展汇总成一份简报，5 条以内，直接输出内容本身，不要多余客套。',
+                "Summarize today's key points and progress from my workspace sessions into a briefing of at most 5 bullets. Output the content itself, no pleasantries.",
+              ),
+            )
+            return reply(
+              'error' in r
+                ? { error: r.error }
+                : {
+                    ok: true,
+                    msg: L(
+                      langOf(req),
+                      '已开始：助理正在汇总，跑完会自动推到通知通道（见执行记录）',
+                      'Started — the assistant is summarizing; results will be pushed to your channels (see run history).',
+                    ),
+                  },
+            )
+          }
+          if (kind === 'progress') {
+            const rows = db.prepare(`SELECT status, COUNT(*) AS c FROM tasks GROUP BY status`).all() as unknown as { status: string; c: number }[]
+            const by: Record<string, number> = {}
+            for (const r2 of rows) by[r2.status] = r2.c
+            const pending = db.prepare(`SELECT id, title FROM tasks WHERE review_state = 'submitted' ORDER BY id`).all() as unknown as { id: number; title: string }[]
+            const text = `${L(langOf(req), '任务进度', 'Task progress')}：${L(langOf(req), '待办', 'todo')} ${by['todo'] ?? 0} · ${L(langOf(req), '进行中', 'doing')} ${by['doing'] ?? 0} · ${L(langOf(req), '已完成', 'done')} ${by['done'] ?? 0}${pending.length ? '；' + L(langOf(req), '待验收', 'awaiting review') + '：' + pending.map((t2) => `#${t2.id} ${t2.title}`).join('、') : ''}`
+            const r = await runQuickNotify(db, L(langOf(req), '任务进度汇总', 'Task progress digest'), L(langOf(req), '任务进度', 'Task progress'), text)
+            return reply(r.ok ? { ok: true, msg: text } : { error: r.info + '：' + text })
+          }
+          if (kind === 'remind') {
+            if (String(user.role) !== 'admin') return reply({ error: L(langOf(req), '给全员发提醒仅管理员可用', 'Admin only') })
+            const text = String(ab.text ?? '').trim().slice(0, 600)
+            if (!text) return reply({ error: L(langOf(req), '内容不能为空', 'Message cannot be empty') })
+            const r = await runQuickNotify(db, L(langOf(req), '全员提醒', 'Team reminder'), L(langOf(req), '团队提醒', 'Team reminder'), text)
+            return reply(r.ok ? { ok: true, msg: L(langOf(req), '已发送', 'Sent') } : { error: r.info })
+          }
+          return reply({ error: 'unknown quick kind' })
         }
         const r = toggleAuto(db, viewer, Number(ab.id ?? 0))
         res.writeHead(200, { 'content-type': 'application/json; charset=utf-8' })

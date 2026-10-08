@@ -342,8 +342,60 @@ window.__ModuleLoader__.load({
       "skl.panelTitle": "技能库全文 + 连接器状态",
       "auto.phTime": "时间格式：10:00 / 明天 09:00 / 09-22 10:00 / +30m",
       "auto.added": "已添加：到点会推送提醒（微信/Webhook 通道）",
-      "auto.title": "自动化：定时提醒与团队自动化",
+      "auto.title": "自动化：定时任务、触发规则与快捷动作",
       "auto.tab": "自动化",
+      "auto.statActive": "进行中",
+      "auto.statWeek": "本周执行",
+      "auto.statFails": "近 7 天失败",
+      "auto.statNext": "下次运行",
+      "auto.fAll": "全部",
+      "auto.fTimer": "定时任务",
+      "auto.fRule": "触发规则",
+      "auto.fPaused": "已暂停",
+      "auto.secMine": "我的自动化",
+      "auto.secQuick": "快捷动作 · 现在就干",
+      "auto.secNew": "新建自动化",
+      "auto.secLogs": "执行记录",
+      "auto.runNow": "立即运行",
+      "auto.rm": "删除",
+      "auto.confirmDel": "删除这条自动化？",
+      "auto.runStarted": "已开始执行，稍后见执行记录",
+      "auto.ruleAdminHint": "团队规则只有管理员能改",
+      "auto.byAgent": "让助理",
+      "auto.next": "下次",
+      "auto.last": "上次",
+      "auto.runs": "已执行",
+      "auto.runsUnit": " 次",
+      "auto.today": "今天",
+      "auto.tomorrow": "明天",
+      "auto.empty": "还没有自动化——下面新建一个",
+      "auto.defaultName": "定时任务",
+      "auto.badTime": "请先选择时间",
+      "auto.qBriefing": "立即生成今日简报",
+      "auto.qBriefingSub": "汇总今天的会话要点，跑完推送",
+      "auto.qProgress": "汇总任务进度",
+      "auto.qProgressSub": "任务板进度自动成稿并推送",
+      "auto.qRemind": "给全员发提醒",
+      "auto.qRemindSub": "说一句话，全员收到",
+      "auto.qRemindPh": "要发给全员的话…",
+      "auto.qSend": "发送",
+      "auto.tabTimer": "⏰ 定时",
+      "auto.tabOne": "💬 一句话创建",
+      "auto.kindNotify": "发一条通知",
+      "auto.kindAgent": "让助理干活",
+      "auto.formNamePh": "名称（如：每天早报）",
+      "auto.formNotifyPh": "到点要发送的内容…",
+      "auto.formPromptPh": "给助理的指令，如：汇总昨天各成员进展，5 条以内",
+      "auto.everyDay": "每天",
+      "auto.everyWeek": "每周",
+      "auto.save": "保存并启用",
+      "auto.saved": "已保存并启用",
+      "auto.onePh": "用一句话描述，如：每天早上九点，把昨天进展汇总成 5 条发我",
+      "auto.oneParse": "解析并创建",
+      "auto.oneFail": "没识别出时间。请写成「每天 09:00」「每周一 9 点」这样",
+      "auto.ruleNote": "触发规则为内建（上方卡片可启停）；更多规则陆续开放",
+      "auto.logsEmpty": "还没有执行记录",
+      "auto.footNote": "到点由工作台自动执行；「让助理干活」的结果会自动推送到通知通道。",
       "auto.pending": "待发送提醒（",
       "auto.emptyPending": "还没有待发送的提醒。",
       "auto.phTime2": "10:00 / +30m / 明天 09:00",
@@ -352,7 +404,7 @@ window.__ModuleLoader__.load({
       "auto.hintAdmin": "到点由通知桥推送微信。也可以直接对助理说：提醒我 明天 09:00 开会。",
       "auto.hintMember": "成员可见提醒列表；新增 / 删除请找管理员，或直接对助理说：提醒我 明天 09:00 开会。",
       "auto.recent": "最近已发送",
-      "auto.panelTitle": "定时提醒与团队自动化",
+      "auto.panelTitle": "定时任务 · 触发规则 · 一键动作",
       "sess.tab": "会话",
       "sess.notStarted": " · 未开始",
       "sess.pending": "⏳ 待审批",
@@ -783,8 +835,60 @@ window.__ModuleLoader__.load({
       "skl.panelTitle": "Skill library full text + connector status",
       "auto.phTime": "Time format: 10:00 / tomorrow 09:00 / 09-22 10:00 / +30m",
       "auto.added": "Added — the reminder is pushed at the set time (WeChat/Webhook channels)",
-      "auto.title": "Automation: reminders & team automation",
+      "auto.title": "Automation: tasks, rules & quick actions",
       "auto.tab": "Automation",
+      "auto.statActive": "Active",
+      "auto.statWeek": "Runs · 7d",
+      "auto.statFails": "Failed · 7d",
+      "auto.statNext": "Next run",
+      "auto.fAll": "All",
+      "auto.fTimer": "Scheduled",
+      "auto.fRule": "Event rules",
+      "auto.fPaused": "Paused",
+      "auto.secMine": "My automations",
+      "auto.secQuick": "Quick actions",
+      "auto.secNew": "New automation",
+      "auto.secLogs": "Run history",
+      "auto.runNow": "Run now",
+      "auto.rm": "Delete",
+      "auto.confirmDel": "Delete this automation?",
+      "auto.runStarted": "Started — see run history soon",
+      "auto.ruleAdminHint": "Team rules are admin-only",
+      "auto.byAgent": "Assistant",
+      "auto.next": "Next",
+      "auto.last": "Last",
+      "auto.runs": "Runs",
+      "auto.runsUnit": "",
+      "auto.today": "Today",
+      "auto.tomorrow": "Tomorrow",
+      "auto.empty": "Nothing yet — create one below",
+      "auto.defaultName": "Scheduled task",
+      "auto.badTime": "Pick a time first",
+      "auto.qBriefing": "Today's briefing now",
+      "auto.qBriefingSub": "Summarize today's sessions, push when done",
+      "auto.qProgress": "Task progress digest",
+      "auto.qProgressSub": "Digest built and pushed",
+      "auto.qRemind": "Remind everyone",
+      "auto.qRemindSub": "One line to the whole team",
+      "auto.qRemindPh": "Message for the team…",
+      "auto.qSend": "Send",
+      "auto.tabTimer": "⏰ Schedule",
+      "auto.tabOne": "💬 One sentence",
+      "auto.kindNotify": "Send a notification",
+      "auto.kindAgent": "Ask an assistant",
+      "auto.formNamePh": "Name (e.g. Daily briefing)",
+      "auto.formNotifyPh": "Text to send at the scheduled time…",
+      "auto.formPromptPh": "Instruction for the assistant…",
+      "auto.everyDay": "Daily",
+      "auto.everyWeek": "Weekly",
+      "auto.save": "Save & enable",
+      "auto.saved": "Saved & enabled",
+      "auto.onePh": "One sentence, e.g. Every day at 9, summarize progress into 5 bullets",
+      "auto.oneParse": "Parse & create",
+      "auto.oneFail": "Couldn't detect a time — try \"daily 09:00\" or \"Mon 9\"",
+      "auto.ruleNote": "Event rules are built-in (toggle above); more coming",
+      "auto.logsEmpty": "No runs yet",
+      "auto.footNote": "Runs on schedule; assistant results are pushed to your channels.",
       "auto.pending": "Pending reminders (",
       "auto.emptyPending": "No pending reminders.",
       "auto.phTime2": "10:00 / +30m / tomorrow 09:00",
@@ -793,7 +897,7 @@ window.__ModuleLoader__.load({
       "auto.hintAdmin": "Pushed through the notification bridge at the set time. You can also just tell an assistant: remind me tomorrow 09:00 meeting.",
       "auto.hintMember": "Members can view the reminder list; ask an admin to add / remove, or tell an assistant: remind me tomorrow 09:00 meeting.",
       "auto.recent": "Recently sent",
-      "auto.panelTitle": "Reminders & team automation",
+      "auto.panelTitle": "Scheduled tasks · event rules · quick actions",
       "sess.tab": "Sessions",
       "sess.notStarted": " · not started",
       "sess.pending": "⏳ Pending approval",
@@ -1085,6 +1189,58 @@ body.desk-panel-open [class*="sidebarCol"] { transform: none !important; }
   .ddp .hd .x { width:44px; height:44px; font-size:19px; opacity:1; background:rgba(127,127,127,.16); border-radius:12px; touch-action:manipulation; }
   .ddp .hd .x:active { background:rgba(127,127,127,.32); }
   .ddp::after { content:""; position:fixed; left:0; top:0; right:0; bottom:0; background:rgba(6,10,14,.34); pointer-events:none; z-index:-1; }
+}
+
+/* —— 自动化面板（v2：卡片列表/快捷动作/表单/记录） —— */
+.ddp .astats { display:grid; grid-template-columns:repeat(4, 1fr); gap:8px; margin:10px 0 4px; }
+.ddp .astat { border:1px solid var(--dsw-alias-border-l2, #e4e6eb); border-radius:11px; padding:9px 11px; background:var(--dsw-alias-bg-layer-2, #fff); min-width:0; }
+.ddp .astat b { display:block; font-size:14.5px; font-weight:680; line-height:1.35; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.ddp .astat span { font-size:11px; color:var(--dsw-alias-label-tertiary, #8a8f98); }
+.ddp .achips { display:flex; gap:6px; flex-wrap:wrap; margin:8px 0 2px; }
+.ddp .achip { border:1px solid var(--dsw-alias-border-l2, #d4d7dc); background:transparent; color:var(--dsw-alias-label-secondary, #5f6570); border-radius:999px; padding:4px 12px; font-size:12px; cursor:pointer; font-family:inherit; }
+.ddp .achip.on { background:rgba(79,124,247,.13); border-color:rgba(79,124,247,.5); color:#4f7cf7; font-weight:600; }
+.ddp .acard { display:flex; gap:10px; border:1px solid var(--dsw-alias-border-l2, #e4e6eb); border-radius:12px; padding:11px 12px; background:var(--dsw-alias-bg-layer-2, #fff); margin-top:8px; }
+.ddp .acard.off { opacity:.62; }
+.ddp .acard .atile { width:32px; height:32px; border-radius:9px; display:flex; align-items:center; justify-content:center; background:var(--dsw-alias-bg-base, #f2f3f5); color:#4f7cf7; flex:0 0 auto; }
+.ddp .acard.rule .atile { color:#e8a33d; }
+.ddp .acard .am { flex:1; min-width:0; }
+.ddp .acard .an { font-weight:640; font-size:13.5px; }
+.ddp .acard .ad { font-size:12.5px; color:var(--dsw-alias-label-secondary, #5f6570); margin-top:4px; line-height:1.6; }
+.ddp .acard .ameta { font-size:11.5px; color:var(--dsw-alias-label-tertiary, #8a8f98); margin-top:6px; display:flex; gap:8px; flex-wrap:wrap; align-items:center; }
+.ddp .acard .ameta .dot { margin-top:0; }
+.ddp .acard .ar { display:flex; flex-direction:column; align-items:flex-end; gap:7px; flex:0 0 auto; }
+.ddp .acard .abtns { display:flex; gap:5px; }
+.ddp .achip2 { font-size:11px; border-radius:999px; padding:2px 8px; background:rgba(127,127,127,.10); color:var(--dsw-alias-label-secondary, #5f6570); }
+.ddp .achip2.blue { background:rgba(79,124,247,.12); color:#4f7cf7; }
+.ddp .achip2.amber { background:rgba(232,163,61,.16); color:#b57a12; }
+.ddp .atg { width:40px; height:22px; border-radius:999px; border:1px solid var(--dsw-alias-border-l2, #d4d7dc); background:rgba(127,127,127,.14); position:relative; cursor:pointer; flex:0 0 auto; padding:0; transition:background .16s; }
+.ddp .atg::after { content:""; position:absolute; top:2px; left:2px; width:16px; height:16px; border-radius:50%; background:#fff; box-shadow:0 1px 2px rgba(0,0,0,.25); transition:left .16s; }
+.ddp .atg.on { background:#4f7cf7; border-color:#4f7cf7; }
+.ddp .atg.on::after { left:20px; }
+.ddp .aqs { display:grid; grid-template-columns:repeat(2, 1fr); gap:8px; margin-top:8px; }
+.ddp .aq { display:flex; gap:9px; align-items:center; text-align:left; border:1px solid var(--dsw-alias-border-l2, #e4e6eb); border-radius:11px; background:var(--dsw-alias-bg-layer-2, #fff); padding:9px 11px; cursor:pointer; font-family:inherit; color:inherit; }
+.ddp .aq:hover { border-color:rgba(79,124,247,.45); }
+.ddp .aq .atile { width:30px; height:30px; border-radius:8px; background:var(--dsw-alias-bg-base, #f2f3f5); display:flex; align-items:center; justify-content:center; color:#4f7cf7; flex:0 0 auto; }
+.ddp .aq .t { font-size:13px; font-weight:620; }
+.ddp .aq .d2 { font-size:11.5px; color:var(--dsw-alias-label-tertiary, #8a8f98); margin-top:2px; }
+.ddp .aform { border:1px solid var(--dsw-alias-border-l2, #e4e6eb); border-radius:12px; background:var(--dsw-alias-bg-layer-2, #fff); padding:12px 13px; margin-top:8px; }
+.ddp .aform .row { margin-top:8px; }
+.ddp .alogs { border:1px solid var(--dsw-alias-border-l2, #e4e6eb); border-radius:12px; background:var(--dsw-alias-bg-layer-2, #fff); padding:4px 12px; margin-top:8px; }
+.ddp .alog { display:flex; align-items:center; gap:8px; padding:8px 0; border-bottom:1px solid var(--dsw-alias-border-l2, #eceef1); font-size:12.5px; flex-wrap:wrap; }
+.ddp .alog:last-child { border-bottom:0; }
+.ddp .alog .dot { margin-top:0; }
+.ddp .alog .nm { font-weight:600; }
+.ddp .alog .inf { color:var(--dsw-alias-label-secondary, #5f6570); }
+.ddp .alog .tm { color:var(--dsw-alias-label-tertiary, #8a8f98); font-size:11.5px; margin-left:auto; }
+.ddp select.inp { padding:0 6px; }
+@media (max-width: 820px) {
+  .ddp .astats { grid-template-columns:repeat(2, 1fr); }
+  .ddp .aqs { grid-template-columns:1fr; }
+  .ddp .acard { flex-wrap:wrap; }
+  .ddp .acard .ar { flex-direction:row; width:100%; align-items:center; justify-content:space-between; }
+  .ddp .atg { width:46px; height:26px; }
+  .ddp .atg::after { width:20px; height:20px; }
+  .ddp .atg.on::after { left:22px; }
 }
 `;
     (function () {
@@ -2644,6 +2800,12 @@ body.desk-panel-open [class*="sidebarCol"] { transform: none !important; }
       phone: ["M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72c.127.96.361 1.903.7 2.81a2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45c.907.339 1.85.573 2.81.7A2 2 0 0 1 22 16.92z"],
       link: ["M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71", "M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"],
       briefcase: ["M16 20V4a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16", "rect|2,6,20,14,2"],
+      clock: ["circle|12,12,9", "M12 7v5l3 2"],
+      zap: ["M13 2 4 14h6l-1 8 9-12h-6l1-8z"],
+      play: ["M7 4.2 19 12 7 19.8Z"],
+      trash: ["M4 7h16", "M9.5 7V5a1 1 0 0 1 1-1h3a1 1 0 0 1 1 1v2", "M6.5 7l1 13h9l1-13"],
+      plus: ["M12 5v14", "M5 12h14"],
+      chart: ["M3 3v18h18", "M7 14l4-4 3 3 5-6"],
     };
     function dicon(name, size) {
       var list = DESK_ICONS[name] || [];
@@ -3666,7 +3828,7 @@ body.desk-panel-open [class*="sidebarCol"] { transform: none !important; }
 
     function AutomationPanel(props) {
       var wide = !!(props && props.wide);
-      var aPair = React.useState({ phase: "loading", role: "member", reminders: [], recent: [] });
+      var aPair = React.useState({ phase: "loading", role: "member", items: [], logs: [], stats: { active: 0, weekRuns: 0, weekFails: 0 }, rules: [] });
       var st = aPair[0];
       var setSt = aPair[1];
       var oPair = React.useState(false);
@@ -3676,25 +3838,59 @@ body.desk-panel-open [class*="sidebarCol"] { transform: none !important; }
       var mPair = React.useState({ kind: "", text: "" });
       var msg = mPair[0];
       var setMsg = mPair[1];
-      var wRef = React.useRef(null);
-      var tRef = React.useRef(null);
+      var langTick = useLocaleSignal();
+      var fPair = React.useState("all");
+      var flt = fPair[0];
+      var setFlt = fPair[1];
+      var tabPair = React.useState("timer");
+      var tab = tabPair[0];
+      var setTab = tabPair[1];
+      var fmPair = React.useState({ name: "", freq: "daily", time: "09:00", week: "1", kind: "notify", ntext: "", agent: "", one: "" });
+      var fm = fmPair[0];
+      var setFm = fmPair[1];
+      var rqPair = React.useState({ open: false, text: "" });
+      var rq = rqPair[0];
+      var setRq = rqPair[1];
+
+      function fs(patch) {
+        setFm(function (prev) {
+          var next = {};
+          for (var k in prev) next[k] = prev[k];
+          for (var k2 in patch) next[k2] = patch[k2];
+          return next;
+        });
+      }
 
       function load() {
-        fetch("/portal/api/panel/auto", { headers: { accept: "application/json" } })
+        fetch("/portal/api/auto", { headers: { accept: "application/json" } })
           .then(function (r) {
             if (!r.ok) throw new Error("HTTP " + r.status);
             return r.json();
           })
           .then(function (d) {
-            setSt({ phase: "ready", role: (d && d.role) || "member", reminders: (d && d.reminders) || [], recent: (d && d.recent) || [] });
+            setSt({
+              phase: "ready",
+              role: (d && d.role) || "member",
+              items: (d && d.items) || [],
+              logs: (d && d.logs) || [],
+              stats: (d && d.stats) || { active: 0, weekRuns: 0, weekFails: 0 },
+              rules: (d && d.rules) || [],
+            });
           })
           .catch(function () {
-            setSt({ phase: "error", role: "member", reminders: [], recent: [] });
+            setSt({ phase: "error", role: "member", items: [], logs: [], stats: { active: 0, weekRuns: 0, weekFails: 0 }, rules: [] });
           });
       }
       React.useEffect(function () {
-        load();
-      }, []);
+        if (open) load();
+      }, [langTick, open]);
+      React.useEffect(function () {
+        if (!open) return undefined;
+        var t = setInterval(load, 20000);
+        return function () {
+          clearInterval(t);
+        };
+      }, [open]);
 
       function toggle() {
         var next = !open;
@@ -3702,40 +3898,7 @@ body.desk-panel-open [class*="sidebarCol"] { transform: none !important; }
         if (next) load();
       }
 
-      function fmtEp(sec) {
-        var d = new Date(Number(sec) * 1000);
-        if (isNaN(d.getTime())) return "";
-        function p2(x) {
-          return (x < 10 ? "0" : "") + x;
-        }
-        return p2(d.getMonth() + 1) + "-" + p2(d.getDate()) + " " + p2(d.getHours()) + ":" + p2(d.getMinutes());
-      }
-
-      function parseWhen(s) {
-        s = String(s || "").trim();
-        var now = new Date();
-        var m;
-        if ((m = /^\+(\d{1,4})\s*m(in)?$/i.exec(s))) return Math.floor(Date.now() / 1000) + Number(m[1]) * 60;
-        if ((m = /^\+(\d{1,3})\s*h(our|r)?$/i.exec(s))) return Math.floor(Date.now() / 1000) + Number(m[1]) * 3600;
-        if ((m = /^明天\s*(\d{1,2}):(\d{2})$/.exec(s))) {
-          var t1 = new Date(now.getFullYear(), now.getMonth(), now.getDate() + 1, Number(m[1]), Number(m[2]), 0, 0);
-          return Math.floor(t1.getTime() / 1000);
-        }
-        if ((m = /^(\d{1,2}):(\d{2})$/.exec(s))) {
-          var t2 = new Date(now.getFullYear(), now.getMonth(), now.getDate(), Number(m[1]), Number(m[2]), 0, 0);
-          if (t2.getTime() <= Date.now()) t2 = new Date(t2.getTime() + 86400000);
-          return Math.floor(t2.getTime() / 1000);
-        }
-        if ((m = /^(\d{1,2})-(\d{1,2})\s+(\d{1,2}):(\d{2})$/.exec(s))) {
-          var t3 = new Date(now.getFullYear(), Number(m[1]) - 1, Number(m[2]), Number(m[3]), Number(m[4]), 0, 0);
-          if (isNaN(t3.getTime())) return 0;
-          if (t3.getTime() <= Date.now()) t3 = new Date(now.getFullYear() + 1, Number(m[1]) - 1, Number(m[2]), Number(m[3]), Number(m[4]), 0, 0);
-          return Math.floor(t3.getTime() / 1000);
-        }
-        return 0;
-      }
-
-      function post(path, body, okText) {
+      function act(path, body, okText, after) {
         setMsg({ kind: "info", text: tr("common.processing") });
         fetch(path, { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify(body) })
           .then(function (r) {
@@ -3744,13 +3907,13 @@ body.desk-panel-open [class*="sidebarCol"] { transform: none !important; }
             });
           })
           .then(function (res) {
-            if (res.status !== 200) {
-              setMsg({ kind: "err", text: (res.d && res.d.error) || "HTTP " + res.status });
+            var d = res.d || {};
+            if (res.status !== 200 || d.error) {
+              setMsg({ kind: "err", text: d.error || "HTTP " + res.status });
               return;
             }
-            setMsg({ kind: "ok", text: okText });
-            if (wRef.current) wRef.current.value = "";
-            if (tRef.current) tRef.current.value = "";
+            setMsg({ kind: "ok", text: okText || d.msg || "OK" });
+            if (after) after();
             load();
           })
           .catch(function (e) {
@@ -3758,19 +3921,92 @@ body.desk-panel-open [class*="sidebarCol"] { transform: none !important; }
           });
       }
 
-      function add() {
-        var text = tRef.current ? tRef.current.value : "";
-        if (!String(text).trim()) {
-          setMsg({ kind: "err", text: tr("common.required") });
-          return;
-        }
-        var at = parseWhen(wRef.current ? wRef.current.value : "");
-        if (!at) {
-          setMsg({ kind: "err", text: tr("auto.phTime") });
-          return;
-        }
-        post("/portal/api/admin/reminders/add", { at_epoch: at, text: text }, tr("auto.added"));
+      function p2(x) {
+        return (x < 10 ? "0" : "") + x;
       }
+      function wkName(d) {
+        var zh = ["一", "二", "三", "四", "五", "六", "日"];
+        var en = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
+        if (deskLang() === "en") return en[(d - 1 + 7) % 7];
+        return "周" + zh[(d - 1 + 7) % 7];
+      }
+      function fmtSched(sv) {
+        sv = String(sv || "");
+        var m = /^daily:(\d{2}):(\d{2})$/.exec(sv);
+        if (m) return tr("auto.everyDay") + " " + m[1] + ":" + m[2];
+        m = /^weekly:([1-7]):(\d{2}):(\d{2})$/.exec(sv);
+        if (m) return tr("auto.everyWeek") + wkName(Number(m[1])) + " " + m[2] + ":" + m[3];
+        return sv;
+      }
+      function fmtNext(sec) {
+        if (!sec) return "—";
+        var d = new Date(Number(sec) * 1000);
+        if (isNaN(d.getTime())) return "—";
+        var now = new Date();
+        var hm = p2(d.getHours()) + ":" + p2(d.getMinutes());
+        if (d.getFullYear() === now.getFullYear() && d.getMonth() === now.getMonth() && d.getDate() === now.getDate()) return tr("auto.today") + " " + hm;
+        if (d.getTime() - now.getTime() < 86400000) return tr("auto.tomorrow") + " " + hm;
+        return p2(d.getMonth() + 1) + "-" + p2(d.getDate()) + " " + hm;
+      }
+      function fmtTs(ts) {
+        var m = /^(\d{4})-(\d{2})-(\d{2})[ T](\d{2}):(\d{2})/.exec(String(ts || ""));
+        if (!m) return String(ts || "");
+        var d = new Date(Date.UTC(Number(m[1]), Number(m[2]) - 1, Number(m[3]), Number(m[4]), Number(m[5])));
+        if (isNaN(d.getTime())) return String(ts || "");
+        return p2(d.getMonth() + 1) + "-" + p2(d.getDate()) + " " + p2(d.getHours()) + ":" + p2(d.getMinutes());
+      }
+      function ruleLabel(it) {
+        var r = (st.rules || []).filter(function (x) {
+          return x.key === it.trigger;
+        })[0];
+        if (!r) return it.name;
+        return deskLang() === "en" ? r.en || it.name : r.zh || it.name;
+      }
+      function actionOf(it) {
+        try {
+          return JSON.parse(it.action || "{}") || {};
+        } catch (e) {
+          return {};
+        }
+      }
+
+      function parseOne() {
+        var one = String(fm.one || "").trim();
+        if (!one) return null;
+        var CN = { 零: 0, 一: 1, 两: 2, 二: 2, 三: 3, 四: 4, 五: 5, 六: 6, 七: 7, 八: 8, 九: 9, 十: 10, 十一: 11, 十二: 12 };
+        function num(x) {
+          if (/^\d+$/.test(x)) return Number(x);
+          return CN[x] != null ? CN[x] : NaN;
+        }
+        var week = null;
+        var m = /每(?:周|星期)([一二三四五六日天])/.exec(one);
+        if (m) week = ("一二三四五六日天".indexOf(m[1]) % 7) + 1;
+        var hh = null;
+        var mm = 0;
+        m = /(\d{1,2})[:：](\d{2})/.exec(one);
+        if (m) {
+          hh = Number(m[1]);
+          mm = Number(m[2]);
+        } else {
+          m = /([零一二两三四五六七八九十]{1,3}|\d{1,2})\s*[点时]/.exec(one);
+          if (m) {
+            hh = num(m[1]);
+            var m2 = /[点时]\s*(半|\d{1,2}\s*分?)/.exec(one);
+            if (m2) mm = m2[1] === "半" ? 30 : Number(String(m2[1]).replace(/\D/g, "") || 0);
+          }
+        }
+        if (hh == null || isNaN(hh) || hh > 23) return null;
+        if (/[下午晚]/.test(one) && hh < 12) hh += 12;
+        if (mm > 59) mm = 0;
+        if (!week && !/每[天日]/.test(one)) return null;
+        var t = p2(hh) + ":" + p2(mm);
+        return { schedule: week ? "weekly:" + week + ":" + t : "daily:" + t, name: one.slice(0, 20), prompt: one };
+      }
+
+      var nextAuto = null;
+      st.items.forEach(function (it) {
+        if (it.type === "timer" && it.enabled && it.next_run_at && (!nextAuto || it.next_run_at < nextAuto)) nextAuto = it.next_run_at;
+      });
 
       var trigger = h(
         "button",
@@ -3784,61 +4020,269 @@ body.desk-panel-open [class*="sidebarCol"] { transform: none !important; }
       if (st.phase === "loading") kids.push(h("div", { key: "ld", className: "empty" }, tr("common.loading")));
       if (st.phase === "error") kids.push(h("div", { key: "er", className: "empty" }, tr("common.failHint")));
       if (st.phase === "ready") {
-        kids.push(h("div", { key: "sub", className: "lb" }, tr("auto.pending") + st.reminders.length + ")"));
-        if (!st.reminders.length) kids.push(h("div", { key: "nr", className: "empty" }, tr("auto.emptyPending")));
-        var rows = [];
-        st.reminders.forEach(function (r) {
-          rows.push(
+        var isAdmin = st.role === "admin";
+        kids.push(
+          h(
+            "div",
+            { key: "stats", className: "astats" },
+            h("div", { key: "s1", className: "astat" }, h("b", null, String(st.stats.active || 0)), h("span", null, tr("auto.statActive"))),
+            h("div", { key: "s2", className: "astat" }, h("b", null, String(st.stats.weekRuns || 0)), h("span", null, tr("auto.statWeek"))),
+            h("div", { key: "s3", className: "astat" }, h("b", null, String(st.stats.weekFails || 0)), h("span", null, tr("auto.statFails"))),
+            h("div", { key: "s4", className: "astat" }, h("b", null, fmtNext(nextAuto)), h("span", null, tr("auto.statNext")))
+          )
+        );
+        var FILTERS = [["all", tr("auto.fAll")], ["timer", tr("auto.fTimer")], ["rule", tr("auto.fRule")], ["paused", tr("auto.fPaused")]];
+        kids.push(
+          h(
+            "div",
+            { key: "flt", className: "achips" },
+            FILTERS.map(function (f2) {
+              return h("button", { key: f2[0], className: "achip" + (flt === f2[0] ? " on" : ""), onClick: function () { setFlt(f2[0]); } }, f2[1]);
+            })
+          )
+        );
+        var shown = st.items.filter(function (it) {
+          if (flt === "all") return true;
+          if (flt === "paused") return !it.enabled;
+          return it.type === flt;
+        });
+        var cards = shown.map(function (it) {
+          var isRule = it.type === "rule";
+          var a = actionOf(it);
+          var rl = isRule ? ruleLabel(it) : "";
+          var desc = isRule ? (rl === it.name ? "" : rl) : a.kind === "agent" ? tr("auto.byAgent") + "：" + (a.prompt || "") : a.text || "";
+          var meta = [];
+          if (it.type === "timer") {
+            meta.push(h("span", { key: "m1", className: "achip2 blue" }, fmtSched(it.schedule)));
+            meta.push(h("span", { key: "m2" }, tr("auto.next") + " " + fmtNext(it.next_run_at)));
+            if (it.last_run_at) meta.push(h("span", { key: "m3" }, tr("auto.last") + " " + fmtTs(it.last_run_at)));
+            meta.push(h("span", { key: "m4" }, tr("auto.runs") + " " + (it.runs || 0) + tr("auto.runsUnit")));
+          } else {
+            meta.push(h("span", { key: "m1", className: "achip2 amber" }, tr("auto.fRule")));
+            if (!isAdmin) meta.push(h("span", { key: "m2" }, tr("auto.ruleAdminHint")));
+          }
+          var btns = [];
+          if (it.type === "timer") {
+            btns.push(h("button", { key: "run", className: "mini", onClick: function () { act("/portal/api/auto/run", { id: it.id }, tr("auto.runStarted")); } }, tr("auto.runNow")));
+            btns.push(
+              h(
+                "button",
+                {
+                  key: "rm",
+                  className: "mini",
+                  onClick: function () {
+                    if (!window.confirm(tr("auto.confirmDel"))) return;
+                    act("/portal/api/auto/rm", { id: it.id }, tr("common.deleted"));
+                  },
+                },
+                tr("auto.rm")
+              )
+            );
+          }
+          return h(
+            "div",
+            { key: "a" + it.id, className: "acard" + (it.enabled ? "" : " off") + (isRule ? " rule" : "") },
+            h("span", { className: "atile" }, dicon(isRule ? "zap" : "clock", 16)),
+            h("div", { className: "am" }, h("div", { className: "an" }, it.name), desc ? h("div", { className: "ad" }, desc) : null, h("div", { className: "ameta" }, meta)),
             h(
               "div",
-              { key: "r" + r.id, className: "it" },
-              h("span", { className: "ico2" }, "⏰"),
-              h(
-                "div",
-                { className: "gr" },
-                h(
-                  "div",
-                  { className: "th" },
-                  h("span", { className: "t" }, r.text),
-                  st.role === "admin"
-                    ? h(
-                        "button",
-                        {
-                          className: "mini",
-                          onClick: function () {
-                            post("/portal/api/admin/reminders/rm", { id: r.id }, tr("common.deleted"));
-                          },
-                        },
-                        tr("common.delete")
-                      )
-                    : null
-                ),
-                h("div", { className: "d" }, "⏰ " + fmtEp(r.at_epoch) + (r.title ? " · " + r.title : ""))
-              )
+              { className: "ar" },
+              h("button", {
+                className: "atg" + (it.enabled ? " on" : ""),
+                title: it.enabled ? tr("auto.statActive") : tr("auto.fPaused"),
+                onClick: function () {
+                  act("/portal/api/auto/toggle", { id: it.id }, it.enabled ? tr("auto.fPaused") : tr("auto.statActive"));
+                },
+              }),
+              btns.length ? h("span", { className: "abtns" }, btns) : null
             )
           );
         });
-        if (rows.length) kids.push(h("div", { key: "rows", className: "list" }, rows));
-        if (st.role === "admin") {
+        kids.push(h("div", { key: "lb1", className: "lb" }, tr("auto.secMine")));
+        kids.push(h("div", { key: "cards", className: "list" }, cards.length ? cards : h("div", { className: "empty" }, tr("auto.empty"))));
+
+        kids.push(h("div", { key: "lb2", className: "lb" }, tr("auto.secQuick")));
+        var qDefs = [["briefing", "doc", tr("auto.qBriefing"), tr("auto.qBriefingSub")], ["progress", "chart", tr("auto.qProgress"), tr("auto.qProgressSub")]];
+        if (isAdmin) qDefs.push(["remind", "bell", tr("auto.qRemind"), tr("auto.qRemindSub")]);
+        kids.push(
+          h(
+            "div",
+            { key: "qs", className: "aqs" },
+            qDefs.map(function (qd) {
+              return h(
+                "button",
+                {
+                  key: qd[0],
+                  className: "aq",
+                  onClick: function () {
+                    if (qd[0] === "remind") {
+                      setRq({ open: true, text: rq.text });
+                      return;
+                    }
+                    act("/portal/api/auto/quick", { kind: qd[0] });
+                  },
+                },
+                h("span", { className: "atile" }, dicon(qd[1], 16)),
+                h("span", null, h("div", { className: "t" }, qd[2]), h("div", { className: "d2" }, qd[3]))
+              );
+            })
+          )
+        );
+        if (rq.open) {
           kids.push(
             h(
               "div",
-              { key: "add", className: "row" },
-              h("input", { ref: wRef, className: "inp", style: { width: 160, flex: "0 0 auto" }, placeholder: tr("auto.phTime2"), onKeyDown: function (e) { if (e.key === "Enter") add(); } }),
-              h("input", { ref: tRef, className: "inp", style: { flex: "1 1 120px", width: "auto" }, placeholder: tr("auto.phText"), onKeyDown: function (e) { if (e.key === "Enter") add(); } }),
-              h("button", { className: "btn", onClick: add }, tr("common.add"))
+              { key: "rq", className: "row" },
+              h("input", {
+                className: "inp",
+                style: { flex: "1 1 auto", width: "auto" },
+                placeholder: tr("auto.qRemindPh"),
+                value: rq.text,
+                onChange: function (e) { setRq({ open: true, text: e.target.value }); },
+              }),
+              h("button", {
+                className: "btn",
+                onClick: function () {
+                  if (!String(rq.text).trim()) { setMsg({ kind: "err", text: tr("common.required") }); return; }
+                  act("/portal/api/auto/quick", { kind: "remind", text: rq.text }, null, function () { setRq({ open: false, text: "" }); });
+                },
+              }, tr("auto.qSend"))
             )
           );
-          kids.push(h("div", { key: "tip", className: "ft" }, tr("auto.hintAdmin")));
+        }
+
+        kids.push(h("div", { key: "lb3", className: "lb" }, tr("auto.secNew")));
+        var tabs2 = [["timer", tr("auto.tabTimer")], ["one", tr("auto.tabOne")]];
+        kids.push(
+          h(
+            "div",
+            { key: "tabs", className: "tabs" },
+            tabs2.map(function (t2) {
+              return h("button", { key: t2[0], className: "tb" + (tab === t2[0] ? " on" : ""), onClick: function () { setTab(t2[0]); } }, t2[1]);
+            })
+          )
+        );
+        if (tab === "timer") {
+          var wsel = null;
+          if (fm.freq === "weekly") {
+            wsel = h(
+              "select",
+              { className: "inp", style: { width: 104, flex: "0 0 auto" }, value: fm.week, onChange: function (e) { fs({ week: e.target.value }); } },
+              [1, 2, 3, 4, 5, 6, 7].map(function (d) {
+                return h("option", { key: d, value: String(d) }, wkName(d));
+              })
+            );
+          }
+          kids.push(
+            h(
+              "div",
+              { key: "form", className: "aform" },
+              h("div", { className: "row" }, h("input", { className: "inp", style: { flex: "1 1 140px", width: "auto" }, placeholder: tr("auto.formNamePh"), value: fm.name, onChange: function (e) { fs({ name: e.target.value }); } })),
+              h(
+                "div",
+                { className: "row" },
+                h(
+                  "select",
+                  { className: "inp", style: { width: 96, flex: "0 0 auto" }, value: fm.freq, onChange: function (e) { fs({ freq: e.target.value }); } },
+                  h("option", { value: "daily" }, tr("auto.everyDay")),
+                  h("option", { value: "weekly" }, tr("auto.everyWeek"))
+                ),
+                wsel,
+                h("input", { className: "inp", type: "time", style: { width: 112, flex: "0 0 auto" }, value: fm.time, onChange: function (e) { fs({ time: e.target.value }); } })
+              ),
+              h(
+                "div",
+                { className: "row" },
+                h(
+                  "select",
+                  { className: "inp", style: { width: 150, flex: "0 0 auto" }, value: fm.kind, onChange: function (e) { fs({ kind: e.target.value }); } },
+                  h("option", { value: "notify" }, tr("auto.kindNotify")),
+                  h("option", { value: "agent" }, tr("auto.kindAgent"))
+                )
+              ),
+              fm.kind === "notify"
+                ? h("textarea", { className: "inp ta", placeholder: tr("auto.formNotifyPh"), value: fm.ntext, onChange: function (e) { fs({ ntext: e.target.value }); } })
+                : h("textarea", { className: "inp ta", placeholder: tr("auto.formPromptPh"), value: fm.agent, onChange: function (e) { fs({ agent: e.target.value }); } }),
+              h(
+                "div",
+                { className: "row" },
+                h(
+                  "button",
+                  {
+                    className: "btn",
+                    onClick: function () {
+                      if (!fm.time) { setMsg({ kind: "err", text: tr("auto.badTime") }); return; }
+                      if (fm.kind === "notify" && !String(fm.ntext).trim()) { setMsg({ kind: "err", text: tr("common.required") }); return; }
+                      if (fm.kind === "agent" && !String(fm.agent).trim()) { setMsg({ kind: "err", text: tr("common.required") }); return; }
+                      var schedule = fm.freq === "weekly" ? "weekly:" + fm.week + ":" + fm.time : "daily:" + fm.time;
+                      var action = fm.kind === "notify" ? { kind: "notify", text: fm.ntext } : { kind: "agent", prompt: fm.agent };
+                      var name = String(fm.name || "").trim() || tr("auto.defaultName") + " " + fm.time;
+                      act("/portal/api/auto/add", { name: name, schedule: schedule, action: action }, tr("auto.saved"), function () { fs({ name: "", ntext: "", agent: "" }); });
+                    },
+                  },
+                  tr("auto.save")
+                )
+              )
+            )
+          );
         } else {
-          kids.push(h("div", { key: "tip", className: "ft" }, tr("auto.hintMember")));
+          var pv = parseOne();
+          kids.push(
+            h(
+              "div",
+              { key: "one", className: "aform" },
+              h("textarea", { className: "inp ta", placeholder: tr("auto.onePh"), value: fm.one, onChange: function (e) { fs({ one: e.target.value }); } }),
+              pv
+                ? h(
+                    "div",
+                    { className: "achips" },
+                    h("span", { key: "p1", className: "achip2 blue" }, "⏰ " + fmtSched(pv.schedule)),
+                    h("span", { key: "p2", className: "achip2" }, "🤖 " + tr("auto.kindAgent"))
+                  )
+                : null,
+              h(
+                "div",
+                { className: "row" },
+                h(
+                  "button",
+                  {
+                    className: "btn",
+                    onClick: function () {
+                      var pv2 = parseOne();
+                      if (!pv2) { setMsg({ kind: "err", text: tr("auto.oneFail") }); return; }
+                      act("/portal/api/auto/add", { name: pv2.name, schedule: pv2.schedule, action: { kind: "agent", prompt: pv2.prompt } }, tr("auto.saved"), function () { fs({ one: "" }); });
+                    },
+                  },
+                  tr("auto.oneParse")
+                )
+              )
+            )
+          );
         }
-        if (st.recent && st.recent.length) {
-          kids.push(h("div", { key: "rh", className: "lb" }, tr("auto.recent")));
-          st.recent.forEach(function (r) {
-            kids.push(h("div", { key: "rs" + r.id, className: "sub" }, "· " + r.text + "(" + fmtEp(r.at_epoch) + ")"));
-          });
+        kids.push(h("div", { key: "rn", className: "d", style: { marginTop: 8, opacity: .8 } }, tr("auto.ruleNote")));
+
+        kids.push(h("div", { key: "lb4", className: "lb" }, tr("auto.secLogs")));
+        if (!st.logs.length) {
+          kids.push(h("div", { key: "lg0", className: "empty" }, tr("auto.logsEmpty")));
+        } else {
+          kids.push(
+            h(
+              "div",
+              { key: "logs", className: "alogs" },
+              st.logs.map(function (lg) {
+                return h(
+                  "div",
+                  { key: "lg" + lg.id, className: "alog" },
+                  h("span", { className: lg.ok ? "dot ok" : "dot bad" }),
+                  h("span", { className: "nm" }, lg.auto_name || ""),
+                  h("span", { className: "inf" }, lg.info || ""),
+                  h("span", { className: "tm" }, fmtTs(lg.ts))
+                );
+              })
+            )
+          );
         }
+        kids.push(h("div", { key: "foot", className: "ft" }, tr("auto.footNote")));
       }
       if (msg.kind) {
         kids.push(h("div", { key: "msg", className: "msg" + (msg.kind === "err" ? " err" : msg.kind === "ok" ? " ok" : "") }, msg.text));

@@ -7,7 +7,7 @@ import { existsSync, readFileSync, readdirSync } from 'node:fs'
 import { join } from 'node:path'
 import { zstdDecompressSync } from 'node:zlib'
 import { dispatchNotify } from './notify.ts'
-import { appendAutoLog, computeNextRun, markAutoRun, type AutoRow, type AutoViewer } from './auto.ts'
+import { appendAutoLog, computeNextRun, logQuickAction, markAutoRun, type AutoRow, type AutoViewer } from './auto.ts'
 import { callInstanceRpc, userHome, userPort } from './session-mgr.ts'
 import { instanceAuthCookie } from './instance-auth.ts'
 
@@ -110,6 +110,31 @@ function decodeSessionText(home: string, sid: string): { text: string; ended: bo
   }
 }
 
+/** 在成员实例上开会话并下指令（自动化与快捷动作共用） */
+async function agentRun(db: DatabaseSync, owner: string, promptText: string): Promise<{ ok: boolean; info: string; sid?: string }> {
+  const port = userPort(db, owner)
+  if (!port) return { ok: false, info: `成员 ${owner} 未分配实例` }
+  const home = userHome(owner)
+  const authCookie = instanceAuthCookie(home, `127.0.0.1:${port}`)
+  const created = await callInstanceRpc(port, authCookie, 'session/create', { args: { request: {} } })
+  const sid = String(rpcValue(created.body)?.['sessionId'] ?? '')
+  if (!sid) return { ok: false, info: `创建会话失败：${shortJson(created.body)}` }
+  const rid = `session-request-${randomUUID()}`
+  const pr = await callInstanceRpc(port, authCookie, 'session/prompt', {
+    args: {
+      request: {
+        requestId: rid,
+        sessionId: sid,
+        mode: 'queue',
+        content: [{ type: 'text', text: promptText }],
+        clientTimeZone: 'Asia/Shanghai',
+      },
+    },
+  })
+  if (rpcValue(pr.body)?.['accepted'] !== true) return { ok: false, info: `下指令失败：${shortJson(pr.body)}` }
+  return { ok: true, info: `会话 ${sid} 已开始`, sid }
+}
+
 async function execOnce(db: DatabaseSync, row: AutoRow): Promise<{ ok: boolean; info: string; sid?: string }> {
   const a = parseAction(row)
   const kind = String(a['kind'] ?? '')
@@ -125,36 +150,17 @@ async function execOnce(db: DatabaseSync, row: AutoRow): Promise<{ ok: boolean; 
   if (kind === 'agent') {
     const promptText = String(a['prompt'] ?? '').trim()
     if (!promptText) return { ok: false, info: '指令为空' }
-    const port = userPort(db, row.owner)
-    if (!port) return { ok: false, info: `成员 ${row.owner} 未分配实例` }
-    const home = userHome(row.owner)
-    const authCookie = instanceAuthCookie(home, `127.0.0.1:${port}`)
-    const created = await callInstanceRpc(port, authCookie, 'session/create', { args: { request: {} } })
-    const sid = String(rpcValue(created.body)?.['sessionId'] ?? '')
-    if (!sid) return { ok: false, info: `创建会话失败：${shortJson(created.body)}` }
-    const rid = `session-request-${randomUUID()}`
-    const pr = await callInstanceRpc(port, authCookie, 'session/prompt', {
-      args: {
-        request: {
-          requestId: rid,
-          sessionId: sid,
-          mode: 'queue',
-          content: [{ type: 'text', text: promptText }],
-          clientTimeZone: 'Asia/Shanghai',
-        },
-      },
-    })
-    if (rpcValue(pr.body)?.['accepted'] !== true) return { ok: false, info: `下指令失败：${shortJson(pr.body)}` }
-    return { ok: true, info: `会话 ${sid} 已开始`, sid }
+    return agentRun(db, row.owner, promptText)
   }
   return { ok: false, info: `未知 action.kind：${kind || '(空)'}` }
 }
 
 /** agent 类跑完后：等会话收尾 → 解码回复 → 推送通知桥 + 记录 */
-async function captureAndForward(db: DatabaseSync, row: AutoRow, sid: string): Promise<void> {
-  const port = userPort(db, row.owner)
+async function captureAndForward(db: DatabaseSync, target: { id: number | null; name: string; owner: string }, sid: string): Promise<void> {
+  const { id, name, owner } = target
+  const port = userPort(db, owner)
   if (!port) return
-  const home = userHome(row.owner)
+  const home = userHome(owner)
   const authCookie = instanceAuthCookie(home, `127.0.0.1:${port}`)
   const deadline = Date.now() + 8 * 60_000
   while (Date.now() < deadline) {
@@ -166,21 +172,20 @@ async function captureAndForward(db: DatabaseSync, row: AutoRow, sid: string): P
       if (s && s.running === true) continue
       const got = decodeSessionText(home, sid)
       if (got && got.text) {
-        const r = await dispatchNotify(db, { title: `自动化《${row.name}》`, text: got.text.slice(0, 3500), source: 'auto' })
+        const r = await dispatchNotify(db, { title: `自动化《${name}》`, text: got.text.slice(0, 3500), source: 'auto' })
         const delivered = r.some((x) => x.ok)
-        appendAutoLog(
-          db,
-          row.id,
-          delivered,
-          delivered ? `结果已推送（${sid}）` : `结果已生成，但通知通道均不可用（见会话 ${sid}）`,
-        )
+        const info = delivered ? `结果已推送（${sid}）` : `结果已生成，但通知通道均不可用（见会话 ${sid}）`
+        if (id != null) appendAutoLog(db, id, delivered, info)
+        else logQuickAction(db, name, delivered, info)
         return
       }
     } catch {
       // 继续等
     }
   }
-  appendAutoLog(db, row.id, false, `结果未捕获（超时，见会话 ${sid}）`)
+  const timeoutInfo = `结果未捕获（超时，见会话 ${sid}）`
+  if (id != null) appendAutoLog(db, id, false, timeoutInfo)
+  else logQuickAction(db, name, false, timeoutInfo)
 }
 
 async function executeWithRetry(db: DatabaseSync, row: AutoRow, nextRunAt: number | null): Promise<void> {
@@ -205,7 +210,37 @@ async function executeWithRetry(db: DatabaseSync, row: AutoRow, nextRunAt: numbe
     else info = `重试仍失败：${info}`
   }
   markAutoRun(db, row.id, ok, info, nextRunAt)
-  if (ok && sid) void captureAndForward(db, row, sid).catch(() => {})
+  if (ok && sid) void captureAndForward(db, { id: row.id, name: row.name, owner: row.owner }, sid).catch(() => {})
+}
+
+/** 快捷动作：让助理干活（自己的实例；结果照常捕获推送） */
+export async function runQuickAgent(
+  db: DatabaseSync,
+  owner: string,
+  name: string,
+  prompt: string,
+): Promise<{ ok: true; info: string } | { error: string }> {
+  const r = await agentRun(db, owner, prompt)
+  if (!r.ok || !r.sid) {
+    logQuickAction(db, name, false, r.info)
+    return { error: r.info }
+  }
+  logQuickAction(db, name, true, `会话 ${r.sid} 已开始`)
+  void captureAndForward(db, { id: null, name, owner }, r.sid).catch(() => {})
+  return { ok: true, info: `会话已开始（${r.sid}），跑完会自动推到通知通道` }
+}
+
+/** 快捷动作：直接发一条通知 */
+export async function runQuickNotify(
+  db: DatabaseSync,
+  name: string,
+  title: string,
+  text: string,
+): Promise<{ ok: boolean; info: string }> {
+  const r = await dispatchNotify(db, { title, text, source: 'auto' })
+  const ok = r.some((x) => x.ok)
+  logQuickAction(db, name, ok, ok ? '已推送' : '通知通道均不可用')
+  return { ok, info: ok ? '已推送' : '没有可用的通知通道' }
 }
 
 /** 定时巡查：到点的任务执行（启动时补跑错过的，之后每 30 秒一次） */
