@@ -435,11 +435,67 @@ const DESK_MOBILE_CSS = `
   [class*="sidebarCol"] button { min-width: 42px !important; min-height: 42px !important; }
   body:has([class*="CtUWPa_root"]:not([class*="hero"])) #desk-usage-fab { bottom: calc(env(safe-area-inset-bottom, 0px) + 132px) !important; }
   body:has([class*="CtUWPa_root"]:not([class*="hero"])):has([contenteditable="true"]:focus) #desk-usage-fab { display: none !important; }
+  /* 侧边栏从上往下缩：顶边把手拖拽 + clip 裁切（底边固定，最底部一行常驻）；打字（键盘弹起）时近扁平状态自动让位 */
+  [data-dsh-frame][data-desk-sbshrink] [class*="sidebarCol"] { clip-path: inset(var(--desk-sb-cut, 0px) 0 0 0 round 14px) !important; transition: opacity .18s ease !important; }
+  html.desk-sb-typing [data-dsh-frame]:not([data-sidebar-collapsed="true"]) [class*="sidebarCol"] { opacity: 0 !important; pointer-events: none !important; }
+  html.desk-sb-typing #desk-sb-grip { opacity: 0 !important; pointer-events: none !important; }
+  #desk-sb-grip { position: fixed; height: 34px; z-index: 75; align-items: center; justify-content: center; touch-action: none; cursor: grab; }
+  #desk-sb-grip > span { width: 46px; height: 20px; border-radius: 10px; background: #2c3340; border: 1px solid #475063; color: #9aa4b8; font-size: 11px; line-height: 18px; text-align: center; user-select: none; -webkit-user-select: none; letter-spacing: 1px; box-shadow: 0 2px 10px rgba(0,0,0,.4); }
 }
 `
 
+const DESK_SB_SCRIPT = `(function(){try{
+if(!window.matchMedia||!document.addEventListener)return;
+var mq=window.matchMedia('(max-width:820px)');
+if(!(window.CSS&&CSS.supports&&CSS.supports('clip-path','inset(1px 0 0 0)')))return;
+var fe=null,g=null,cut=0,maxCut=0,minVis=80,scH=820,focused=false,pp=null;
+function sb(){return fe?fe.querySelector('[class*="sidebarCol"]'):null;}
+function ex(){return fe&&fe.getAttribute('data-sidebar-collapsed')!=='true';}
+function measure(){var sc=sb();if(!sc)return;var r=sc.getBoundingClientRect();scH=Math.round(r.height);
+var bs=sc.querySelectorAll('button');var lb=bs.length?bs[bs.length-1]:null;var mv=80;
+if(lb){var lr=lb.getBoundingClientRect();mv=Math.round(r.bottom-lr.bottom+lr.height+12);}
+minVis=Math.max(60,Math.min(mv,scH-40));maxCut=Math.max(0,Math.round(scH-minVis));}
+function hide(){return focused&&cut>4&&(scH-cut)<240;}
+function apply(){if(!fe)return;
+if(cut>4){fe.setAttribute('data-desk-sbshrink','1');document.documentElement.style.setProperty('--desk-sb-cut',cut+'px');}
+else{fe.removeAttribute('data-desk-sbshrink');document.documentElement.style.removeProperty('--desk-sb-cut');}
+document.documentElement.classList.toggle('desk-sb-typing',hide());paint();}
+function paint(){if(!g)return;var sc=sb();
+var show=!!(mq.matches&&sc&&ex());
+if(!show){g.style.display='none';return;}
+var r=sc.getBoundingClientRect();
+g.style.display='flex';g.style.left=Math.round(r.left)+'px';g.style.width=Math.round(r.width)+'px';
+g.style.top=Math.max(2,Math.round(r.top+cut-17))+'px';}
+function setCut(v,sn){measure();var m=Math.round(v);
+if(m<0)m=0;if(m>maxCut)m=maxCut;
+if(sn){if(m<90)m=0;else if(m>maxCut-50)m=maxCut;}
+cut=m;apply();}
+function boot(){fe=document.querySelector('[data-dsh-frame]');if(!fe)return false;
+g=document.createElement('div');g.id='desk-sb-grip';g.innerHTML='<span>\u22ef</span>';
+g.style.display='none';document.body.appendChild(g);
+g.addEventListener('pointerdown',function(e){if(!ex())return;
+pp={y:e.clientY,c0:cut,moved:false};try{g.setPointerCapture(e.pointerId);}catch(_){}
+if(e.cancelable)e.preventDefault();});
+g.addEventListener('pointermove',function(e){if(!pp)return;var dy=e.clientY-pp.y;
+if(!pp.moved&&Math.abs(dy)>3)pp.moved=true;
+if(pp.moved){setCut(pp.c0+dy,false);if(e.cancelable)e.preventDefault();}});
+function up(){if(!pp)return;var m=pp.moved;pp=null;
+if(m){setCut(cut,true);}else{setCut(cut>4?0:Math.max(20,maxCut),true);}}
+g.addEventListener('pointerup',up);g.addEventListener('pointercancel',up);
+document.addEventListener('focusin',function(e){var t=e.target;
+focused=!!(t&&t.closest&&t.closest('[contenteditable="true"]'));apply();});
+document.addEventListener('focusout',function(){setTimeout(function(){var a=document.activeElement;
+focused=!!(a&&a.closest&&a.closest('[contenteditable="true"]'));apply();},140);});
+window.addEventListener('resize',function(){if(!mq.matches){cut=0;apply();return;}
+measure();if(cut>0)setCut(cut,false);else paint();});
+try{new MutationObserver(function(){if(ex()){measure();}else{cut=0;}apply();})
+.observe(fe,{attributes:true,attributeFilter:['data-sidebar-collapsed']});}catch(_){}
+measure();apply();return true;}
+var tries=0,t=setInterval(function(){tries++;if(boot()||tries>50){clearInterval(t);}},400);
+}catch(e){}})();`;
+
 const usageWidgetTag = (lang: string): string =>
-  `<script>window.__DSH_HOST_PERSISTENCE__=true;window.__DESK_LANG=${lang === 'en' ? "'en'" : "'zh'"};</script><link rel="manifest" href="/portal.webmanifest"><link rel="icon" type="image/svg+xml" href="/portal-icon.svg"><meta name="theme-color" content="#1c1e21"><link rel="stylesheet" href="/portal/static/desk-mobile.css"><script src="/portal/static/desk-usage.js" defer></script>`
+  `<script>window.__DSH_HOST_PERSISTENCE__=true;window.__DESK_LANG=${lang === 'en' ? "'en'" : "'zh'"};${DESK_SB_SCRIPT}</script><link rel="manifest" href="/portal.webmanifest"><link rel="icon" type="image/svg+xml" href="/portal-icon.svg"><meta name="theme-color" content="#1c1e21"><link rel="stylesheet" href="/portal/static/desk-mobile.css"><script src="/portal/static/desk-usage.js" defer></script>`
 
 /** PWA / 桌面端图标（SVG；浏览器「安装应用」与标签页图标共用） */
 const PORTAL_ICON_SVG = [
