@@ -457,6 +457,76 @@ async function sendViaWeixin(target: string, msg: NotifyMsg): Promise<string> {
   }
 }
 
+/** 微信 iLink 直发（通知桥与微信桥共用；带 context_token 时优先，-14 自动退化为 tokenless 重试一次） */
+export async function sendWeixinIlink(
+  base: string,
+  token: string,
+  to: string,
+  text: string,
+  contextToken?: string,
+): Promise<{ ok: boolean; info: string }> {
+  const url = (base || 'https://ilinkai.weixin.qq.com').replace(/\/+$/, '') + '/ilink/bot/sendmessage'
+  const uin = Buffer.from(String(Math.floor(Math.random() * 4294967296))).toString('base64')
+  const clientId = 'dsh-anywork-' + Date.now() + '-' + Math.random().toString(16).slice(2, 10)
+  const mk = (ctx?: string): string =>
+    JSON.stringify({
+      msg: {
+        from_user_id: '',
+        to_user_id: to,
+        client_id: clientId,
+        message_type: 2,
+        message_state: 2,
+        item_list: [{ type: 1, text_item: { text } }],
+        ...(ctx ? { context_token: ctx } : {}),
+      },
+    })
+  const attempt = async (
+    ctx?: string,
+  ): Promise<{ ret?: number; errcode?: number; errmsg?: string; msg?: string; status: number; raw: string }> => {
+    const ctrl = new AbortController()
+    const t = setTimeout(() => ctrl.abort(), 15000)
+    try {
+      const r = await fetch(url, {
+        method: 'POST',
+        headers: {
+          'content-type': 'application/json',
+          AuthorizationType: 'ilink_bot_token',
+          Authorization: 'Bearer ' + token,
+          'iLink-App-Id': 'bot',
+          'iLink-App-ClientVersion': '131584',
+          'X-WECHAT-UIN': uin,
+        },
+        body: mk(ctx),
+        signal: ctrl.signal,
+      })
+      const raw = await r.text()
+      let j: { ret?: number; errcode?: number; errmsg?: string; msg?: string } | null = null
+      try {
+        j = JSON.parse(raw) as typeof j
+      } catch {
+        j = null
+      }
+      return { ...(j || {}), status: r.status, raw }
+    } finally {
+      clearTimeout(t)
+    }
+  }
+  try {
+    let res = await attempt(contextToken)
+    const bad = (res.ret ?? 0) !== 0 || (res.errcode ?? 0) !== 0
+    if (bad && contextToken && (res.ret === -14 || res.errcode === -14)) {
+      res = await attempt(undefined)
+    }
+    if (res.status !== 200) return { ok: false, info: 'HTTP ' + res.status + ' ' + res.raw.slice(0, 120) }
+    if ((res.ret ?? 0) === 0 && (res.errcode ?? 0) === 0) return { ok: true, info: 'ok' }
+    const em = String(res.errmsg || res.msg || res.raw).trim()
+    return { ok: false, info: 'ret=' + String(res.ret ?? '?') + ' errcode=' + String(res.errcode ?? '?') + ' ' + em.slice(0, 150) }
+  } catch (e) {
+    const cause = (e as { cause?: { message?: string } })?.cause?.message
+    return { ok: false, info: String(cause || (e as Error)?.message || e).slice(0, 150) }
+  }
+}
+
 const SENDERS: Record<string, (target: string, msg: NotifyMsg) => Promise<string>> = {
   webhook: sendViaWebhook,
   hermes: sendViaHermes,

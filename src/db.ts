@@ -88,6 +88,32 @@ function migrate(db: DatabaseSync): void {
       created_at TEXT NOT NULL DEFAULT (datetime('now'))
     );
 
+    CREATE TABLE IF NOT EXISTS wx_chat (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      account TEXT NOT NULL,
+      label TEXT NOT NULL DEFAULT '',
+      openid TEXT NOT NULL,
+      token TEXT NOT NULL,
+      base_url TEXT NOT NULL DEFAULT 'https://ilinkai.weixin.qq.com',
+      enabled INTEGER NOT NULL DEFAULT 1,
+      session_id TEXT NOT NULL DEFAULT '',
+      last_ctx TEXT NOT NULL DEFAULT '',
+      sync_buf TEXT NOT NULL DEFAULT '',
+      last_msg_ts INTEGER NOT NULL DEFAULT 0,
+      last_reply_ts INTEGER NOT NULL DEFAULT 0,
+      created_at TEXT NOT NULL DEFAULT (datetime('now'))
+    );
+
+    CREATE TABLE IF NOT EXISTS wx_chat_log (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      chat_id INTEGER NOT NULL,
+      dir TEXT NOT NULL,
+      text TEXT,
+      ok INTEGER,
+      info TEXT,
+      ts INTEGER NOT NULL
+    );
+
     CREATE TABLE IF NOT EXISTS notify_log (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
       ts TEXT NOT NULL DEFAULT (datetime('now')),

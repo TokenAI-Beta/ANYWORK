@@ -6,6 +6,7 @@ import { defaultDataDir, openDb } from './db.ts'
 import { startGateway } from './gateway.ts'
 import { checkReminders, readOrCreateNotifyToken } from './notify.ts'
 import { checkAutos } from './auto-exec.ts'
+import { startWxBridge } from './wx-bridge.ts'
 import { startPortal } from './portal.ts'
 
 function loadRealKey(): string {
@@ -40,4 +41,6 @@ checkAutos(db).catch(() => {})
 setInterval(() => {
   checkAutos(db).catch(() => {})
 }, 30000)
+// 微信桥：成员微信 ⇄ 工作台助理（常驻长轮询；无启用绑定时自动空转）
+startWxBridge(db)
 console.log(`[desk] portal on http://${portalHost}:${portalPort} · gateway on http://127.0.0.1:${gatewayPort} · data=${defaultDataDir()}`)
