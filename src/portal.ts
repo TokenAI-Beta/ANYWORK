@@ -433,6 +433,12 @@ const DESK_MOBILE_CSS = `
   button[aria-label="发送消息"], button[aria-label="send message" i] { min-width: 44px !important; min-height: 44px !important; }
   [class*="CtUWPa_"] [contenteditable="true"] { font-size: 16px !important; }
   [class*="sidebarCol"] button { min-width: 42px !important; min-height: 42px !important; }
+  [class*="sidebarCol"] [class*="headerActions"] { margin-right: 8px !important; }
+  [data-desk-frame] [class*="sidebarCol"] { -webkit-text-size-adjust: 100% !important; text-size-adjust: 100% !important; }
+  [data-desk-frame] [class*="sidebarCol"] button { font-size: 13px !important; }
+  [data-desk-frame] [class*="sidebarCol"] [class*="title"] { font-size: 13px !important; }
+  [data-desk-frame] [class*="sidebarCol"] [class*="sectionHeader"] { font-size: 12.5px !important; }
+  [data-desk-frame] [class*="sidebarCol"] [class*="logoRow"] { font-size: 13px !important; }
   body:has([class*="CtUWPa_root"]:not([class*="hero"])) #desk-usage-fab { bottom: calc(env(safe-area-inset-bottom, 0px) + 132px) !important; }
   body:has([class*="CtUWPa_root"]:not([class*="hero"])):has([contenteditable="true"]:focus) #desk-usage-fab { display: none !important; }
   /* 侧边栏从上往下缩：顶边把手拖拽 + clip 裁切（底边固定，最底部一行常驻）；打字（键盘弹起）时近扁平状态自动让位 */
@@ -448,7 +454,7 @@ const DESK_SB_SCRIPT = `(function(){try{
 if(!window.matchMedia||!document.addEventListener)return;
 if(!Element.prototype.closest){Element.prototype.closest=function(s){var el=this;while(el&&el.nodeType===1){if(el.matches&&el.matches(s))return el;el=el.parentElement||el.parentNode;}return null;};}
 var mq=window.matchMedia('(max-width:820px)');
-var fe=null,sc=null,g=null,cut=0,maxCut=0,minVis=80,scH=820,rootH=0,focused=false,focusAt=0,smallSince=0,wasSmall=false,pp=null,mo=null,root=null,tries=0;
+var fe=null,sc=null,g=null,cut=0,maxCut=0,minVis=80,scH=820,rootH=0,focused=false,focusAt=0,smallSince=0,wasSmall=false,pp=null,mo=null,root=null,tries=0,tick=0,lastTap=null,lastTapAt=0,lastBlur=null,lastBlurAt=0,sw=null;
 function setP(el,k,v){if(!el)return;try{el.style.setProperty(k,v,'important');}catch(e){try{el.style[k]=v;}catch(e2){}}}
 function remP(el,k){if(!el)return;try{el.style.removeProperty(k);}catch(e){try{el.style[k]='';}catch(e2){}}}
 function getRoot(){if(!sc)return null;if(root&&root.isConnected)return root;root=null;
@@ -474,7 +480,8 @@ var bs=sc.querySelectorAll('button');var lb=bs.length?bs[bs.length-1]:null;var m
 if(lb){var lr=lb.getBoundingClientRect();mv=Math.round(r.bottom-lr.bottom+lr.height+12);}
 minVis=Math.max(60,Math.min(mv,scH-40));maxCut=Math.max(0,Math.round(scH-minVis));}
 function setTop(v){if(!sc)return;if(v>0){setP(sc,'top',(12+v)+'px');}else{remP(sc,'top');}}
-function sync(){try{if(!find())return;
+function sync(){try{tick++;if(tick%7===0)stripTitles();
+if(!find())return;
 var col=fe.getAttribute('data-sidebar-collapsed')==='true';
 if(col&&cut>0){cut=0;}
 if(col){if(fe.getAttribute('data-desk-collapsed')!=='true')fe.setAttribute('data-desk-collapsed','true');}
@@ -525,10 +532,37 @@ g.addEventListener('touchend',up);g.addEventListener('touchcancel',up);
 g.addEventListener('mousedown',down);
 document.addEventListener('mousemove',move);document.addEventListener('mouseup',up);}
 }
+function openSb(){try{var bs=document.querySelectorAll('button[aria-label]');
+for(var i=0;i<bs.length;i++){var al=bs[i].getAttribute('aria-label')||'';
+if(/open sidebar|打开侧边栏/i.test(al)){bs[i].click();return true;}}}catch(e){}return false;}
+function tapOnEditor(){try{if(!lastTap||Date.now()-lastTapAt>1000)return false;var t=lastTap;
+if(t.closest&&(t.closest('[contenteditable="true"]')||t.closest('[class*="CtUWPa"]')))return true;
+return false;}catch(e){return false;}}
+function stripTitles(){try{if(!mq.matches)return;var els=document.querySelectorAll('[title]');
+for(var i=0;i<els.length;i++){var e=els[i],t=e.getAttribute('title');
+if(t){e.setAttribute('data-desk-t',t);e.removeAttribute('title');}}}catch(e){}}
+function wireMobileUx(){try{
+document.addEventListener('touchstart',function(e){try{lastTap=e.target;lastTapAt=Date.now();
+if(!mq.matches||ex())return;var t=e.touches&&e.touches[0];if(!t)return;
+if(t.clientX<=24)sw={x:t.clientX,y:t.clientY,ok:true};}catch(x){}},true);
+document.addEventListener('mousedown',function(e){lastTap=e.target;lastTapAt=Date.now();},true);
+document.addEventListener('touchmove',function(e){try{if(!sw||!sw.ok)return;var t=e.touches&&e.touches[0];if(!t)return;
+var dx=t.clientX-sw.x,dy=t.clientY-sw.y;
+if(dy>70&&dy>Math.abs(dx)){sw.ok=false;return;}
+if(dx>55){sw.ok=false;openSb();}}catch(x){}},true);
+document.addEventListener('touchend',function(){sw=null;},true);
+document.addEventListener('touchcancel',function(){sw=null;},true);
+document.addEventListener('focusin',function(e){try{if(!mq.matches)return;var t=e.target;
+if(!(t&&t.closest&&t.closest('[contenteditable="true"]')))return;
+if(tapOnEditor())return;
+if(lastBlur===t&&Date.now()-lastBlurAt<400)return;
+setTimeout(function(){try{lastBlur=t;lastBlurAt=Date.now();t.blur();}catch(x){}},0);}catch(x){}},true);
+stripTitles();}catch(e){}}
 function boot(){if(!find())return false;
 if(!g){g=document.createElement('div');g.id='desk-sb-grip';g.innerHTML='<span>\u22ef</span>';
 g.style.display='none';document.body.appendChild(g);wireDrag();}
 if(!boot.__wired){boot.__wired=1;
+wireMobileUx();
 document.addEventListener('focusin',function(e){var t=e.target;
 focused=!!(t&&t.closest&&t.closest('[contenteditable="true"]'));if(focused)focusAt=Date.now();apply();});
 document.addEventListener('focusout',function(){setTimeout(function(){var a=document.activeElement;
