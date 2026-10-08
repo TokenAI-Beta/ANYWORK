@@ -6,6 +6,7 @@ import { createHmac, randomBytes } from 'node:crypto'
 import { join } from 'node:path'
 import { eventCost, monthStartUtc } from './pricing.ts'
 import type { DatabaseSync } from 'node:sqlite'
+import { ruleEnabled } from './auto.ts'
 
 // Hermes CLI（可用 DESK_HERMES_CLI 覆盖；迁移机器时改这里）
 const HERMES_CLI = process.env.DESK_HERMES_CLI || '/mnt/d/hermes/hermes-agent/venv/Scripts/hermes.exe'
@@ -542,6 +543,8 @@ export async function maybeBudgetAlert(db: DatabaseSync, userId: number): Promis
   const pct = sum / u.budget
   const level = pct >= 1 ? 100 : pct >= 0.8 ? 80 : 0
   if (level === 0) return
+  // 规则卡 'budget80' 关掉后不再推 80% 档（100% 档保底提醒不受影响）
+  if (level === 80 && !ruleEnabled(db, 'budget80')) return
   const month = start.slice(0, 7)
   const ins = db.prepare(`INSERT OR IGNORE INTO budget_alerts (user_id, month, level) VALUES (?, ?, ?)`).run(userId, month, level)
   if (ins.changes === 0) return

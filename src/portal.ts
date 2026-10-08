@@ -22,7 +22,7 @@ import { defaultDataDir } from './db.ts'
 import { collectConnectors, collectPlatforms, collectPresets, collectSkills, readSkill } from './panel.ts'
 import { CONN_PLATFORMS, getConn, removeConn, setConn, testConn, validateConnConfig } from './conns.ts'
 import { collectOps } from './ops.ts'
-import { addTimer, autoStats, ensureRuleRows, listAutoLog, listAutos, removeAuto, toggleAuto, RULE_CATALOG } from './auto.ts'
+import { addTimer, autoStats, ensureRuleRows, listAutoLog, listAutos, removeAuto, toggleAuto, RULE_CATALOG, ruleEnabled } from './auto.ts'
 import { runAutoNow } from './auto-exec.ts'
 
 /** 请求语言：?lang=en 时为英文（由工作台客户端带过来），默认中文 */
@@ -1141,6 +1141,13 @@ export function startPortal(opts: PortalOptions) {
           return res.end(JSON.stringify({ error: L(langOf(req), '反馈内容不能为空', 'Feedback content cannot be empty') }))
         }
         db.prepare(`INSERT INTO feedback (user_id, username, text) VALUES (?, ?, ?)`).run(user.id, user.username, ftext)
+        if (ruleEnabled(db, 'feedback')) {
+          dispatchNotify(db, {
+            title: '新意见反馈',
+            text: `成员 ${user.username} 提交了反馈：${ftext.slice(0, 120)}${ftext.length > 120 ? '…' : ''}`,
+            source: 'feedback',
+          }).catch(() => {})
+        }
         res.writeHead(200, { 'content-type': 'application/json; charset=utf-8' })
         return res.end(JSON.stringify({ ok: true }))
       }
@@ -1308,11 +1315,13 @@ export function startPortal(opts: PortalOptions) {
           sessionId,
           title || null,
         )
-        dispatchNotify(db, {
-          title: '会话删除申请',
-          text: `成员 ${user.username} 请求删除会话「${title || sessionId}」——到 工作台 设置 → 会话管理 审批。`,
-          source: 'session-mgr',
-        }).catch(() => {})
+        if (ruleEnabled(db, 'session_del')) {
+          dispatchNotify(db, {
+            title: '会话删除申请',
+            text: `成员 ${user.username} 请求删除会话「${title || sessionId}」——到 工作台 设置 → 会话管理 审批。`,
+            source: 'session-mgr',
+          }).catch(() => {})
+        }
         return reply({ ok: true })
       }
       if (req.method === 'POST' && path === '/portal/api/session-mgr/cancel') {
@@ -1488,11 +1497,13 @@ export function startPortal(opts: PortalOptions) {
              updated_at = datetime('now') WHERE id = ?`,
         ).run(user.username, submitNote || null, commitRefs || null, sessionRefs, sid)
         const extra = [commitRefs ? '含提交链接' : '', sessionId ? '含关联会话' : ''].filter(Boolean).join('、')
-        dispatchNotify(db, {
-          title: '任务待验收',
-          text: `成员 ${user.username} 提交任务 #${task.id}「${task.title}」待验收${extra ? '（' + extra + '）' : ''}——到 工作台 设置 → 任务板 处理。`,
-          source: 'task-review',
-        }).catch(() => {})
+        if (ruleEnabled(db, 'task_review')) {
+          dispatchNotify(db, {
+            title: '任务待验收',
+            text: `成员 ${user.username} 提交任务 #${task.id}「${task.title}」待验收${extra ? '（' + extra + '）' : ''}——到 工作台 设置 → 任务板 处理。`,
+            source: 'task-review',
+          }).catch(() => {})
+        }
         res.writeHead(200, { 'content-type': 'application/json; charset=utf-8' })
         return res.end(JSON.stringify({ ok: true }))
       }
@@ -1540,21 +1551,25 @@ export function startPortal(opts: PortalOptions) {
               `UPDATE tasks SET review_state = 'accepted', reviewed_by = ?, reviewed_at = datetime('now'),
                  review_note = ?, status = 'done', updated_at = datetime('now') WHERE id = ?`,
             ).run(user.username, note || null, rid)
-            dispatchNotify(db, {
-              title: '任务验收通过',
-              text: `任务 #${task.id}「${task.title}」已由 ${user.username} 验收通过${note ? '（' + note + '）' : ''}。`,
-              source: 'task-review',
-            }).catch(() => {})
+            if (ruleEnabled(db, 'task_review')) {
+              dispatchNotify(db, {
+                title: '任务验收通过',
+                text: `任务 #${task.id}「${task.title}」已由 ${user.username} 验收通过${note ? '（' + note + '）' : ''}。`,
+                source: 'task-review',
+              }).catch(() => {})
+            }
           } else {
             db.prepare(
               `UPDATE tasks SET review_state = 'rejected', reviewed_by = ?, reviewed_at = datetime('now'),
                  review_note = ?, status = 'doing', updated_at = datetime('now') WHERE id = ?`,
             ).run(user.username, note, rid)
-            dispatchNotify(db, {
-              title: '任务被打回',
-              text: `任务 #${task.id}「${task.title}」被 ${user.username} 打回，理由：${note}——请处理后重新提交验收。`,
-              source: 'task-review',
-            }).catch(() => {})
+            if (ruleEnabled(db, 'task_review')) {
+              dispatchNotify(db, {
+                title: '任务被打回',
+                text: `任务 #${task.id}「${task.title}」被 ${user.username} 打回，理由：${note}——请处理后重新提交验收。`,
+                source: 'task-review',
+              }).catch(() => {})
+            }
           }
         } else if (action === 'cancel') {
           if (task.submitted_by !== user.username) {
