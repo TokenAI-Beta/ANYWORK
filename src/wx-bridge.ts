@@ -362,7 +362,7 @@ async function chatTurn(
 
 async function respond(db: DatabaseSync, id: number, text: string): Promise<void> {
   const row = getRow(db, id)
-  if (!row || !row.enabled) return
+  if (!row) return
   const r = await chatTurn(db, row, text)
   const outText = r.ok && r.reply ? r.reply : '（助理暂时没有响应，请稍后再试）'
   let ok = true
