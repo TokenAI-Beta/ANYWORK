@@ -2861,7 +2861,6 @@ body.desk-panel-open [class*="sidebarCol"] { transform: none !important; }
     function roleIcon(id) { return ROLE_ICON[id] || "assist"; }
     var PLAT_META = {
       "wx-mine": { i: "bubble", c: "#07c160" },
-      wechat: { i: "bubble", c: "#3ecf8e" },
       telegram: { i: "send", c: "#5cc8f7" },
       feishu: { i: "msq", c: "#7fa3ff" },
       dingtalk: { i: "pin", c: "#5db4ff" },
@@ -2876,9 +2875,6 @@ body.desk-panel-open [class*="sidebarCol"] { transform: none !important; }
       zoom: { i: "video", c: "#6aa8ff" },
       github: { i: "code", c: "#aab4c0" },
       notion: { i: "msq", c: "#c8ccd4" },
-      wps: { i: "doc", c: "#e05b5b" },
-      canva: { i: "pen", c: "#28c3cf" },
-      tiktok: { i: "music", c: "#ff4d6d" },
     };
 
     function TeamHub(props) {
