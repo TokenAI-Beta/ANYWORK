@@ -509,6 +509,15 @@ window.__ModuleLoader__.load({
       "task.empty": "暂无任务，先在上面建一条。",
       "task.emptyFilter": "此筛选下暂无任务",
       "sec.usage": "工作台用量",
+      "usg.tab": "用量",
+      "usg.title": "工作台用量",
+      "usg.sub": "本月消耗与预算",
+      "usg.chipPfx": "本月 ",
+      "usg.chipTip": "本月费用（点击查看）",
+      "usg.details": "查看详情 →",
+      "usg.recent": "最近请求",
+      "usg.none": "暂无记录",
+      "usg.signout": "退出登录",
       "sec.kb": "知识库",
       "sec.members": "成员管理",
       "sec.notify": "通知",
@@ -1012,6 +1021,15 @@ window.__ModuleLoader__.load({
       "task.empty": "No tasks yet — create one above.",
       "task.emptyFilter": "No tasks under this filter",
       "sec.usage": "Usage",
+      "usg.tab": "Usage",
+      "usg.title": "Workbench usage",
+      "usg.sub": "This month's spend and budget",
+      "usg.chipPfx": "This month ",
+      "usg.chipTip": "Spend this month (click to view)",
+      "usg.details": "View details →",
+      "usg.recent": "Recent requests",
+      "usg.none": "No records yet",
+      "usg.signout": "Sign out",
       "sec.kb": "Knowledge base",
       "sec.members": "Members",
       "sec.notify": "Notifications",
@@ -1160,8 +1178,25 @@ window.__ModuleLoader__.load({
 .ddp .wxq-msg.err { color:#e05b5b; }
 .ddp .wxq-msg.ok { color:#3ecf8e; font-weight:600; }
 .ddp .pdl { font-size:12px; color:var(--dsw-alias-label-secondary, #5f6570); word-break:break-all; margin:4px 0 0; }
-body:has(.ddp.fv) #desk-usage-fab, body:has(.ddp.fv) #desk-usage-panel { display:none !important; }
-body.desk-panel-open #desk-usage-fab, body.desk-panel-open #desk-usage-panel { display:none !important; }
+/* ── 「用量」顶栏轻提示（方案C）：平时很淡，点开小气泡；≥80% 变黄、≥100% 变红；手机端隐藏 ── */
+.duc-wrap { position:relative; display:inline-flex; align-items:center; }
+.duc { border:0; background:transparent; color:var(--dsw-alias-label-tertiary, #8a8f98); font-size:12px; cursor:pointer; padding:4px 9px; border-radius:8px; opacity:.72; transition:opacity .12s ease, background .12s ease; white-space:nowrap; }
+.duc:hover { background:rgba(127,127,127,.12); opacity:1; }
+.duc.warn { color:#b8860b; opacity:.95; }
+.duc.bad { color:#d64545; opacity:1; }
+.duc-pop { width:250px; background:var(--dsw-alias-bg-layer-2, #fff); border:1px solid var(--dsw-alias-border-l2, #d0d3d9); border-radius:12px; box-shadow:0 14px 34px rgba(16,24,40,.22); padding:12px 14px; z-index:9998; color:inherit; text-align:left; }
+.duc-pop .big { font-size:19px; font-weight:700; }
+.duc-pop .mut { font-size:11.5px; color:var(--dsw-alias-label-tertiary, #8a8f98); margin-top:2px; }
+.duc-pop .bar { background:rgba(127,127,127,.18); border-radius:6px; height:7px; overflow:hidden; margin-top:7px; }
+.duc-pop .bar i { display:block; height:100%; background:#4f7cf7; }
+.duc-pop .go { margin-top:9px; color:var(--dsw-alias-state-business-primary, #4f7cf7); cursor:pointer; font-size:12.5px; }
+/* 用量整页（方案A）内部小样式 */
+.ddp .ug-big { font-size:26px; font-weight:700; }
+.ddp .ug-mut { font-size:12.5px; color:var(--dsw-alias-label-tertiary, #8a8f98); margin-top:2px; }
+.ddp .ug-bar { background:rgba(127,127,127,.18); border-radius:7px; height:9px; overflow:hidden; margin-top:6px; }
+.ddp .ug-bar i { display:block; height:100%; background:#4f7cf7; }
+.ddp .ug-row { display:flex; gap:12px; align-items:baseline; padding:5px 0; border-bottom:1px solid var(--dsw-alias-border-l2, #e8eaed); font-size:12.5px; }
+@media (max-width: 820px) { .duc-wrap { display:none !important; } }
 @media (max-width: 820px) {
   .ddp.fv { left:0; border-left:0; }
   .ddp.fv::before { display:none; }
@@ -1210,9 +1245,6 @@ body.desk-panel-open [class*="sidebarCol"] { transform: none !important; }
   .ddp .ft { font-size:12.5px; }
   .ddp .msg, .ddp .empty { font-size:13px; }
   .ddp .code { font-size:12.5px; }
-  /* 面板打开时隐藏右下角“用量”悬浮钮，避免压在面板上 */
-  body:has(.ddp) #desk-usage-fab, body:has(.ddp) #desk-usage-panel { display: none !important; }
-  body.desk-panel-open #desk-usage-fab, body.desk-panel-open #desk-usage-panel { display: none !important; }
   /* 关闭操作强化：✕ 更醒目、整屏轻压暗（点空白处关闭，见注入脚本） */
   .ddp .hd { position:relative; z-index:2; }
   .ddp .hd .x { width:44px; height:44px; font-size:19px; opacity:1; background:rgba(127,127,127,.16); border-radius:12px; touch-action:manipulation; }
@@ -2798,6 +2830,187 @@ body.desk-panel-open [class*="sidebarCol"] { transform: none !important; }
         fvMeasure();
       } catch (e) { /* 忽略 */ }
     })();
+
+    /* ═══ 「用量」方案A（侧栏整页）+ 方案C（会话顶栏轻提示）═══ */
+    function UsagePanel(props) {
+      var wide = !!(props && props.wide);
+      var openPair = React.useState(false);
+      var open = openPair[0];
+      var setOpen = openPair[1];
+      useFvSync(open, setOpen);
+      var dataPair = React.useState({ phase: "loading", team: null });
+      var data = dataPair[0];
+      var setData = dataPair[1];
+
+      function load() {
+        fetch("/portal/api/usage", { headers: { accept: "application/json" } })
+          .then(function (r) {
+            if (!r.ok) throw new Error("HTTP " + r.status);
+            return r.json();
+          })
+          .then(function (d) {
+            setData({ phase: "ready", data: d, team: null });
+            fetch("/portal/api/admin/overview", { headers: { accept: "application/json" } })
+              .then(function (r2) { return r2.ok ? r2.json() : null; })
+              .then(function (ov) {
+                if (!ov || !ov.trend || !ov.trend.length) return;
+                var total7 = 0;
+                for (var i = 0; i < ov.trend.length; i++) total7 += ov.trend[i].s;
+                setData(function (p2) {
+                  return p2.phase === "ready" ? { phase: "ready", data: p2.data, team: { total7: total7 } } : p2;
+                });
+              })
+              .catch(function () { /* 非管理员或不可用：隐藏团队块 */ });
+          })
+          .catch(function () {
+            setData({ phase: "error", team: null });
+          });
+      }
+      React.useEffect(function () {
+        load();
+      }, []);
+      React.useEffect(function () {
+        function onOpen(e) {
+          try {
+            if (e && e.detail && e.detail.id === "desk-usage") {
+              setOpen(true);
+              load();
+            }
+          } catch (x) { /* 忽略 */ }
+        }
+        window.addEventListener("desk-open", onOpen);
+        return function () { window.removeEventListener("desk-open", onOpen); };
+      }, []);
+
+      function toggle() {
+        var next = !open;
+        setOpen(next);
+        if (next) load();
+      }
+
+      var trigger = h(
+        "button",
+        { className: "ddb" + (wide ? "" : " rail") + (open ? " on" : ""), onClick: toggle, title: tr("usg.title") },
+        h("span", { className: "ic" }, dicon("chart", 15)),
+        wide ? h("span", { className: "lbl" }, tr("usg.tab")) : null
+      );
+      if (!open) return h("div", null, trigger);
+
+      var kids = [];
+      if (data.phase === "loading") kids.push(h("div", { key: "ld", className: "empty" }, tr("usage.loading")));
+      if (data.phase === "error") kids.push(h("div", { key: "er", className: "empty" }, tr("usage.portalHint")));
+      if (data.phase === "ready") {
+        var d = data.data;
+        var pct = d.budget != null ? Math.min(100, (d.month.cost / d.budget) * 100) : null;
+        kids.push(h("div", { key: "m" },
+          h("div", { className: "ug-big" }, fmt(d.month.cost)),
+          h("div", { className: "ug-mut" }, tr("usage.monthPrefix") + d.month.events + tr("usage.mid") + d.month.miss + tr("usage.outMid") + d.month.out + " tokens")
+        ));
+        kids.push(h("div", { key: "t", className: "ug-mut" }, tr("usage.todayPrefix") + fmt(d.day.cost) + " · " + d.day.events + tr("usage.reqSuffix")));
+        if (pct != null) {
+          kids.push(h("div", { key: "b" },
+            h("div", { className: "ug-mut" }, tr("usage.budgetPrefix") + d.budget + " · " + (d.month.cost >= d.budget ? tr("usage.overLimit") : tr("usage.remainingPrefix") + (d.budget - d.month.cost).toFixed(4))),
+            h("div", { className: "ug-bar" }, h("i", { style: { width: pct.toFixed(1) + "%" } }))
+          ));
+        }
+        kids.push(h("div", { key: "rlb", className: "lb" }, tr("usg.recent")));
+        var rowsN = [];
+        var rec = d.recent || [];
+        for (var ri = 0; ri < rec.length; ri++) {
+          rowsN.push(h("div", { key: "r" + ri, className: "ug-row" },
+            h("span", { className: "ug-mut", style: { marginTop: 0 } }, rec[ri].time),
+            h("span", null, rec[ri].model + (rec[ri].channel ? " @" + rec[ri].channel : "")),
+            h("span", { style: { marginLeft: "auto" } }, fmt(rec[ri].cost))
+          ));
+        }
+        kids.push(h("div", { key: "rows" }, rowsN.length ? rowsN : h("div", { className: "empty" }, tr("usg.none"))));
+        if (data.team) kids.push(h("div", { key: "tm", className: "ft" }, tr("admin.teamUsage7d") + fmt(data.team.total7)));
+        kids.push(h("div", { key: "ft", className: "ft" },
+          h("a", { href: "/portal/me", target: "_blank", style: { color: "var(--dsw-alias-state-business-primary, #4f7cf7)" } }, tr("usage.openPortal")),
+          " · ",
+          h("form", { method: "post", action: "/logout", style: { display: "inline", margin: 0 } },
+            h("button", { style: { border: 0, background: "none", color: "#c0392b", cursor: "pointer", fontSize: "inherit", padding: 0 } }, tr("usg.signout")))
+        ));
+      }
+
+      return h("div", null,
+        trigger,
+        h("div", { key: "panel", className: "ddp fv" },
+          h("div", { className: "hd" },
+            h("span", { className: "ico" }, dicon("chart", 18)),
+            h("div", null, h("div", { className: "t1" }, tr("usg.title")), h("div", { className: "t2" }, tr("usg.sub"))),
+            h("button", { className: "x", onClick: toggle }, tr("fv.back"))
+          ),
+          h("div", { className: "bd" }, kids)
+        )
+      );
+    }
+
+    function UsageChip() {
+      var stPair = React.useState({ phase: "loading" });
+      var st = stPair[0];
+      var setSt = stPair[1];
+      var popPair = React.useState(null);
+      var pop = popPair[0];
+      var setPop = popPair[1];
+      var wrapRef = React.useRef(null);
+
+      function load() {
+        fetch("/portal/api/usage", { headers: { accept: "application/json" } })
+          .then(function (r) {
+            if (!r.ok) throw new Error("HTTP " + r.status);
+            return r.json();
+          })
+          .then(function (d) { setSt({ phase: "ready", data: d }); })
+          .catch(function () { setSt({ phase: "error" }); });
+      }
+      React.useEffect(function () {
+        load();
+        var iv = setInterval(load, 180000);
+        return function () { clearInterval(iv); };
+      }, []);
+      React.useEffect(function () {
+        if (!pop) return;
+        function onDoc(e) {
+          try {
+            if (wrapRef.current && e && e.target && wrapRef.current.contains(e.target)) return;
+            setPop(null);
+          } catch (x) { setPop(null); }
+        }
+        document.addEventListener("pointerdown", onDoc, true);
+        return function () { document.removeEventListener("pointerdown", onDoc, true); };
+      }, [pop]);
+
+      if (st.phase !== "ready") return null;
+      var d = st.data;
+      var pct = d.budget != null ? Math.min(100, (d.month.cost / d.budget) * 100) : null;
+      var cls = "duc" + (pct != null && pct >= 100 ? " bad" : pct != null && pct >= 80 ? " warn" : "");
+
+      function togglePop() {
+        if (pop) { setPop(null); return; }
+        var pos = { top: 52, right: 12 };
+        try {
+          var r = wrapRef.current ? wrapRef.current.getBoundingClientRect() : null;
+          if (r && r.bottom) pos = { top: Math.round(r.bottom + 8), right: Math.max(8, Math.round(window.innerWidth - r.right)) };
+        } catch (x) { /* 忽略 */ }
+        setPop(pos);
+      }
+
+      var popup = pop
+        ? h("div", { className: "duc-pop", style: { position: "fixed", top: pop.top, right: pop.right } },
+            h("div", { className: "big" }, fmt(d.month.cost)),
+            h("div", { className: "mut" }, tr("usage.monthPrefix") + d.month.events + tr("usage.reqSuffix") + (pct != null ? " · " + tr("usage.budgetPrefix") + Math.round(pct) + "%" : "")),
+            pct != null ? h("div", { className: "bar" }, h("i", { style: { width: pct.toFixed(1) + "%" } })) : null,
+            h("div", { className: "mut" }, tr("usage.todayPrefix") + fmt(d.day.cost) + " · " + d.day.events + tr("usage.reqSuffix")),
+            h("div", { className: "go", onClick: function () { setPop(null); try { window.dispatchEvent(new CustomEvent("desk-open", { detail: { id: "desk-usage" } })); } catch (x) { /* 忽略 */ } } }, tr("usg.details"))
+          )
+        : null;
+
+      return h("span", { className: "duc-wrap", ref: wrapRef },
+        h("button", { className: cls, onClick: togglePop, title: tr("usg.chipTip") }, tr("usg.chipPfx") + fmt(d.month.cost) + (pct != null ? " · " + Math.round(pct) + "%" : "")),
+        popup
+      );
+    }
 
     /* ═══ 侧栏入口线性图标（统一 24×24 描边风格，stroke=currentColor） ═══ */
     var DESK_ICONS = {
@@ -5657,6 +5870,32 @@ body.desk-panel-open [class*="sidebarCol"] { transform: none !important; }
             },
           },
           AutomationPanel
+        );
+      });
+      ctx.slots.inject("sidebar.footer.action", function () {
+        return ctx.slots.register(
+          {
+            name: "sidebar.footer.action",
+            id: "desk-usage",
+            order: 92,
+            label: function () {
+              return tr("usg.tab");
+            },
+          },
+          UsagePanel
+        );
+      });
+      ctx.slots.inject("conversation.session.header.utilities", function () {
+        return ctx.slots.register(
+          {
+            name: "conversation.session.header.utilities",
+            id: "desk-usage-chip",
+            order: 60,
+            label: function () {
+              return tr("usg.chipTip");
+            },
+          },
+          UsageChip
         );
       });
       ctx.slots.inject("settings.section", function () {

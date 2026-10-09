@@ -423,15 +423,12 @@ const DESK_MOBILE_CSS = `
   [class*="LVqHyW_header"] { padding: 4px 8px 4px 14px !important; }
   [class*="LVqHyW_header"] [class*="LVqHyW_actions"] { display: none !important; }
   [class*="LVqHyW_close"] { width: 40px !important; height: 40px !important; margin-left: 8px !important; }
-  #desk-usage-fab { right: 12px !important; bottom: 12px !important; padding: 9px 13px !important; font-size: 12.5px !important; }
-  body:has([class*="LVqHyW_overlay"]) #desk-usage-fab { display: none !important; }
   /* 侧边栏抽屉化：展开时覆盖在内容上（不再压扁主内容）；不压暗、点右侧不自动收起（边看运行边用侧栏；关闭用收起钮/收起侧边栏） */
   [data-desk-frame]:not([data-desk-collapsed="true"]) { grid-template-columns: 0px minmax(0px, 1fr) 0px !important; }
   [data-desk-frame]:not([data-desk-collapsed="true"]) [class*="centerCol"] { grid-column: 2 !important; width: 100% !important; }
   [data-desk-frame]:not([data-desk-collapsed="true"]) [class*="sidebarCol"] { position: fixed !important; left: 12px !important; top: 12px !important; bottom: 12px !important; margin: 0 !important; box-sizing: border-box !important; width: min(64vw, 280px) !important; height: auto !important; z-index: 70 !important; border-radius: 14px !important; box-shadow: 0 18px 60px rgba(8,12,20,.42) !important; }
   [data-desk-frame]:not([data-desk-collapsed="true"]) [class*="handle"] { display: none !important; }
-  [data-desk-frame]:not([data-desk-collapsed="true"]) #desk-usage-fab { display: none !important; }
-  /* 主界面微调（第 4 项）：触控尺寸 / 输入字号 / 用量钮防遮挡 */
+  /* 主界面微调（第 4 项）：触控尺寸 / 输入字号 */
   [class*="CtUWPa_row"] button { min-width: 38px !important; min-height: 38px !important; }
   button[aria-label="发送消息"], button[aria-label="send message" i] { min-width: 44px !important; min-height: 44px !important; }
   [class*="CtUWPa_"] [contenteditable="true"] { font-size: 16px !important; }
@@ -445,8 +442,6 @@ const DESK_MOBILE_CSS = `
   body { --dsw-font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", "Helvetica Neue", Helvetica, Arial, sans-serif !important; }
   [data-dsh-float] [role="treeitem"], [data-dsh-float] [role="dialog"] h2 { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", "Helvetica Neue", Helvetica, Arial, sans-serif !important; }
   [role="tooltip"] { display: none !important; }
-  body:has([class*="CtUWPa_root"]:not([class*="hero"])) #desk-usage-fab { bottom: calc(env(safe-area-inset-bottom, 0px) + 132px) !important; }
-  body:has([class*="CtUWPa_root"]:not([class*="hero"])):has([contenteditable="true"]:focus) #desk-usage-fab { display: none !important; }
   /* 侧边栏从上往下缩：顶边把手拖拽 + clip 裁切（底边固定，最底部一行常驻）；打字（键盘弹起）时近扁平状态自动让位 */
   [data-desk-frame][data-desk-sbshrink] [class*="sidebarCol"] { bottom: 12px !important; height: auto !important; overflow: hidden !important; transition: opacity .18s ease !important; }
   html.desk-sb-typing [data-desk-frame]:not([data-desk-collapsed="true"]) [class*="sidebarCol"] { opacity: 0 !important; pointer-events: none !important; }
@@ -581,7 +576,7 @@ var t=setInterval(function(){tries++;if(boot()||tries>75){clearInterval(t);}},40
 }catch(e){}})();`;
 
 const usageWidgetTag = (lang: string): string =>
-  `<script>window.__DSH_HOST_PERSISTENCE__=true;window.__DESK_LANG=${lang === 'en' ? "'en'" : "'zh'"};${DESK_SB_SCRIPT}</script><link rel="manifest" href="/portal.webmanifest"><link rel="icon" type="image/svg+xml" href="/portal-icon.svg"><meta name="theme-color" content="#1c1e21"><link rel="stylesheet" href="/portal/static/desk-mobile.css"><script src="/portal/static/desk-usage.js" defer></script>`
+  `<script>window.__DSH_HOST_PERSISTENCE__=true;window.__DESK_LANG=${lang === 'en' ? "'en'" : "'zh'"};${DESK_SB_SCRIPT}</script><link rel="manifest" href="/portal.webmanifest"><link rel="icon" type="image/svg+xml" href="/portal-icon.svg"><meta name="theme-color" content="#1c1e21"><link rel="stylesheet" href="/portal/static/desk-mobile.css">`
 
 /** PWA / 桌面端图标（SVG；浏览器「安装应用」与标签页图标共用） */
 const PORTAL_ICON_SVG = [
@@ -605,79 +600,12 @@ const bootSplashTag = (lang: string): string => `
 /** 往 dsh 工作台的 HTML 里注入"用量"悬浮小组件（不改 dsh 源码） */
 function injectUsageWidget(body: string, lang: string = 'zh'): string {
   const tag = bootSplashTag(lang) + usageWidgetTag(lang)
-  if (body.includes('desk-usage.js')) return body
+  if (body.includes('desk-mobile.css')) return body
   const idx = body.lastIndexOf('</body>')
   if (idx === -1) return body + tag
   return body.slice(0, idx) + tag + body.slice(idx)
 }
 
-/** 工作台内的"用量"小组件脚本（纯 JS；避免反引号与模板占位符，方便内嵌） */
-const DESK_USAGE_JS = `
-(function () {
-  if (document.getElementById('desk-usage-fab')) return
-  var LANG = (window.__DESK_LANG === 'en') ? 'en' : 'zh'
-  function T(zh, en) { return LANG === 'en' ? en : zh }
-  var css = document.createElement('style')
-  css.textContent =
-    '#desk-usage-fab{position:fixed;right:18px;bottom:18px;z-index:2147483000;border:1px solid #e4e6eb;border-radius:999px;padding:10px 16px;background:#ffffff;color:#1c1e21;font-size:13.5px;cursor:pointer;box-shadow:0 6px 20px rgba(16,24,40,.12);font-family:system-ui,"Microsoft YaHei",sans-serif;transition:box-shadow .15s ease}'
-    + '#desk-usage-fab:hover{box-shadow:0 8px 26px rgba(16,24,40,.18)}'
-    + '#desk-usage-panel{position:fixed;right:18px;bottom:64px;z-index:2147483000;width:324px;max-height:70vh;overflow:auto;background:#fff;color:#1c1e21;border:1px solid #e9ebee;border-radius:14px;box-shadow:0 16px 44px rgba(16,24,40,.18);padding:14px 16px;font-family:system-ui,"Microsoft YaHei",sans-serif;font-size:13px;display:none}'
-    + '#desk-usage-panel h3{margin:0 0 8px;font-size:15px}'
-    + '#desk-usage-panel .big{font-size:22px;font-weight:700}'
-    + '#desk-usage-panel .muted{color:#65676b;font-size:12px}'
-    + '#desk-usage-panel table{width:100%;border-collapse:collapse;font-size:12px;margin-top:6px}'
-    + '#desk-usage-panel td{padding:3px 4px;border-bottom:1px solid #f0f1f3}'
-    + '#desk-usage-panel .row{display:flex;justify-content:space-between;margin:6px 0}'
-    + '#desk-usage-panel .bar{background:#eef0f3;border-radius:6px;height:8px;overflow:hidden;margin-top:4px}'
-    + '#desk-usage-panel .bar i{display:block;height:100%;background:#4f7cf7}'
-    + '#desk-usage-panel .pnl-foot{margin-top:10px;display:flex;justify-content:space-between;align-items:center}'
-    + '#desk-usage-panel a{color:#1c1e21}'
-  document.head.appendChild(css)
-  var fab = document.createElement('button')
-  fab.id = 'desk-usage-fab'
-  fab.textContent = T('📊 用量', '📊 Usage')
-  document.body.appendChild(fab)
-  var panel = document.createElement('div')
-  panel.id = 'desk-usage-panel'
-  document.body.appendChild(panel)
-  var loadedAt = 0
-  function esc(s) { return String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;') }
-  function fmt(n) { return '¥' + Number(n).toFixed(4) }
-  function render(d) {
-    var h = '<h3>' + T('我的用量', 'My usage') + '</h3>'
-    h += '<div class="big">' + fmt(d.month.cost) + '</div>'
-    h += '<div class="muted">' + T('本月 · 请求 ', 'This month · requests ') + d.month.events + T(' 次 · 未命中 ', ' · missed ') + d.month.miss + T(' / 输出 ', ' / output ') + d.month.out + ' tokens</div>'
-    if (d.budget != null) {
-      var pct = Math.min(100, (d.month.cost / d.budget) * 100)
-      h += '<div class="muted" style="margin-top:8px">' + T('预算 ¥', 'Budget ¥') + d.budget + (d.month.cost >= d.budget ? T('（已超限）', ' (over limit)') : '') + '</div>'
-      h += '<div class="bar"><i style="width:' + pct.toFixed(1) + '%"></i></div>'
-    }
-    h += '<div class="row"><span class="muted">' + T('今日', 'Today') + '</span><span>' + fmt(d.day.cost) + ' · ' + d.day.events + T(' 次', ' requests') + '</span></div>'
-    h += '<table>'
-    for (var i = 0; i < d.recent.length; i++) {
-      h += '<tr><td class="muted">' + esc(d.recent[i].time) + '</td><td>' + esc(d.recent[i].model) + (d.recent[i].channel ? ' <span class="muted">@' + esc(d.recent[i].channel) + '</span>' : '') + '</td><td style="text-align:right">' + fmt(d.recent[i].cost) + '</td></tr>'
-    }
-    if (!d.recent.length) h += '<tr><td class="muted">' + T('暂无记录', 'No records yet') + '</td></tr>'
-    h += '</table>'
-    h += '<div class="pnl-foot"><a href="/portal/me" target="_blank">' + T('详细 / 管理', 'Details / manage') + '</a>'
-    h += '<form method="post" action="/logout" style="margin:0"><button style="border:0;background:none;color:#c0392b;cursor:pointer;font-size:12px;padding:0">' + T('退出登录', 'Sign out') + '</button></form></div>'
-    panel.innerHTML = h
-  }
-  function load() {
-    fetch('/portal/api/usage')
-      .then(function (r) { if (!r.ok) throw new Error('HTTP ' + r.status); return r.json() })
-      .then(function (d) { loadedAt = Date.now(); render(d) })
-      .catch(function (e) {
-        panel.innerHTML = '<h3>' + T('我的用量', 'My usage') + '</h3><div class="muted">' + T('加载失败（', 'Failed to load (') + esc(e.message) + T('）· ', '). ') + '<a href="/portal/me" target="_blank">' + T('打开完整页', 'open the full page') + '</a></div>'
-      })
-  }
-  fab.addEventListener('click', function () {
-    var show = panel.style.display !== 'block'
-    panel.style.display = show ? 'block' : 'none'
-    if (show && Date.now() - loadedAt > 15000) load()
-  })
-})()
-`
 
 export function startPortal(opts: PortalOptions) {
   const db = opts.db
@@ -775,11 +703,7 @@ export function startPortal(opts: PortalOptions) {
         return res.end(JSON.stringify({ ok: true, service: 'dsh-anywork-portal' }))
       }
 
-      // —— 工作台内小组件：脚本 + 用量 JSON ——
-      if (req.method === 'GET' && path === '/portal/static/desk-usage.js') {
-        res.writeHead(200, { 'content-type': 'application/javascript; charset=utf-8' })
-        return res.end(DESK_USAGE_JS)
-      }
+      // —— 工作台内小组件：移动端样式 + 用量 JSON ——
       if (req.method === 'GET' && path === '/portal/static/desk-mobile.css') {
         res.writeHead(200, { 'content-type': 'text/css; charset=utf-8', 'cache-control': 'no-cache' })
         return res.end(DESK_MOBILE_CSS)
