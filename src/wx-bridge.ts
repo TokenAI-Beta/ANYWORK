@@ -21,6 +21,8 @@ const BACKOFF_MS = 30_000
 const MAX_FAILS = 3
 const SESSION_EXPIRED_PAUSE_MS = 10 * 60_000
 const REPLY_WAIT_MS = 4 * 60_000
+/** 检测到「挂着选择题」后最多等多久就把救援包发出去 */
+const QUESTION_NOTICE_MS = 45_000
 const CHUNK_MAX = 1800
 const MAX_PER_HOUR = 30
 const sleep = (ms: number): Promise<void> => new Promise((r) => setTimeout(r, ms))
@@ -60,7 +62,43 @@ function pruneSeen(): void {
 }
 
 // —— 会话文件解码（与 auto-exec 同源的自带副本，便于最小化部署到旧镜像）——
-function decodeSessionText(home: string, sid: string): { text: string; ended: boolean } | null {
+interface PendingAsk {
+  header?: string
+  question: string
+  options: { label: string; description?: string }[]
+  multiSelect?: boolean
+}
+
+/** 解析 ask_user_question 工具调用的 arguments（JSON 字符串或对象） */
+function parseAsk(args: unknown): PendingAsk | null {
+  try {
+    const obj = typeof args === 'string' ? JSON.parse(args) : args
+    const q0 = (obj as { questions?: unknown[] } | null)?.questions?.[0] as
+      | { header?: unknown; question?: unknown; options?: unknown; multi_select?: unknown; multiSelect?: unknown }
+      | undefined
+    if (!q0 || typeof q0.question !== 'string') return null
+    const options = Array.isArray(q0.options)
+      ? q0.options
+          .filter((o) => o && typeof (o as { label?: unknown }).label === 'string')
+          .map((o) => ({
+            label: String((o as { label: unknown }).label),
+            ...(typeof (o as { description?: unknown }).description === 'string'
+              ? { description: String((o as { description: unknown }).description) }
+              : {}),
+          }))
+      : []
+    return {
+      ...(typeof q0.header === 'string' ? { header: q0.header } : {}),
+      question: q0.question,
+      options,
+      ...(q0.multi_select === true || q0.multiSelect === true ? { multiSelect: true } : {}),
+    }
+  } catch {
+    return null
+  }
+}
+
+function decodeSessionState(home: string, sid: string): { text: string; ended: boolean; pendingAsk: PendingAsk | null } | null {
   try {
     const sdir = join(home, 'sessions')
     if (!existsSync(sdir)) return null
@@ -90,10 +128,11 @@ function decodeSessionText(home: string, sid: string): { text: string; ended: bo
     }
     let text = ''
     let ended = false
+    const asks = new Map<string, PendingAsk>()
     for (const line of out.toString('utf8').split('\n')) {
       const t = line.trim()
       if (!t) continue
-      let ev: { type?: string; data?: { message?: { content?: unknown } } }
+      let ev: { type?: string; data?: { message?: { content?: unknown }; callId?: unknown; name?: unknown; arguments?: unknown } }
       try {
         ev = JSON.parse(t) as typeof ev
       } catch {
@@ -116,16 +155,34 @@ function decodeSessionText(home: string, sid: string): { text: string; ended: bo
           if (txt) text = txt
         }
       }
+      if (ev.type === 'tool/call') {
+        const d = ev.data as { callId?: unknown; name?: unknown; arguments?: unknown } | undefined
+        if (d && d.name === 'ask_user_question' && typeof d.callId === 'string') {
+          const ask = parseAsk(d.arguments)
+          if (ask) asks.set(d.callId, ask)
+        }
+      }
+      if (ev.type === 'tool/result') {
+        const rawLine = JSON.stringify(ev.data ?? '')
+        for (const m of rawLine.matchAll(/"(?:callId|toolCallId)":"([^"]+)"/g)) asks.delete(m[1])
+      }
       if (ev.type === 'turn/end') ended = true
       if (ev.type === 'user/message' || ev.type === 'turn/start') {
         ended = false
         text = ''
       }
     }
-    return { text, ended }
+    let pendingAsk: PendingAsk | null = null
+    for (const v of asks.values()) pendingAsk = v
+    return { text, ended, pendingAsk }
   } catch {
     return null
   }
+}
+
+/** 运维/测试：查看某会话当前文本与挂起问题（只读） */
+export function wxDebugDecode(home: string, sid: string): { text: string; ended: boolean; pendingAsk: PendingAsk | null } | null {
+  return decodeSessionState(home, sid)
 }
 
 function rpcValue(body: unknown): Record<string, unknown> | undefined {
@@ -301,7 +358,7 @@ async function chatTurn(
   db: DatabaseSync,
   row: WxChatRow,
   text: string,
-): Promise<{ ok: boolean; reply?: string; info: string; sid?: string }> {
+): Promise<{ ok: boolean; reply?: string; info: string; sid?: string; partial?: string }> {
   try {
     const owner = row.account
     const port = userPort(db, owner)
@@ -320,7 +377,7 @@ async function chatTurn(
       if (!sid) return { ok: false, info: '创建会话失败' }
       db.prepare(`UPDATE wx_chat SET session_id = ? WHERE id = ?`).run(sid, row.id)
     }
-    const prevText = decodeSessionText(home, sid)?.text ?? ''
+    const prevText = decodeSessionState(home, sid)?.text ?? ''
     const pr = await callInstanceRpc(port, auth, 'session/prompt', {
       args: {
         request: {
@@ -336,6 +393,8 @@ async function chatTurn(
     const start = Date.now()
     let sawRunning = false
     let reply = ''
+    let askNotice: { partial: string; ask: PendingAsk } | null = null
+    let lastText = prevText
     while (Date.now() < start + REPLY_WAIT_MS) {
       await sleep(2500)
       let running = false
@@ -346,18 +405,98 @@ async function chatTurn(
         // 忽略，继续等
       }
       if (running) sawRunning = true
-      const got = decodeSessionText(home, sid)
+      const got = decodeSessionState(home, sid)
       if (!running && got && got.text && (sawRunning || got.text !== prevText)) {
         reply = got.text
         break
       }
       if (!sawRunning && !running && Date.now() > start + 45_000) break
+      // 「挂着选择题」救援：running 还在 + 有未作答的 ask_user_question + 文本已稳定
+      if (running && got?.pendingAsk) {
+        const stable = got.text === lastText
+        lastText = got.text
+        if (Date.now() > start + QUESTION_NOTICE_MS && stable) {
+          askNotice = { partial: got.text !== prevText ? got.text : '', ask: got.pendingAsk }
+          break
+        }
+      } else if (got) {
+        lastText = got.text
+      }
     }
-    if (!reply) return { ok: false, info: '等待回复超时', sid }
-    return { ok: true, reply, info: 'ok', sid }
+    if (reply) return { ok: true, reply, info: 'ok', sid, partial: '' }
+    if (askNotice) return { ok: true, reply: composeAskNotice(askNotice.partial, askNotice.ask), info: 'question', sid, partial: askNotice.partial }
+    const tail = decodeSessionState(home, sid)
+    const partial = tail && tail.text && tail.text !== prevText ? tail.text : ''
+    if (tail?.pendingAsk) return { ok: true, reply: composeAskNotice(partial, tail.pendingAsk), info: 'question', sid, partial }
+    if (partial) {
+      return { ok: true, reply: partial + '\n\n（助理还没跑完，先把已经产出的部分发来；完整结果稍后追加）', info: 'partial', sid, partial }
+    }
+    return { ok: false, info: '等待回复超时', sid, partial: '' }
   } catch (e) {
     return { ok: false, info: String((e as Error)?.message || e).slice(0, 200) }
   }
+}
+
+/** 把「助理卡在选择题」格式化给微信（题目 + 选项 + 指引） */
+function composeAskNotice(partial: string, ask: PendingAsk): string {
+  const lines: string[] = []
+  if (partial) lines.push(partial, '')
+  lines.push('✋ 助理卡在一道选择题上了——它在等工作台里的你挑一个（微信这头没法直接选）：', '')
+  lines.push((ask.header ? '「' + ask.header + '」' : '') + ask.question)
+  if (ask.options.length) {
+    lines.push('')
+    ask.options.forEach((o, i) => {
+      lines.push((i + 1) + '. ' + o.label + (o.description ? ' —— ' + o.description : ''))
+    })
+  }
+  lines.push('')
+  if (ask.multiSelect) lines.push('（可多选）', '')
+  lines.push('👉 去工作台网页里点选（题目挂着等你）；选完助理会继续，后续回复我接着发到这里。')
+  return lines.join('\n')
+}
+
+// —— 「挂起续传」：发过选择题/半截回复后，盯住会话；出现新的助理文本就继续发到微信 ——
+const continuations = new Map<number, number>()
+function scheduleContinuation(db: DatabaseSync, chatId: number, sid: string, sentText: string): void {
+  const gen = (continuations.get(chatId) ?? 0) + 1
+  continuations.set(chatId, gen)
+  const started = Date.now()
+  let lastSent = sentText
+  let sends = 0
+  const tick = async (): Promise<void> => {
+    if (continuations.get(chatId) !== gen) return
+    if (Date.now() - started > 45 * 60_000 || sends >= 6) return
+    try {
+      const row = getRow(db, chatId)
+      if (row && row.enabled) {
+        const st = decodeSessionState(userHome(row.account), sid)
+        const textNow = st?.text ?? ''
+        if (textNow && textNow !== lastSent) {
+          const out = st?.pendingAsk ? composeAskNotice(textNow, st.pendingAsk) : textNow
+          let ok = true
+          let info = ''
+          const chunks = chunkText(out, CHUNK_MAX)
+          for (const c of chunks) {
+            const raw = getRow(db, chatId)
+            const res = await sendWeixinIlink(raw?.base_url || row.base_url, row.token, row.openid, c, raw?.last_ctx || undefined)
+            ok = ok && res.ok
+            info = res.info
+            if (!res.ok) break
+            if (chunks.length > 1) await sleep(400)
+          }
+          logMsg(db, chatId, 'out', out, ok, 'continuation:' + info)
+          if (!ok) return
+          lastSent = textNow
+          sends += 1
+          if (st && !st.pendingAsk && st.ended) return
+        }
+      }
+    } catch {
+      // 忽略，下轮再试
+    }
+    setTimeout(() => { void tick() }, 20_000)
+  }
+  setTimeout(() => { void tick() }, 20_000)
 }
 
 async function respond(db: DatabaseSync, id: number, text: string): Promise<void> {
@@ -376,8 +515,11 @@ async function respond(db: DatabaseSync, id: number, text: string): Promise<void
     if (!res.ok) break
     if (chunks.length > 1) await sleep(400)
   }
-  logMsg(db, id, 'out', outText, ok, info)
+  logMsg(db, id, 'out', outText, ok, r.info === 'ok' ? info : r.info + ':' + info)
   db.prepare(`UPDATE wx_chat SET last_reply_ts = ? WHERE id = ?`).run(nowSec(), id)
+  if (ok && r.ok && (r.info === 'question' || r.info === 'partial') && r.sid) {
+    scheduleContinuation(db, id, r.sid, r.partial || '')
+  }
 }
 
 /** 启动微信桥（服务启动时调用一次）：每 15 秒巡检绑定表，起/停轮询循环 */
