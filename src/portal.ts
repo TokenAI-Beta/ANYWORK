@@ -744,7 +744,7 @@ export function startPortal(opts: PortalOptions) {
       // —— 工作台内小组件：移动端样式 + 用量 JSON ——
       if (req.method === 'GET' && path === '/portal/static/desk-mobile.css') {
         res.writeHead(200, { 'content-type': 'text/css; charset=utf-8', 'cache-control': 'no-cache' })
-        return res.end(DESK_MOBILE_CSS)
+        return res.end(DESK_MOBILE_CSS + CLAUDE_M_CSS)
       }
       if (req.method === 'GET' && path === '/portal/api/usage') {
         if (!user) {
@@ -2371,3 +2371,77 @@ export function startPortal(opts: PortalOptions) {
   console.log(`[portal] listening on http://${opts.host}:${opts.port}`)
   return server
 }
+
+const CLAUDE_M_CSS = `
+/* ===== Claude 移动端风格（暖黑 + 陶土）· 2026-10-15 =====
+   仅作用于 ≤820px（手机/窄屏）；令牌对齐 dsh 的 --dsw-alias-*；
+   作用域挂在 html[data-dsh-aqua]（工作台专有标记），门户页不受影响。
+   参考来源：统一设计令牌 + 手机视口验证（390×844）。 */
+@media (max-width: 820px) {
+html[data-dsh-aqua] body {
+  --dsw-alias-bg-base: #151515 !important;
+  --dsw-alias-bg-layer-1: #1E1E1D !important;
+  --dsw-alias-bg-layer-2: #262625 !important;
+  --dsw-alias-bg-layer-3: #2E2D2B !important;
+  --dsw-alias-bg-module-platform: #1A1A19 !important;
+  --dsw-alias-bg-multi-select: #262625 !important;
+  --dsw-alias-bg-skeleton: rgba(255,255,255,0.06) !important;
+  --dsw-alias-label-primary: #F0EFEC !important;
+  --dsw-alias-label-primary-dimmed: #DDDBD3 !important;
+  --dsw-alias-label-primary-bluish: #DDDBD3 !important;
+  --dsw-alias-label-secondary: #A8A69D !important;
+  --dsw-alias-label-caption: #A19E95 !important;
+  --dsw-alias-label-primary-inverted: #FFFFFF !important;
+  --dsw-alias-border-l1: rgba(255,255,255,0.08) !important;
+  --dsw-alias-border-l2: rgba(255,255,255,0.14) !important;
+  --dsw-alias-border-l4: rgba(255,255,255,0.28) !important;
+  --dsw-alias-border-inverted: rgba(255,255,255,0.08) !important;
+  --dsw-alias-border-inverted2: rgba(255,255,255,0.08) !important;
+  --dsw-alias-border-l2-darkmode-thin: rgba(255,255,255,0.10) !important;
+  --dsw-alias-button-primary-fill: #D97757 !important;
+  --dsw-alias-button-primary-hover: #E08A6A !important;
+  --dsw-alias-button-primary-dimmed: #4A2E22 !important;
+  --dsw-alias-brand-primary-new-colorprimary-new-color: #D97757 !important;
+  --dsw-alias-brand-primary: #F0EFEC !important;
+  --dsw-alias-interactive-bg-hover: rgba(255,255,255,0.07) !important;
+  --dsw-alias-interactive-bg-active: rgba(255,255,255,0.12) !important;
+  --dsw-alias-interactive-bg-hover-solid: #232322 !important;
+  --dsw-alias-interactive-bg-hover-accent: rgba(217,119,87,0.18) !important;
+  --dsw-alias-sidebar-nav-item-active-accent: #D97757 !important;
+  --dsw-specific-sidebar-nav-item-active-accent: #D97757 !important;
+  --dsw-alias-button-elevated-fill: #1E1E1D !important;
+  --dsw-alias-button-floating-fill: #1E1E1D !important;
+  --dsw-alias-tooltip-bg: #2E2D2B !important;
+  --dsw-alias-toast-bg: #2E2D2B !important;
+  --dsw-alias-bg-mask-1: rgba(0,0,0,0.55) !important;
+  --dsw-alias-bg-mask-2: rgba(0,0,0,0.35) !important;
+  --dsw-alias-bg-mask-3: rgba(0,0,0,0.55) !important;
+  --dsw-alias-bg-mask-drop: rgba(21,21,21,0.72) !important;
+  --dsw-alias-button-ghost-active-border: rgba(255,255,255,0.30) !important;
+  --dsw-elevation-stroke-color: rgba(255,255,255,0.16) !important;
+  --dsh-aqua-spot-color: hsla(15, 63%, 60%, 0.10) !important;
+  --dsw-alias-scrollbar-bg-l1: rgba(255,255,255,0.15) !important;
+  --dsw-alias-scrollbar-bg-l2: rgba(255,255,255,0.25) !important;
+  --dsw-alias-button-tool-bar-fill: rgba(38,38,37,0.65) !important;
+  --dsw-alias-button-tool-bar-fill-invisible: rgba(38,38,37,0.35) !important;
+  --dsw-alias-state-business-primary: #D97757 !important;
+  --dsw-alias-button-info-fill: #D97757 !important;
+  background: #151515 !important;
+}
+/* 隐藏 aqua 玻璃视觉层（渐变/网格/粒子都画在 canvas 上） */
+html[data-dsh-aqua] canvas { display: none !important; }
+/* 输入卡片：暖深灰 + 白 12% 边框 */
+[class*="CtUWPa_card"] { background: rgba(255,255,255,0.06) !important; border-color: rgba(255,255,255,0.12) !important; }
+[class*="CtUWPa_placeholder"] { color: #A19E95 !important; }
+[class*="CtUWPa_add"] { background: rgba(255,255,255,0.07) !important; color: #C9C6BD !important; }
+[class*="gb7XDG_chevron"], [class*="vtjdUa_triggerEffort"] { color: #A19E95 !important; }
+/* 发送按钮：陶土圆钮 */
+[class*="CtUWPa_card"] button[aria-label*="发送"], [class*="CtUWPa_card"] button[aria-label*="send" i] {
+  background: #D97757 !important; border-color: #D97757 !important; color: #FFFFFF !important;
+}
+[class*="CtUWPa_card"] [class*="CtUWPa_primary"] {
+  background: #D97757 !important; border-color: #D97757 !important; color: #FFFFFF !important;
+}
+}
+
+`;
