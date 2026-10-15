@@ -1303,6 +1303,13 @@ body.desk-panel-open [class*="sidebarCol"] { transform: none !important; }
   .ddp .atg::after { width:20px; height:20px; }
   .ddp .atg.on::after { left:22px; }
 }
+
+/* —— 去掉品牌鲸鱼（侧栏品牌位/轨道休止位 + 新会话 Hero 标题旁）—— */
+[class*="brandMark"] { display: none !important; }
+[class*="railMark"] { display: none !important; }
+[class*="fishHitbox"] { display: none !important; }
+/* 轨道态原为「休止=鲸鱼、悬停=面板图标」；鲸鱼移除后面板图标改为常显 */
+[class*="collapsed"] [class*="panelIcon"] { display: inline !important; }
 `;
     (function () {
       try {
