@@ -602,6 +602,17 @@ if(!g){g=document.createElement('div');g.id='desk-sb-grip';g.innerHTML='<span>\u
 g.style.display='none';document.body.appendChild(g);wireDrag();}
 if(!boot.__wired){boot.__wired=1;
 wireMobileUx();
+function wireMenuBtn(){try{
+if(!document.body)return;
+if(document.getElementById('desk-menu-btn'))return;
+if(!window.matchMedia||!matchMedia('(max-width:820px)').matches)return;
+var b=document.createElement('button');b.id='desk-menu-btn';b.type='button';b.setAttribute('aria-label','打开侧边栏');
+b.innerHTML='<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><rect x="3.2" y="4.2" width="17.6" height="15.6" rx="3.2"/><path d="M9.4 4.2v15.6"/></svg>';
+b.addEventListener('click',function(ev){try{ev.preventDefault();var t=document.querySelectorAll('button');for(var i=0;i<t.length;i++){var a=t[i].getAttribute('aria-label')||'';if(a==='打开侧边栏'||a==='收起侧边栏'){t[i].click();break;}}}catch(_){}});
+document.body.appendChild(b);
+}catch(_){}}
+wireMenuBtn();setInterval(wireMenuBtn,2000);
+
 document.addEventListener('focusin',function(e){var t=e.target;
 focused=!!(t&&t.closest&&t.closest('[contenteditable="true"]'));if(focused)focusAt=Date.now();apply();});
 document.addEventListener('focusout',function(){setTimeout(function(){var a=document.activeElement;
@@ -2442,6 +2453,15 @@ html[data-dsh-aqua] canvas { display: none !important; }
 [class*="CtUWPa_card"] [class*="CtUWPa_primary"] {
   background: #D97757 !important; border-color: #D97757 !important; color: #FFFFFF !important;
 }
+/* 移动端侧栏开关：内容区左上角的面板按钮（≤820px） */
+#desk-menu-btn {
+  position: fixed; left: 64px; top: calc(env(safe-area-inset-top, 0px) + 12px);
+  width: 42px; height: 42px; padding: 0; border: 0; border-radius: 12px;
+  background: transparent; color: var(--dsw-alias-label-primary, #F0EFEC);
+  display: grid; place-items: center; z-index: 60;
+  -webkit-tap-highlight-color: transparent; cursor: pointer;
+}
+#desk-menu-btn:active { background: rgba(255,255,255,0.08); }
 }
 
 `;
