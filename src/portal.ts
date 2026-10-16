@@ -636,6 +636,13 @@ setTimeout(function(){deskCloseDrawer(0);},260);
 }catch(_){}},true);
 }catch(_){}}
 wireRowClose();
+function deskDark(){try{
+if(!window.matchMedia||!matchMedia('(max-width:820px)').matches)return;
+if(document.body&&!document.body.hasAttribute('data-ds-dark-theme'))document.body.setAttribute('data-ds-dark-theme','');
+}catch(_){}}
+if(document.body)deskDark();else document.addEventListener('DOMContentLoaded',deskDark);
+setInterval(deskDark,1500);
+
 
 
 document.addEventListener('focusin',function(e){var t=e.target;
@@ -2571,6 +2578,11 @@ html[data-desk-wb] #desk-menu-btn {
   html[data-desk-wb] .haTdLq_footerActions > div > button:hover,
   html[data-desk-wb] .haTdLq_footerActions > div > div:hover { background: transparent !important; }
 }
+/* 玻璃关时的浅色残留兜底（dsh 原生=浅色主题；JS 盖 data-ds-dark-theme 章之前的过渡期也不闪白） */
+html[data-desk-wb]:not([data-dsh-aqua]) [class*="sidebarCol"] { background: #111111 !important; }
+html[data-desk-wb]:not([data-dsh-aqua]) [class*="bubble"] { background: rgba(255,255,255,0.10) !important; }
+html[data-desk-wb]:not([data-dsh-aqua]) pre,
+html[data-desk-wb]:not([data-dsh-aqua]) code { background: rgba(255,255,255,0.08) !important; }
 }
 
 `;
