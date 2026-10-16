@@ -1,0 +1,7 @@
+# dsh-agents-md：把 agents/*.md 子代理定义接入 dsh 的委派（subagent）体系。
+# 在 host 组合里插入一个 row；定义扫描目录与行为由 config 决定（缺省见 index.js 的 resolveDirs）。
+- insert:
+    - id: dsh-agents-md
+      name: 'dsh-agents-md'
+      config:
+        toolName: agent
