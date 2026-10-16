@@ -117,3 +117,16 @@ New-NetFirewallRule -DisplayName 'DSH-DESK-P0-4' -Direction Inbound -Action Allo
 - 网关数据：`~/desk-data/desk.db`；真 key：`~/.desk/keys.env`（600）。
 - 局域网入口：Windows portproxy `0.0.0.0:8080 → WSL:8080`（门户；条目切换脚本 `C:\Users\Yangc\AppData\Local\Temp\desk-p2-portproxy.ps1`，需 UAC）；旧测试页 `~/desk-test/www`（:8090）已退役。Windows 局域网 IP `192.168.0.171`（WLAN）。
 - DeepSeek 计费（2026-08-16 起）：高峰＝北京时间周一至周五 9:00–12:00、14:00–18:00；其余（含整周末）为空闲时段，价格恰为高峰一半。
+
+
+## 子代理（agents-md）✅（2026-10-16）
+
+**结论**：`agents/*.md` 定义的团队子代理「文件定义 → 模型委派 → 管理界面 → 结算通知 → 活动聚合」全链路在本地容器（admin001/cth）实测通过；引擎零改动（host 组合插件），成员零配置（bootstrap 自动安装）。
+
+- 插件 `plugin/dsh-agents-md`：零依赖 ESM；`link:` 安装 + `dsh.bundle` 补丁自动挂 profile 行；引擎助手（`defineTool`/`settleRun`）由 `process.argv[1]` 推导 dsh 安装根运行时加载；定义目录优先级：config.dirs → `$DSH_HOME/agents` → `~/desk-data/agents`（先出现优先）。
+- 实测（全部通过）：
+  1. RPC E2E：`agent` 工具委派——前台（bash 产物回传）/ toolFilter（子代理无 bash 拒用）/ 定义级后台（`started background agent job`）/ `job_output` 收取；子会话落档：`subagent/catalog` 事实、persona 逐字注入、模型覆盖（deepseek-v4-pro）。
+  2. 结算通知：临时路由 `wechat-admin001`→mock:9911；后台委派 → mock 收到「🔧 子代理「后台通知测试」(researcher) 完成：…」；`notify_log ok=1`；测毕路由按名清理。
+  3. 热更：改动定义文件 → 20s 定时摘查重登记 → 工具描述 24s 内更新（会话 `request/header` 佐证）。
+  4. UI（浏览器）：admin 定义页（3 行/chips/新建-编辑-保存-删除全流程）、活动页（6 行：类型·label·状态·时间·成员·标题·模式 + 30s 自动刷新）；cth 只读（无增删改按钮）且活动仅见本人（空态）。
+- 坑（复用必读）：生命周期事件配对用 `info.id`（`runId` 为观测新 uuid）；终稿文本在 `lastAssistantMessage`；`ctx.on` 无标签监听器收全部 parent-carrier 事件（dsh-scope 过滤器「无标签放行」）。
