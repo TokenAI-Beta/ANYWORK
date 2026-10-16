@@ -2462,6 +2462,71 @@ html[data-dsh-aqua] canvas { display: none !important; }
   -webkit-tap-highlight-color: transparent; cursor: pointer;
 }
 #desk-menu-btn:active { background: rgba(255,255,255,0.08); }
+
+
+/* 全宽抽屉 v2（≤820px 打开态覆盖）— 全部加 html[data-dsh-aqua] 提权
+   规则对1：这是主因——旧 DESK_MOBILE_CSS 抽屉规则同权重且 !important，必须提权才能赢 */
+html[data-dsh-aqua] [data-desk-frame]:not([data-desk-collapsed="true"]) [class*="sidebarCol"] {
+  left: 0 !important; top: 0 !important; bottom: 0 !important;
+  width: 100% !important; max-width: none !important;
+  border-radius: 0 !important; box-shadow: none !important;
+  background: #111111 !important;
+}
+html[data-dsh-aqua] [data-desk-frame]:not([data-desk-collapsed="true"]) [class*="sidebarCol"] .haTdLq_root,
+html[data-dsh-aqua] [data-desk-frame]:not([data-desk-collapsed="true"]) [class*="sidebarCol"] > div {
+  background: transparent !important; border: 0 !important; box-shadow: none !important;
+  backdrop-filter: none !important; -webkit-backdrop-filter: none !important;
+}
+html[data-dsh-aqua] [data-desk-frame]:not([data-desk-collapsed="true"]) [class*="sidebarCol"] .haTdLq_root {
+  padding: 0 20px !important;
+}
+/* 顶部：品牌 + 收起钮 */
+html[data-dsh-aqua] .haTdLq_brandIdentity .haTdLq_brandName {
+  font-size: 17px !important; font-weight: 600 !important; color: #F0EFEC !important;
+}
+html[data-dsh-aqua] .haTdLq_toggle svg { width: 18px !important; height: 18px !important; }
+/* 新会话 = Claude「新建」风格 */
+html[data-dsh-aqua] .haTdLq_newSession {
+  width: 100% !important; height: 46px !important; border-radius: 12px !important;
+  background: rgba(255,255,255,0.07) !important; border: 0 !important;
+  color: #F0EFEC !important; font-size: 15px !important;
+}
+html[data-dsh-aqua] .haTdLq_newSession:hover { background: rgba(255,255,255,0.10) !important; }
+/* 分组标题 */
+html[data-dsh-aqua] ._4ccpTW_sectionHeader { font-size: 13px !important; color: #A8A69D !important; }
+/* 会话列表行 */
+html[data-dsh-aqua] ._root_1b2ny_3 {
+  min-height: 40px !important; border-radius: 10px !important;
+  font-size: 15px !important; color: #D9D7D0 !important;
+}
+html[data-dsh-aqua] ._root_1b2ny_3:hover { background: rgba(255,255,255,0.05) !important; }
+/* 底部功能行 */
+html[data-dsh-aqua] .haTdLq_footerActions > div > button,
+html[data-dsh-aqua] .haTdLq_footerActions > div > div {
+  width: 100% !important; height: 44px !important; border-radius: 10px !important;
+  font-size: 15px !important; color: #D9D7D0 !important;
+}
+html[data-dsh-aqua] .haTdLq_footerActions > div > button:hover,
+html[data-dsh-aqua] .haTdLq_footerActions > div > div:hover { background: rgba(255,255,255,0.05) !important; }
+/* 设置行 */
+html[data-dsh-aqua] .LVqHyW_triggerRow { border-radius: 10px !important; height: 48px !important; }
+/* ===== v3 ===== */
+/* 选中态：去橙色竖条（陶土 2px 内嵌线）与冷蓝光晕 → 轻背景 */
+html[data-dsh-aqua] ._9USomq_sessionRow { box-shadow: none !important; }
+html[data-dsh-aqua] ._9USomq_sessionRow._9USomq_selected,
+html[data-dsh-aqua] ._9USomq_sessionRow._9USomq_sel {
+  background: rgba(255,255,255,0.10) !important;
+  box-shadow: none !important;
+  border-radius: 10px !important;
+}
+/* 顶部：【✕ + 品牌名】—— 只改打开态 */
+html[data-dsh-aqua] [data-desk-frame]:not([data-desk-collapsed="true"]) .haTdLq_root:not(.haTdLq_collapsed) .haTdLq_logoRow { flex-direction: row-reverse !important; justify-content: flex-end !important; gap: 6px !important; }
+html[data-dsh-aqua] [data-desk-frame]:not([data-desk-collapsed="true"]) .haTdLq_root:not(.haTdLq_collapsed) .haTdLq_toggle svg { display: none !important; }
+html[data-dsh-aqua] [data-desk-frame]:not([data-desk-collapsed="true"]) .haTdLq_root:not(.haTdLq_collapsed) .haTdLq_toggle::after {
+  content: "✕"; font-size: 17px; line-height: 1; color: #E8E6DE;
+}
+/* 拖拽把手：全宽模式下无意义，隐藏（≤820px） */
+html[data-dsh-aqua] #desk-sb-grip { display: none !important; }
 }
 
 `;
