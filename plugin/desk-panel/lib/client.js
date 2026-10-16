@@ -41,6 +41,15 @@ window.__ModuleLoader__.load({
       "agt.usage": "对话里说「用 agent 工具委派 <名称>」即可调用；定义改动下一轮生效。",
       "agt.hintTitle": "怎么写",
       "agt.hintBody": "两条 --- 之间是配置（name/description 必填；tools/model/background 可选），下面是它的人设提示词。",
+      "agt.tabDefs": "定义",
+      "agt.tabRuns": "活动",
+      "agt.refresh": "刷新",
+      "agt.runsHint": "最近 7 天团队的子代理委派",
+      "agt.runsEmpty": "暂无子代理活动",
+      "agt.stReturned": "已返回",
+      "agt.stBackground": "已后台启动",
+      "agt.stStarted": "已发起",
+      "agt.stRunning": "进行中",
       "asst.groupTeam": "团队角色",
       "asst.defaultTag": "默认",
       "skl.platforms": "消息平台",
@@ -580,6 +589,15 @@ window.__ModuleLoader__.load({
       "agt.usage": "In chat, say \u201cdelegate <name> with the agent tool\u201d; edits apply next turn.",
       "agt.hintTitle": "How to write",
       "agt.hintBody": "Config lives between the --- lines (name/description required; tools/model/background optional); the body below is the persona.",
+      "agt.tabDefs": "Definitions",
+      "agt.tabRuns": "Activity",
+      "agt.refresh": "Refresh",
+      "agt.runsHint": "Subagent delegations across the team \u2014 last 7 days",
+      "agt.runsEmpty": "No subagent activity yet",
+      "agt.stReturned": "Returned",
+      "agt.stBackground": "Background",
+      "agt.stStarted": "Started",
+      "agt.stRunning": "Running",
       "asst.groupTeam": "Team roles",
       "asst.defaultTag": "Default",
       "skl.platforms": "Messaging platforms",
@@ -3093,7 +3111,7 @@ body.desk-panel-open [class*="sidebarCol"] { transform: none !important; }
       var open = openPair[0];
       var setOpen = openPair[1];
       useFvSync(open, setOpen);
-      var stPair = React.useState({ phase: "loading", items: [], role: "", msg: null, edit: null, editFile: "", editNew: false });
+      var stPair = React.useState({ phase: "loading", items: [], role: "", msg: null, edit: null, editFile: "", editNew: false, tab: "defs", runsPhase: "", runs: [] });
       var st = stPair[0];
       var setSt = stPair[1];
 
@@ -3108,6 +3126,26 @@ body.desk-panel-open [class*="sidebarCol"] { transform: none !important; }
           .catch(function () { pset({ phase: "error" }); });
       }
       React.useEffect(function () { load(); }, []);
+      function loadRuns() {
+        pset({ runsPhase: "loading" });
+        fetch("/portal/api/panel/agent-runs", { headers: { accept: "application/json" } })
+          .then(function (r) { if (!r.ok) throw new Error("HTTP " + r.status); return r.json(); })
+          .then(function (d) { pset({ runsPhase: "ready", runs: d.items || [] }); })
+          .catch(function () { pset({ runsPhase: "error" }); });
+      }
+      function fmtRunTime(ms) {
+        try {
+          var d = new Date(ms);
+          var p = function (n) { return (n < 10 ? "0" : "") + n; };
+          return (d.getMonth() + 1) + "-" + p(d.getDate()) + " " + p(d.getHours()) + ":" + p(d.getMinutes());
+        } catch (e) { return ""; }
+      }
+      React.useEffect(function () {
+        if (!open || st.tab !== "runs") return;
+        loadRuns();
+        var iv = setInterval(loadRuns, 30000);
+        return function () { clearInterval(iv); };
+      }, [open, st.tab]);
       function toggle() { var n = !open; setOpen(n); if (n) load(); }
 
       function openEdit(fileName) {
@@ -3169,6 +3207,37 @@ body.desk-panel-open [class*="sidebarCol"] { transform: none !important; }
       } else if (st.phase === "error") {
         kids.push(h("div", { key: "er", className: "empty" }, tr("usage.portalHint")));
       } else {
+        kids.push(h("div", { key: "tabs", className: "tabs" },
+          h("button", { className: "tb" + (st.tab === "defs" ? " on" : ""), onClick: function () { pset({ tab: "defs" }); } }, tr("agt.tabDefs")),
+          h("button", { className: "tb" + (st.tab === "runs" ? " on" : ""), onClick: function () { pset({ tab: "runs" }); } }, tr("agt.tabRuns"))
+        ));
+        if (st.tab === "runs") {
+          if (st.runsPhase === "loading" && !(st.runs && st.runs.length)) kids.push(h("div", { key: "rld", className: "empty" }, tr("agt.loading")));
+          else if (st.runsPhase === "error") kids.push(h("div", { key: "rer", className: "empty" }, tr("usage.portalHint")));
+          else {
+            kids.push(h("div", { key: "rhd", style: { display: "flex", alignItems: "center", marginBottom: "6px" } },
+              h("span", { className: "lb", style: { margin: 0 } }, tr("agt.runsHint")),
+              h("button", { className: "mini", style: { marginLeft: "auto" }, onClick: loadRuns }, tr("agt.refresh"))
+            ));
+            var rr = [];
+            for (var ri = 0; ri < st.runs.length; ri++) {
+              (function (it) {
+                var stName = it.state === "returned" ? tr("agt.stReturned") : it.state === "background" ? tr("agt.stBackground") : it.state === "continuable" ? tr("agt.stStarted") : tr("agt.stRunning");
+                var stColor = it.state === "running" ? "#b7791f" : "var(--dsw-alias-label-secondary, #65676b)";
+                rr.push(h("div", { key: "rr" + ri + it.childId, className: "it" },
+                  h("div", { style: { display: "flex", alignItems: "center", gap: "8px" } },
+                    h("span", { style: { fontWeight: 600 } }, it.type || it.tool),
+                    h("span", { className: "t2", style: { margin: 0 } }, it.label || ""),
+                    h("span", { className: "tag", style: { color: stColor } }, stName),
+                    h("span", { style: { marginLeft: "auto", fontSize: "12px", opacity: 0.75 } }, fmtRunTime(it.time))
+                  ),
+                  h("div", { style: { fontSize: "12px", opacity: 0.7, marginTop: "2px" } }, it.user + (it.title ? " · " + it.title : "") + (it.mode ? " · " + it.mode : ""))
+                ));
+              })(st.runs[ri]);
+            }
+            kids.push(h("div", { key: "rrows" }, rr.length ? rr : h("div", { className: "empty" }, tr("agt.runsEmpty"))));
+          }
+        } else {
         if (isAdmin) kids.push(h("div", { key: "act", style: { marginBottom: "8px" } }, h("button", { className: "btn", onClick: function () { openEdit(null); } }, tr("agt.new"))));
         var rows = [];
         for (var i = 0; i < st.items.length; i++) {
@@ -3200,6 +3269,7 @@ body.desk-panel-open [class*="sidebarCol"] { transform: none !important; }
         kids.push(h("div", { key: "rows" }, rows.length ? rows : h("div", { className: "empty" }, tr("agt.empty") + " —— " + tr("agt.emptyHint"))));
         kids.push(h("div", { key: "ft", className: "ft" }, tr("agt.usage")));
         if (!isAdmin) kids.push(h("div", { key: "ro", className: "ft" }, tr("agt.adminOnly")));
+        }
       }
 
       return h("div", null,

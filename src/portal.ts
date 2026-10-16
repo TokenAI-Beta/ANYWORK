@@ -19,7 +19,7 @@ import { kbSearch, listKbNotes, readKbNote, removeKbNote, saveKbNote } from './k
 import { listDrive, makeDir, movePath, removePath, resolveInDrive, saveToDrive, MAX_UPLOAD } from './drive.ts'
 import { addNotifyRoute, addReminder, dispatchNotify, listNotifyLog, listNotifyRoutes, listReminders, listRemindersSent, readOrCreateNotifyToken, removeNotifyRoute, removeReminder, toggleNotifyRoute } from './notify.ts'
 import { defaultDataDir } from './db.ts'
-import { collectAgents, collectConnectors, collectPlatforms, collectPresets, collectSkills, deleteAgent, readAgent, readSkill, saveAgent } from './panel.ts'
+import { collectAgentRuns, collectAgents, collectConnectors, collectPlatforms, collectPresets, collectSkills, deleteAgent, readAgent, readSkill, saveAgent } from './panel.ts'
 import { CONN_PLATFORMS, getConn, removeConn, setConn, testConn, validateConnConfig } from './conns.ts'
 import { collectOps } from './ops.ts'
 import { addTimer, autoStats, ensureRuleRows, listAutoLog, listAutos, removeAuto, toggleAuto, RULE_CATALOG, ruleEnabled } from './auto.ts'
@@ -1264,6 +1264,14 @@ export function startPortal(opts: PortalOptions) {
         }
         res.writeHead(200, { 'content-type': 'application/json; charset=utf-8' })
         return res.end(JSON.stringify(readAgent(url.searchParams.get('file') ?? '', langOf(req))))
+      }
+      if (req.method === 'GET' && path === '/portal/api/panel/agent-runs') {
+        if (!user) {
+          res.writeHead(401, { 'content-type': 'application/json' })
+          return res.end(JSON.stringify({ error: 'login required' }))
+        }
+        res.writeHead(200, { 'content-type': 'application/json; charset=utf-8' })
+        return res.end(JSON.stringify({ ok: true, items: collectAgentRuns(db, 30, user.role === 'admin' ? undefined : { user: String(user.username) }) }))
       }
       // —— 自动化（成员自建定时任务 + 团队规则卡）——
       if (req.method === 'GET' && path === '/portal/api/auto') {

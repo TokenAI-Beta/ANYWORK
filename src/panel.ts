@@ -7,6 +7,8 @@ import type { DatabaseSync } from 'node:sqlite'
 import { defaultDataDir } from './db.ts'
 // 与 dsh-agents-md 插件共用同一份 agents/*.md 解析/校验（纯 JS，零依赖）
 import { normalizeAgentDef, parseAgentMd } from '../plugin/dsh-agents-md/lib/scan.js'
+import { zstdDecompressSync } from 'node:zlib'
+import { userHome } from './session-mgr.ts'
 
 const L = (lang: string, zh: string, en: string): string => (lang === 'en' ? en : zh)
 
@@ -388,4 +390,251 @@ export function deleteAgent(fileName: string, lang: string = 'zh'): { ok: true }
     return { error: L(lang, '删除失败：', 'Delete failed: ') + String((e as Error)?.message || e) }
   }
   return { ok: true }
+}
+// —— 子代理活动（跨成员聚合「最近委派」：父会话的委派工具调用 + subagent/catalog 事实） ——
+
+export interface AgentRunInfo {
+  time: number
+  user: string
+  sessionId: string
+  title: string
+  tool: string
+  type: string
+  label: string
+  mode: string
+  childId: string
+  state: 'returned' | 'background' | 'continuable' | 'running'
+}
+
+const DELEGATE_TOOLS = new Set(['agent', 'subagent', 'subagent_fork', 'subagent_codex', 'subagent_claude_code'])
+
+interface RunRowLite {
+  time: number
+  sessionId: string
+  tool: string
+  type: string
+  label: string
+  mode: string
+  childId: string
+  state: AgentRunInfo['state']
+}
+
+const runFileCache = new Map<string, { key: string; sid: string; rows: RunRowLite[] }>()
+
+function decodeSessionEventsFile(file: string): Record<string, unknown>[] {
+  const out: Record<string, unknown>[] = []
+  let buf: Buffer
+  try {
+    buf = readFileSync(file)
+  } catch {
+    return out
+  }
+  const magic = Buffer.from([0x28, 0xb5, 0x2f, 0xfd])
+  const idxs: number[] = []
+  let i = buf.indexOf(magic)
+  while (i !== -1) {
+    idxs.push(i)
+    i = buf.indexOf(magic, i + 1)
+  }
+  const parts: Buffer[] = []
+  for (let k = 0; k < idxs.length; k++) {
+    const end = k + 1 < idxs.length ? idxs[k + 1] : buf.length
+    try {
+      parts.push(zstdDecompressSync(buf.subarray(idxs[k], end)))
+    } catch {
+      // 跳坏帧（正在追写的尾部）
+    }
+  }
+  for (const line of Buffer.concat(parts).toString('utf8').split('\n')) {
+    const t = line.trim()
+    if (!t) continue
+    try {
+      const ev = JSON.parse(t) as unknown
+      if (ev && typeof ev === 'object') out.push(ev as Record<string, unknown>)
+    } catch {
+      // 半行
+    }
+  }
+  return out
+}
+
+function extractRuns(events: Record<string, unknown>[], sid: string): RunRowLite[] {
+  interface Call { seq: number; callId: string; name: string; type: string; desc: string; time: number }
+  const calls: Call[] = []
+  const catalogs: { seq: number; childId: string; label: string; mode: string; createdAt: number; time: number }[] = []
+  const resultText = new Map<string, string>()
+  for (const ev of events) {
+    const type = String(ev.type ?? '')
+    const data = (ev.data ?? {}) as Record<string, unknown>
+    if (type === 'tool/call') {
+      const name = String(data.name ?? '')
+      if (!DELEGATE_TOOLS.has(name)) continue
+      let subagentType = ''
+      let desc = ''
+      try {
+        const args = JSON.parse(String(data.arguments ?? '{}')) as Record<string, unknown>
+        subagentType = String(args.subagent_type ?? '')
+        desc = String(args.description ?? '')
+      } catch {
+        // 参数不是 JSON
+      }
+      calls.push({ seq: Number(ev.seq ?? 0), callId: String(data.callId ?? ''), name, type: subagentType, desc, time: Number(ev.time ?? 0) })
+    } else if (type === 'subagent/catalog') {
+      catalogs.push({
+        seq: Number(ev.seq ?? 0),
+        childId: String(data.childId ?? ''),
+        label: String(data.label ?? ''),
+        mode: String(data.mode ?? ''),
+        createdAt: Number(data.childCreatedAt ?? 0),
+        time: Number(ev.time ?? 0),
+      })
+    } else if (type === 'tool/result') {
+      const msg = (data.message ?? {}) as Record<string, unknown>
+      const source = (msg.source ?? {}) as Record<string, unknown>
+      const callId = String(source.callId ?? '')
+      if (!callId) continue
+      const content = (msg.content ?? []) as unknown[]
+      let text = ''
+      for (const block of content) {
+        if (!block || typeof block !== 'object') continue
+        const inner = (block as Record<string, unknown>).content
+        if (!Array.isArray(inner)) continue
+        for (const ib of inner) {
+          if (ib && typeof ib === 'object' && (ib as Record<string, unknown>).type === 'text') {
+            text += String((ib as Record<string, unknown>).text ?? '')
+          }
+        }
+      }
+      resultText.set(callId, text)
+    }
+  }
+  const rows: RunRowLite[] = []
+  let ci = 0
+  for (const call of calls) {
+    let cat: (typeof catalogs)[number] | undefined
+    for (; ci < catalogs.length; ci++) {
+      if (catalogs[ci].seq > call.seq) {
+        cat = catalogs[ci]
+        ci++
+        break
+      }
+    }
+    const res = resultText.get(call.callId)
+    const state: AgentRunInfo['state'] = res === undefined
+      ? 'running'
+      : res.includes('started background agent job')
+        ? 'background'
+        : res.includes('started subagent')
+          ? 'continuable'
+          : 'returned'
+    rows.push({
+      time: cat?.createdAt || call.time,
+      sessionId: sid,
+      tool: call.name,
+      type: call.type,
+      label: (cat?.label || call.desc || '').slice(0, 80),
+      mode: cat?.mode ?? '',
+      childId: cat?.childId ?? '',
+      state,
+    })
+  }
+  return rows
+}
+
+function sessionTitleOf(home: string, sid: string): string {
+  try {
+    const f = join(home, 'storages', 'session_projcache', 'sessions', `${sid}.json`)
+    const raw = JSON.parse(readFileSync(f, 'utf8')) as Record<string, unknown>
+    const rec = (raw.record ?? raw) as Record<string, unknown>
+    const rows = (rec.rows ?? {}) as Record<string, unknown>
+    const title = rows.title as Record<string, unknown> | undefined
+    const val = title?.val as unknown
+    if (typeof val === 'string') return val.slice(0, 60)
+    if (val && typeof val === 'object') {
+      const t = (val as Record<string, unknown>).text ?? (val as Record<string, unknown>).value
+      if (typeof t === 'string') return t.slice(0, 60)
+    }
+  } catch {
+    // 无标题
+  }
+  return ''
+}
+
+/** 聚合各成员最近 7 天的子代理委派（按发起时间倒序）。 */
+export function collectAgentRuns(db: DatabaseSync, limit = 30, viewer?: { user: string }): AgentRunInfo[] {
+  let members: { username: string }[] = []
+  try {
+    members = db.prepare(`SELECT username FROM users WHERE agent_port IS NOT NULL ORDER BY id`).all() as unknown as { username: string }[]
+  } catch {
+    return []
+  }
+  if (viewer) members = members.filter((m) => m.username === viewer.user)
+  const cutoff = Date.now() - 7 * 86400 * 1000
+  const titleCache = new Map<string, string>()
+  const all: AgentRunInfo[] = []
+  for (const m of members) {
+    const home = userHome(m.username)
+    const sdir = join(home, 'sessions')
+    let buckets: string[] = []
+    try {
+      buckets = readdirSync(sdir)
+    } catch {
+      continue
+    }
+    const files: { file: string; sid: string; mtime: number; size: number }[] = []
+    for (const b of buckets) {
+      const bd = join(sdir, b)
+      let sids: string[] = []
+      try {
+        sids = readdirSync(bd)
+      } catch {
+        continue
+      }
+      for (const sid of sids) {
+        const sd = join(bd, sid)
+        let fs: string[] = []
+        try {
+          fs = readdirSync(sd)
+        } catch {
+          continue
+        }
+        for (const f of fs) {
+          if (!/^session(\.v\d+)?\.jsonl\.zstd$/.test(f)) continue
+          const full = join(sd, f)
+          try {
+            const st = statSync(full)
+            if (st.mtimeMs >= cutoff) files.push({ file: full, sid, mtime: st.mtimeMs, size: st.size })
+          } catch {
+            // 跳过
+          }
+        }
+      }
+    }
+    files.sort((a, b) => b.mtime - a.mtime)
+    for (const f of files.slice(0, 40)) {
+      const key = `${f.size}:${f.mtime}`
+      const cached = runFileCache.get(f.file)
+      let rows: RunRowLite[]
+      if (cached && cached.key === key) {
+        rows = cached.rows
+      } else {
+        rows = extractRuns(decodeSessionEventsFile(f.file), f.sid)
+        runFileCache.set(f.file, { key, sid: f.sid, rows })
+        if (runFileCache.size > 800) {
+          const first = runFileCache.keys().next().value
+          if (first !== undefined) runFileCache.delete(first)
+        }
+      }
+      for (const r of rows) {
+        let title = titleCache.get(f.sid)
+        if (title === undefined) {
+          title = sessionTitleOf(home, f.sid)
+          titleCache.set(f.sid, title)
+        }
+        all.push({ ...r, user: m.username, title })
+      }
+    }
+  }
+  all.sort((a, b) => b.time - a.time)
+  return all.slice(0, limit)
 }
