@@ -490,6 +490,7 @@ const DESK_MOBILE_CSS = `
 `
 
 const DESK_SB_SCRIPT = `(function(){try{
+document.documentElement.setAttribute('data-desk-wb','1');
 if(!window.matchMedia||!document.addEventListener)return;
 if(!Element.prototype.closest){Element.prototype.closest=function(s){var el=this;while(el&&el.nodeType===1){if(el.matches&&el.matches(s))return el;el=el.parentElement||el.parentNode;}return null;};}
 var mq=window.matchMedia('(max-width:820px)');
@@ -2410,10 +2411,10 @@ export function startPortal(opts: PortalOptions) {
 const CLAUDE_M_CSS = `
 /* ===== Claude 移动端风格（暖黑 + 陶土）· 2026-10-15 =====
    仅作用于 ≤820px（手机/窄屏）；令牌对齐 dsh 的 --dsw-alias-*；
-   作用域挂在 html[data-dsh-aqua]（工作台专有标记），门户页不受影响。
+   作用域挂在 html[data-desk-wb]（工作台专有标记），门户页不受影响。
    参考来源：统一设计令牌 + 手机视口验证（390×844）。 */
 @media (max-width: 820px) {
-html[data-dsh-aqua] body {
+html[data-desk-wb] body {
   --dsw-alias-bg-base: #151515 !important;
   --dsw-alias-bg-layer-1: #1E1E1D !important;
   --dsw-alias-bg-layer-2: #262625 !important;
@@ -2463,7 +2464,7 @@ html[data-dsh-aqua] body {
   --dsw-alias-button-info-fill: #D97757 !important;
   background: #151515 !important;
 }
-/* 隐藏 aqua 玻璃视觉层（渐变/网格/粒子都画在 canvas 上） */
+/* 隐藏 aqua 玻璃视觉层（渐变/网格/粒子都画在 canvas 上）——仅玻璃开时存在，故保持 aqua 作用域，避免误伤其他 canvas（终端/图表等） */
 html[data-dsh-aqua] canvas { display: none !important; }
 /* 输入卡片：暖深灰 + 白 12% 边框 */
 [class*="CtUWPa_card"] { background: rgba(255,255,255,0.06) !important; border-color: rgba(255,255,255,0.12) !important; }
@@ -2488,69 +2489,88 @@ html[data-dsh-aqua] canvas { display: none !important; }
 #desk-menu-btn:active { background: rgba(255,255,255,0.08); }
 
 
-/* 全宽抽屉 v2（≤820px 打开态覆盖）— 全部加 html[data-dsh-aqua] 提权
+/* 全宽抽屉 v2（≤820px 打开态覆盖）— 全部加 html[data-desk-wb] 提权
    规则对1：这是主因——旧 DESK_MOBILE_CSS 抽屉规则同权重且 !important，必须提权才能赢 */
-html[data-dsh-aqua] [data-desk-frame]:not([data-desk-collapsed="true"]) [class*="sidebarCol"] {
+html[data-desk-wb] [data-desk-frame]:not([data-desk-collapsed="true"]) [class*="sidebarCol"] {
   left: 0 !important; top: 0 !important; bottom: 0 !important;
   width: 100% !important; max-width: none !important;
   border-radius: 0 !important; box-shadow: none !important;
   background: #111111 !important;
 }
-html[data-dsh-aqua] [data-desk-frame]:not([data-desk-collapsed="true"]) [class*="sidebarCol"] .haTdLq_root,
-html[data-dsh-aqua] [data-desk-frame]:not([data-desk-collapsed="true"]) [class*="sidebarCol"] > div {
+html[data-desk-wb] [data-desk-frame]:not([data-desk-collapsed="true"]) [class*="sidebarCol"] .haTdLq_root,
+html[data-desk-wb] [data-desk-frame]:not([data-desk-collapsed="true"]) [class*="sidebarCol"] > div {
   background: transparent !important; border: 0 !important; box-shadow: none !important;
   backdrop-filter: none !important; -webkit-backdrop-filter: none !important;
 }
-html[data-dsh-aqua] [data-desk-frame]:not([data-desk-collapsed="true"]) [class*="sidebarCol"] .haTdLq_root {
+html[data-desk-wb] [data-desk-frame]:not([data-desk-collapsed="true"]) [class*="sidebarCol"] .haTdLq_root {
   padding: 0 20px !important;
 }
 /* 顶部：品牌 + 收起钮 */
-html[data-dsh-aqua] .haTdLq_brandIdentity .haTdLq_brandName {
+html[data-desk-wb] .haTdLq_brandIdentity .haTdLq_brandName {
   font-size: 17px !important; font-weight: 600 !important; color: #F0EFEC !important;
 }
-html[data-dsh-aqua] .haTdLq_toggle svg { width: 18px !important; height: 18px !important; }
+html[data-desk-wb] .haTdLq_toggle svg { width: 18px !important; height: 18px !important; }
 /* 新会话 = Claude「新建」风格 */
-html[data-dsh-aqua] .haTdLq_newSession {
+html[data-desk-wb] .haTdLq_newSession {
   width: 100% !important; height: 46px !important; border-radius: 12px !important;
   background: rgba(255,255,255,0.07) !important; border: 0 !important;
   color: #F0EFEC !important; font-size: 15px !important;
 }
-html[data-dsh-aqua] .haTdLq_newSession:hover { background: rgba(255,255,255,0.10) !important; }
+html[data-desk-wb] .haTdLq_newSession:hover { background: rgba(255,255,255,0.10) !important; }
 /* 分组标题 */
-html[data-dsh-aqua] ._4ccpTW_sectionHeader { font-size: 13px !important; color: #A8A69D !important; }
+html[data-desk-wb] ._4ccpTW_sectionHeader { font-size: 13px !important; color: #A8A69D !important; }
 /* 会话列表行 */
-html[data-dsh-aqua] ._root_1b2ny_3 {
+html[data-desk-wb] ._root_1b2ny_3 {
   min-height: 40px !important; border-radius: 10px !important;
   font-size: 15px !important; color: #D9D7D0 !important;
 }
-html[data-dsh-aqua] ._root_1b2ny_3:hover { background: rgba(255,255,255,0.05) !important; }
+html[data-desk-wb] ._root_1b2ny_3:hover { background: rgba(255,255,255,0.05) !important; }
 /* 底部功能行 */
-html[data-dsh-aqua] .haTdLq_footerActions > div > button,
-html[data-dsh-aqua] .haTdLq_footerActions > div > div {
+html[data-desk-wb] .haTdLq_footerActions > div > button,
+html[data-desk-wb] .haTdLq_footerActions > div > div {
   width: 100% !important; height: 44px !important; border-radius: 10px !important;
   font-size: 15px !important; color: #D9D7D0 !important;
 }
-html[data-dsh-aqua] .haTdLq_footerActions > div > button:hover,
-html[data-dsh-aqua] .haTdLq_footerActions > div > div:hover { background: rgba(255,255,255,0.05) !important; }
+html[data-desk-wb] .haTdLq_footerActions > div > button:hover,
+html[data-desk-wb] .haTdLq_footerActions > div > div:hover { background: rgba(255,255,255,0.05) !important; }
 /* 设置行 */
-html[data-dsh-aqua] .LVqHyW_triggerRow { border-radius: 10px !important; height: 48px !important; }
+html[data-desk-wb] .LVqHyW_triggerRow { border-radius: 10px !important; height: 48px !important; }
 /* ===== v3 ===== */
 /* 选中态：去橙色竖条（陶土 2px 内嵌线）与冷蓝光晕 → 轻背景 */
-html[data-dsh-aqua] ._9USomq_sessionRow { box-shadow: none !important; }
-html[data-dsh-aqua] ._9USomq_sessionRow._9USomq_selected,
-html[data-dsh-aqua] ._9USomq_sessionRow._9USomq_sel {
+html[data-desk-wb] ._9USomq_sessionRow { box-shadow: none !important; }
+html[data-desk-wb] ._9USomq_sessionRow._9USomq_selected,
+html[data-desk-wb] ._9USomq_sessionRow._9USomq_sel {
   background: rgba(255,255,255,0.10) !important;
   box-shadow: none !important;
   border-radius: 10px !important;
 }
 /* 顶部：【✕ + 品牌名】—— 只改打开态 */
-html[data-dsh-aqua] [data-desk-frame]:not([data-desk-collapsed="true"]) .haTdLq_root:not(.haTdLq_collapsed) .haTdLq_logoRow { flex-direction: row-reverse !important; justify-content: flex-end !important; gap: 6px !important; }
-html[data-dsh-aqua] [data-desk-frame]:not([data-desk-collapsed="true"]) .haTdLq_root:not(.haTdLq_collapsed) .haTdLq_toggle svg { display: none !important; }
-html[data-dsh-aqua] [data-desk-frame]:not([data-desk-collapsed="true"]) .haTdLq_root:not(.haTdLq_collapsed) .haTdLq_toggle::after {
+html[data-desk-wb] [data-desk-frame]:not([data-desk-collapsed="true"]) .haTdLq_root:not(.haTdLq_collapsed) .haTdLq_logoRow { flex-direction: row-reverse !important; justify-content: flex-end !important; gap: 6px !important; }
+html[data-desk-wb] [data-desk-frame]:not([data-desk-collapsed="true"]) .haTdLq_root:not(.haTdLq_collapsed) .haTdLq_toggle svg { display: none !important; }
+html[data-desk-wb] [data-desk-frame]:not([data-desk-collapsed="true"]) .haTdLq_root:not(.haTdLq_collapsed) .haTdLq_toggle::after {
   content: "✕"; font-size: 17px; line-height: 1; color: #E8E6DE;
 }
 /* 拖拽把手：全宽模式下无意义，隐藏（≤820px） */
-html[data-dsh-aqua] #desk-sb-grip { display: none !important; }
+html[data-desk-wb] #desk-sb-grip { display: none !important; }
+/* 触屏打点强化（2026-10-15）：禁双击缩放判定与点击高亮延迟——
+   iOS Safari 上"点两次才进"多半是第一下的 tap 被双击缩放/悬停判定吃掉 */
+html[data-desk-wb] [class*="sidebarCol"],
+html[data-desk-wb] [class*="sidebarCol"] button,
+html[data-desk-wb] ._9USomq_sessionRow,
+html[data-desk-wb] ._9USomq_projectRow,
+html[data-desk-wb] ._root_1b2ny_3,
+html[data-desk-wb] .haTdLq_newSession,
+html[data-desk-wb] #desk-menu-btn {
+  touch-action: manipulation;
+  -webkit-tap-highlight-color: transparent;
+}
+/* 触摸设备上屏蔽悬停态残留（iOS 首触=hover 的第二触问题） */
+@media (hover: none) {
+  html[data-desk-wb] ._root_1b2ny_3:hover { background: transparent !important; }
+  html[data-desk-wb] .haTdLq_newSession:hover { background: rgba(255,255,255,0.07) !important; }
+  html[data-desk-wb] .haTdLq_footerActions > div > button:hover,
+  html[data-desk-wb] .haTdLq_footerActions > div > div:hover { background: transparent !important; }
+}
 }
 
 `;
