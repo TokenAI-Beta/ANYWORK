@@ -612,6 +612,26 @@ b.addEventListener('click',function(ev){try{ev.preventDefault();var t=document.q
 document.body.appendChild(b);
 }catch(_){}}
 wireMenuBtn();setInterval(wireMenuBtn,2000);
+function wireRowClose(){try{
+if(!window.matchMedia||!matchMedia('(max-width:820px)').matches)return;
+if(window.__deskRowClose)return;window.__deskRowClose=1;
+document.addEventListener('click',function(ev){try{
+var t=ev.target;if(!t||!t.closest)return;
+var fr=document.querySelector('[data-desk-frame]');
+if(!fr||fr.getAttribute('data-desk-collapsed')==='true')return;
+if(!t.closest('[class*=sidebarCol]'))return;
+var hit=t.closest('[class*=sessionRow]')||t.closest('[class*=newSession]')||t.closest('[class*=footerActions]')||t.closest('[class*=settingsArea]');
+if(!hit)return;
+setTimeout(function(){try{
+var bs=document.querySelectorAll('button'),b=null;
+for(var i=0;i<bs.length;i++){var a=bs[i].getAttribute('aria-label')||'';if(a==='收起侧边栏'||a==='Collapse sidebar'){b=bs[i];break;}}
+var f2=document.querySelector('[data-desk-frame]');
+if(b&&f2&&f2.getAttribute('data-desk-collapsed')!=='true')b.click();
+}catch(_){}},260);
+}catch(_){}},true);
+}catch(_){}}
+wireRowClose();
+
 
 document.addEventListener('focusin',function(e){var t=e.target;
 focused=!!(t&&t.closest&&t.closest('[contenteditable="true"]'));if(focused)focusAt=Date.now();apply();});
