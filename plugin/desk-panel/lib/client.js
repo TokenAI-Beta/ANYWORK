@@ -41,8 +41,53 @@ window.__ModuleLoader__.load({
       "agt.usage": "对话里直接说「让 <名称> 去做…」「@<名称>」即可精准委派；定义改动下一轮生效。",
       "agt.hintTitle": "怎么写",
       "agt.hintBody": "两条 --- 之间是配置（name/description 必填；tools/model/background 可选），下面是它的人设提示词。",
-      "agt.tabDefs": "定义",
-      "agt.tabRuns": "活动",
+      "agt.runningNow": "有任务进行中",
+      "agt.stBgDone": "后台已完成",
+      "agt.modeOnce": "一次性",
+      "agt.modeCont": "可继续",
+      "agt.followModel": "跟随对话",
+      "agt.noSteps": "暂无步骤（可能刚派出或子会话尚未开始记录）",
+      "agt.cAsk": "① 你的指令",
+      "agt.cOrder": "② 派工单",
+      "agt.cSteps": "③ 它的工作过程",
+      "agt.cResult": "④ 结果",
+      "agt.cmdDetail": "看命令细节",
+      "agt.assignTitle": "模型分配",
+      "agt.assignHint": "不选就「跟随对话」；想让它更聪明或更省，单独指定即可。改动下一轮对话生效。",
+      "agt.assignMain": "主对话 · 团队助理",
+      "agt.assignMainHint": "主对话也可以在对话窗口随时切换；这里设的是新会话默认。",
+      "agt.assignSubHint": "「跟随对话」的子代理会随主对话走。",
+      "agt.setOk": "已更新——下一轮对话生效",
+      "agt.needReload": "模型列表加载失败（可点刷新重试）",
+      "agt.formName": "名字（对话里用它点名）",
+      "agt.formNameHint": "英文小写；保存后对话里说「让 <名字> …」或「@<名字>」。",
+      "agt.formDesc": "什么时候用它（一句话）",
+      "agt.formDescHint": "写给助理看的挑选依据，也是列表里显示的一句话。",
+      "agt.formPersona": "它怎么干活（人设与工作方式）",
+      "agt.formPersonaHint": "用你自己的话写：职责、原则、输出格式。它只看得到这段 + 收到的任务。",
+      "agt.formAbil": "它能用哪些能力",
+      "agt.formAbilHint": "不勾选 = 使用全部默认能力；勾选后 = 只能用勾选的（最小权限更安全）。",
+      "agt.formModel": "用哪个模型",
+      "agt.formModelHint": "列表来自工作台已接入的模型；拿不准选「跟随对话模型」。",
+      "agt.formBg": "默认后台跑",
+      "agt.formBgHint": "适合耗时长、不想等它交活的任务",
+      "agt.advancedHint": "熟悉格式的话可以在同一份文件里精确控制；保存走同样的校验。",
+      "agt.backForm": "返回表单",
+      "agt.rawBtn": "高级：原始",
+      "agt.tplLabel": "快速开始：",
+      "agt.tplReviewer": "代码审查员",
+      "agt.tplResearcher": "资料研究员",
+      "agt.tplWriter": "文案写手",
+      "agt.tplBlank": "空白",
+      "agt.tplFilled": "模板已填入——按需改几个字就行",
+      "agt.keepFields": "其它参数（如 effort、disallowed-tools 等）将原样保留。",
+      "agt.noFm": "未找到 frontmatter（--- 两行）——已按人设正文处理；保存时会自动补齐头部。",
+      "agt.viewTitle": "查看 · ",
+      "agt.fileName": "文件名",
+      "agt.advanced": "高级：直接编辑原始定义",
+      "agt.bg": "后台",
+      "agt.tabDefs": "定义管理",
+      "agt.tabRuns": "工作动态",
       "agt.refresh": "刷新",
       "agt.runsHint": "最近 7 天团队的子代理委派",
       "agt.runsEmpty": "暂无子代理活动",
@@ -589,6 +634,51 @@ window.__ModuleLoader__.load({
       "agt.usage": "Say \u201clet <name> do \u2026\u201d or \u201c@<name>\u201d in chat \u2014 it routes to that agent; edits apply next turn.",
       "agt.hintTitle": "How to write",
       "agt.hintBody": "Config lives between the --- lines (name/description required; tools/model/background optional); the body below is the persona.",
+      "agt.runningNow": "running now",
+      "agt.stBgDone": "background done",
+      "agt.modeOnce": "one-shot",
+      "agt.modeCont": "continuable",
+      "agt.followModel": "Follows chat",
+      "agt.noSteps": "No steps yet (just dispatched, or the child has not recorded anything)",
+      "agt.cAsk": "① Your ask",
+      "agt.cOrder": "② Work order",
+      "agt.cSteps": "③ Its work",
+      "agt.cResult": "④ Result",
+      "agt.cmdDetail": "Command details",
+      "agt.assignTitle": "Model assignment",
+      "agt.assignHint": "Leave on follow unless a subagent should be smarter or cheaper. Applies from the next turn.",
+      "agt.assignMain": "Main chat · Team Assistant",
+      "agt.assignMainHint": "The main chat can also switch in the composer; this sets the default for new sessions.",
+      "agt.assignSubHint": "Subagents on follow use whatever the main chat uses.",
+      "agt.setOk": "Updated — applies from the next turn",
+      "agt.needReload": "Failed to load the model list (retry later)",
+      "agt.formName": "Name (how you call it in chat)",
+      "agt.formNameHint": "Lowercase; then say let <name> ... or @<name> in chat.",
+      "agt.formDesc": "When to use it (one line)",
+      "agt.formDescHint": "How the assistant picks it; also shown in the list.",
+      "agt.formPersona": "How it works (persona)",
+      "agt.formPersonaHint": "Duties, principles, output format. It only sees this plus the task.",
+      "agt.formAbil": "Allowed abilities",
+      "agt.formAbilHint": "None checked = all defaults; checked = only those (least privilege).",
+      "agt.formModel": "Model",
+      "agt.formModelHint": "From the workbench connected models; unsure? keep follow.",
+      "agt.formBg": "Run in background by default",
+      "agt.formBgHint": "For long tasks you do not want to wait on",
+      "agt.advancedHint": "Exact control in the same file; saves run the same validation.",
+      "agt.backForm": "Back to form",
+      "agt.rawBtn": "Advanced: raw",
+      "agt.tplLabel": "Quick start:",
+      "agt.tplReviewer": "Code reviewer",
+      "agt.tplResearcher": "Researcher",
+      "agt.tplWriter": "Writer",
+      "agt.tplBlank": "Blank",
+      "agt.tplFilled": "Template filled - tweak as needed",
+      "agt.keepFields": "Other keys (effort, disallowed-tools, ...) are preserved as-is.",
+      "agt.noFm": "No frontmatter found - treated as persona text; markers are added on save.",
+      "agt.viewTitle": "View · ",
+      "agt.fileName": "File name",
+      "agt.advanced": "Advanced: edit the raw definition",
+      "agt.bg": "Background",
       "agt.tabDefs": "Definitions",
       "agt.tabRuns": "Activity",
       "agt.refresh": "Refresh",
@@ -1381,6 +1471,72 @@ body.desk-panel-open [class*="sidebarCol"] { transform: none !important; }
 [class*="brandMark"]::after, [class*="railMark"]::after, [class*="fishHitbox"]::after { content: ""; display: block; background: currentColor; -webkit-mask: url("data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20viewBox%3D%2229.4%2029.0%20527.5%20453.4%22%3E%3Cpath%20d%3D%22M186.4%20481.1C186.2%20480.9%20186.0%20460.1%20186.0%20435.0C186.0%20392.0%20186.1%20389.2%20187.8%20387.7C189.5%20386.1%20197.4%20386.0%20280.7%20386.0C371.7%20386.0%20371.8%20386.0%20377.7%20383.8C383.0%20381.9%20390.1%20377.6%20390.8%20375.9C391.0%20375.5%20392.2%20373.9%20393.5%20372.4C396.4%20369.0%20398.5%20360.2%20397.6%20354.9C396.9%20350.2%20393.9%20344.3%20390.8%20341.3C386.9%20337.4%20382.2%20333.9%20380.3%20333.5C379.3%20333.2%20375.9%20332.4%20372.6%20331.6C367.7%20330.4%20352.0%20330.1%20277.2%20330.0C227.9%20330.0%20187.4%20329.7%20187.1%20329.4C186.8%20329.1%20186.5%20303.5%20186.4%20272.4L186.1%20216.0%20189.3%20214.3C192.2%20212.8%20199.5%20212.5%20261.5%20211.9C305.8%20211.5%20331.8%20210.9%20334.0%20210.2C344.8%20206.9%20347.7%20205.8%20350.0%20204.1C351.4%20203.1%20353.6%20202.0%20354.8%20201.6C356.1%20201.2%20358.4%20199.6%20359.9%20198.2C361.5%20196.7%20363.6%20194.8%20364.6%20193.9C365.7%20193.1%20367.4%20191.1%20368.5%20189.6C369.6%20188.0%20371.2%20186.0%20372.1%20185.1C372.9%20184.2%20374.4%20180.7%20375.4%20177.4C377.5%20170.4%20376.7%20167.3%20372.0%20163.8C369.6%20162.0%20363.5%20161.9%20200.8%20161.7C108.1%20161.6%2031.8%20161.1%2031.3%20160.7C30.9%20160.2%2030.5%20131.3%2030.5%2096.4C30.4%2038.8%2030.6%2032.8%2032.0%2031.5C33.5%2030.2%2045.2%2030.0%20124.1%2030.4C173.8%2030.7%20291.2%2031.0%20385.0%2031.2L555.5%2031.5%20555.8%2095.4C555.9%20141.1%20555.7%20159.7%20554.9%20160.6C554.0%20161.7%20542.7%20162.0%20496.1%20162.3C438.4%20162.7%20428.6%20163.2%20422.5%20166.4C420.8%20167.3%20418.8%20168.0%20417.9%20168.0C417.0%20168.0%20415.7%20168.7%20415.0%20169.5C414.3%20170.3%20412.8%20171.0%20411.7%20171.0C409.8%20171.0%20398.0%20179.3%20397.2%20181.2C397.0%20181.7%20396.2%20182.0%20395.4%20182.0C394.6%20182.0%20393.6%20182.8%20393.3%20183.8C392.9%20184.7%20391.0%20188.0%20389.0%20191.0C387.0%20194.0%20384.8%20198.0%20384.1%20199.8C383.3%20201.5%20382.4%20203.0%20382.1%20203.0C381.2%20203.0%20379.1%20218.7%20378.8%20227.2C378.7%20232.0%20379.1%20234.5%20380.2%20235.7C381.0%20236.7%20382.3%20239.1%20383.0%20241.0C385.9%20248.3%20393.7%20258.4%20400.1%20263.2C408.8%20269.7%20413.7%20272.0%20424.0%20274.5C427.6%20275.4%20431.9%20276.5%20433.5%20276.9C435.1%20277.4%20453.1%20277.8%20473.5%20277.9C514.6%20278.1%20515.0%20278.2%20529.7%20285.8C533.8%20288.0%20546.0%20299.7%20546.0%20301.5C546.0%20302.3%20546.5%20303.2%20547.0%20303.5C548.2%20304.2%20550.3%20309.0%20553.3%20318.0C555.4%20324.1%20555.5%20326.3%20555.5%20352.2C555.4%20372.5%20555.1%20380.3%20554.2%20381.2C553.3%20382.1%20539.6%20382.4%20497.1%20382.3C466.4%20382.2%20439.7%20382.5%20437.9%20383.0C420.9%20387.3%20412.3%20391.1%20404.2%20397.7C401.2%20400.0%20398.4%20402.0%20397.9%20402.0C397.4%20402.0%20395.8%20403.9%20394.3%20406.1C392.7%20408.4%20390.3%20412.1%20388.8%20414.4C387.2%20416.7%20385.1%20421.6%20383.9%20425.5C382.7%20429.4%20381.4%20433.4%20380.9%20434.5C379.4%20438.3%20378.8%20446.6%20378.6%20463.9L378.5%20481.3%20282.7%20481.4C230.0%20481.5%20186.6%20481.3%20186.4%20481.1Z%22%20fill%3D%22%23052846%22%2F%3E%3C%2Fsvg%3E") center / contain no-repeat; mask: url("data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20viewBox%3D%2229.4%2029.0%20527.5%20453.4%22%3E%3Cpath%20d%3D%22M186.4%20481.1C186.2%20480.9%20186.0%20460.1%20186.0%20435.0C186.0%20392.0%20186.1%20389.2%20187.8%20387.7C189.5%20386.1%20197.4%20386.0%20280.7%20386.0C371.7%20386.0%20371.8%20386.0%20377.7%20383.8C383.0%20381.9%20390.1%20377.6%20390.8%20375.9C391.0%20375.5%20392.2%20373.9%20393.5%20372.4C396.4%20369.0%20398.5%20360.2%20397.6%20354.9C396.9%20350.2%20393.9%20344.3%20390.8%20341.3C386.9%20337.4%20382.2%20333.9%20380.3%20333.5C379.3%20333.2%20375.9%20332.4%20372.6%20331.6C367.7%20330.4%20352.0%20330.1%20277.2%20330.0C227.9%20330.0%20187.4%20329.7%20187.1%20329.4C186.8%20329.1%20186.5%20303.5%20186.4%20272.4L186.1%20216.0%20189.3%20214.3C192.2%20212.8%20199.5%20212.5%20261.5%20211.9C305.8%20211.5%20331.8%20210.9%20334.0%20210.2C344.8%20206.9%20347.7%20205.8%20350.0%20204.1C351.4%20203.1%20353.6%20202.0%20354.8%20201.6C356.1%20201.2%20358.4%20199.6%20359.9%20198.2C361.5%20196.7%20363.6%20194.8%20364.6%20193.9C365.7%20193.1%20367.4%20191.1%20368.5%20189.6C369.6%20188.0%20371.2%20186.0%20372.1%20185.1C372.9%20184.2%20374.4%20180.7%20375.4%20177.4C377.5%20170.4%20376.7%20167.3%20372.0%20163.8C369.6%20162.0%20363.5%20161.9%20200.8%20161.7C108.1%20161.6%2031.8%20161.1%2031.3%20160.7C30.9%20160.2%2030.5%20131.3%2030.5%2096.4C30.4%2038.8%2030.6%2032.8%2032.0%2031.5C33.5%2030.2%2045.2%2030.0%20124.1%2030.4C173.8%2030.7%20291.2%2031.0%20385.0%2031.2L555.5%2031.5%20555.8%2095.4C555.9%20141.1%20555.7%20159.7%20554.9%20160.6C554.0%20161.7%20542.7%20162.0%20496.1%20162.3C438.4%20162.7%20428.6%20163.2%20422.5%20166.4C420.8%20167.3%20418.8%20168.0%20417.9%20168.0C417.0%20168.0%20415.7%20168.7%20415.0%20169.5C414.3%20170.3%20412.8%20171.0%20411.7%20171.0C409.8%20171.0%20398.0%20179.3%20397.2%20181.2C397.0%20181.7%20396.2%20182.0%20395.4%20182.0C394.6%20182.0%20393.6%20182.8%20393.3%20183.8C392.9%20184.7%20391.0%20188.0%20389.0%20191.0C387.0%20194.0%20384.8%20198.0%20384.1%20199.8C383.3%20201.5%20382.4%20203.0%20382.1%20203.0C381.2%20203.0%20379.1%20218.7%20378.8%20227.2C378.7%20232.0%20379.1%20234.5%20380.2%20235.7C381.0%20236.7%20382.3%20239.1%20383.0%20241.0C385.9%20248.3%20393.7%20258.4%20400.1%20263.2C408.8%20269.7%20413.7%20272.0%20424.0%20274.5C427.6%20275.4%20431.9%20276.5%20433.5%20276.9C435.1%20277.4%20453.1%20277.8%20473.5%20277.9C514.6%20278.1%20515.0%20278.2%20529.7%20285.8C533.8%20288.0%20546.0%20299.7%20546.0%20301.5C546.0%20302.3%20546.5%20303.2%20547.0%20303.5C548.2%20304.2%20550.3%20309.0%20553.3%20318.0C555.4%20324.1%20555.5%20326.3%20555.5%20352.2C555.4%20372.5%20555.1%20380.3%20554.2%20381.2C553.3%20382.1%20539.6%20382.4%20497.1%20382.3C466.4%20382.2%20439.7%20382.5%20437.9%20383.0C420.9%20387.3%20412.3%20391.1%20404.2%20397.7C401.2%20400.0%20398.4%20402.0%20397.9%20402.0C397.4%20402.0%20395.8%20403.9%20394.3%20406.1C392.7%20408.4%20390.3%20412.1%20388.8%20414.4C387.2%20416.7%20385.1%20421.6%20383.9%20425.5C382.7%20429.4%20381.4%20433.4%20380.9%20434.5C379.4%20438.3%20378.8%20446.6%20378.6%20463.9L378.5%20481.3%20282.7%20481.4C230.0%20481.5%20186.6%20481.3%20186.4%20481.1Z%22%20fill%3D%22%23052846%22%2F%3E%3C%2Fsvg%3E") center / contain no-repeat; }
 [class*="brandMark"]::after, [class*="railMark"]::after { width: 24px; height: 24px; }
 [class*="fishHitbox"]::after { width: 34px; height: 34px; }
+/* ── 子代理控制台 v2：工作动态（指派链/步骤/结果）＋ 定义管理（模型分配/抽屉编辑器） ── */
+.ddp .agrow { border:1px solid var(--dsw-alias-border-l2, #e8eaed); border-radius:12px; background:var(--dsw-alias-bg-layer-2, #fff); margin-bottom:8px; overflow:hidden; }
+.ddp .agrow-h { display:flex; align-items:center; gap:8px; padding:10px 13px; cursor:pointer; user-select:none; }
+.ddp .agrow-h:hover { background:rgba(127,127,127,.08); }
+.ddp .agrow .caret { color:var(--dsw-alias-label-tertiary, #8a8f98); transition:transform .15s; flex:0 0 auto; font-size:11px; }
+.ddp .agrow.open .caret { transform:rotate(90deg); }
+.ddp .agrow-h .who { font-weight:650; font-size:13px; flex:0 0 auto; }
+.ddp .agrow-h .what { color:var(--dsw-alias-label-secondary, #5f6570); font-size:12.5px; min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.ddp .agrow-h .meta { margin-left:auto; font-size:11.5px; color:var(--dsw-alias-label-tertiary, #8a8f98); white-space:nowrap; flex:0 0 auto; }
+.ddp .agrow-b { padding:2px 13px 12px; }
+.ddp .agchain { display:grid; grid-template-columns:1fr 18px 1.25fr; gap:4px; align-items:stretch; margin-top:4px; }
+.ddp .agcbox { background:var(--dsw-alias-bg-base, #f6f7f8); border:1px solid var(--dsw-alias-border-l2, #e8eaed); border-radius:9px; padding:8px 10px; min-width:0; }
+.ddp .agcbox .cl { font-size:10.5px; color:var(--dsw-alias-label-tertiary, #8a8f98); letter-spacing:.3px; }
+.ddp .agcbox .cv { font-size:12.5px; margin-top:3px; color:inherit; line-height:1.55; word-break:break-word; }
+.ddp .agarr { display:flex; align-items:center; justify-content:center; color:var(--dsw-alias-label-tertiary, #8a8f98); font-size:12px; }
+.ddp .agsteps { list-style:none; margin:8px 0 0; padding:0; }
+.ddp .agsteps li { position:relative; padding:4px 0 4px 20px; font-size:12.5px; color:var(--dsw-alias-label-secondary, #65676b); line-height:1.5; }
+.ddp .agsteps li .k { position:absolute; left:0; top:5px; font-size:10.5px; }
+.ddp .agsteps li .tm { font-size:10.5px; color:var(--dsw-alias-label-tertiary, #8a8f98); margin-left:6px; }
+.ddp .agres { border-top:1px dashed var(--dsw-alias-border-l2, #e8eaed); margin-top:9px; padding-top:8px; }
+.ddp .agres .cl { font-size:10.5px; color:var(--dsw-alias-label-tertiary, #8a8f98); }
+.ddp .agres .cv { font-size:12.5px; margin-top:3px; white-space:pre-wrap; line-height:1.6; }
+.ddp .agrun-pill { display:inline-flex; align-items:center; gap:5px; font-size:11px; color:#b7791f; flex:0 0 auto; }
+.ddp .agrun-pill .sp { width:9px; height:9px; border:2px solid currentColor; border-top-color:transparent; border-radius:50%; animation:dshdesk-spin .8s linear infinite; flex:0 0 auto; }
+@keyframes dshdesk-spin { to { transform:rotate(360deg); } }
+.ddp .agm { display:flex; align-items:center; gap:10px; padding:7px 2px; border-bottom:1px dashed var(--dsw-alias-border-l2, #e8eaed); }
+.ddp .agm:last-child { border-bottom:0; }
+.ddp .agm .nm { flex:0 0 170px; font-size:12.5px; font-weight:600; min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.ddp .agm.main .nm { color:#4f7cf7; }
+.ddp .agm select.inp { flex:1; max-width:330px; height:30px; }
+.ddp .agcmd summary { cursor:pointer; list-style:none; color:#4f7cf7; font-size:11.5px; margin-top:6px; }
+.ddp .agcmd summary::-webkit-details-marker { display:none; }
+.agscrim { position:fixed; inset:0; background:rgba(20,19,17,.34); z-index:10050; opacity:0; pointer-events:none; transition:opacity .18s; }
+.agscrim.show { opacity:1; pointer-events:auto; }
+.agdrawer { position:fixed; top:0; right:0; bottom:0; width:min(520px, 96vw); background:var(--dsw-alias-bg-layer-2, #fff); border-left:1px solid var(--dsw-alias-border-l2, #e8eaed); box-shadow:-12px 0 40px rgba(16,24,40,.18); z-index:10051; display:flex; flex-direction:column; transform:translateX(102%); transition:transform .2s ease; color:inherit; }
+.agdrawer.show { transform:none; }
+.agdrawer .dh { display:flex; align-items:center; gap:10px; padding:14px 18px; border-bottom:1px solid var(--dsw-alias-border-l2, #e8eaed); font-weight:700; font-size:14px; }
+.agdrawer .db2 { flex:1; overflow:auto; padding:14px 18px 20px; }
+.agdrawer .dfoot { border-top:1px solid var(--dsw-alias-border-l2, #e8eaed); padding:10px 18px; display:flex; gap:9px; align-items:center; }
+.agdrawer .agfield { margin-bottom:13px; }
+.agdrawer .agfield label { display:block; font-size:12.5px; font-weight:650; margin-bottom:3px; }
+.agdrawer .agfield .hint { font-size:11.5px; color:var(--dsw-alias-label-tertiary, #8a8f98); margin-bottom:5px; line-height:1.5; }
+.agdrawer .agchips { display:flex; flex-wrap:wrap; gap:6px; }
+.agdrawer .agchips button { border:1px solid var(--dsw-alias-border-l2, #d4d7dc); border-radius:9px; background:transparent; color:inherit; padding:6px 11px; font-size:12px; cursor:pointer; display:inline-flex; flex-direction:column; align-items:flex-start; gap:1px; font-family:inherit; }
+.agdrawer .agchips button small { font-size:10px; color:var(--dsw-alias-label-tertiary, #8a8f98); }
+.agdrawer .agchips button.on { border-color:#4f7cf7; background:rgba(79,124,247,.10); }
+.agdrawer .agmlist { display:grid; grid-template-columns:1fr 1fr; gap:6px; }
+.agdrawer .agmlist button { text-align:left; border:1px solid var(--dsw-alias-border-l2, #d4d7dc); border-radius:9px; background:transparent; color:inherit; padding:6px 10px; cursor:pointer; display:flex; flex-direction:column; gap:1px; font-family:inherit; }
+.agdrawer .agmlist button .mn { font-size:12px; font-family:ui-monospace, Consolas, monospace; }
+.agdrawer .agmlist button .mh { font-size:10.5px; color:var(--dsw-alias-label-tertiary, #8a8f98); }
+.agdrawer .agmlist button.on { border-color:#4f7cf7; background:rgba(79,124,247,.10); }
+.agdrawer .inp { width:100%; min-width:0; height:34px; border:1px solid var(--dsw-alias-border-l2, #d4d7dc); border-radius:9px; padding:0 11px; font-size:12.5px; background:transparent; color:inherit; outline:none; box-sizing:border-box; }
+.agdrawer .inp.ta { height:auto; min-height:64px; padding:9px 11px; resize:vertical; line-height:1.6; font-family:inherit; }
+.agdrawer .inp:focus { border-color:#4f7cf7; box-shadow:0 0 0 3px rgba(79,124,247,.15); }
+.agdrawer .btn { height:33px; padding:0 14px; border:0; border-radius:9px; background:#4f7cf7; color:#fff; font-size:12.5px; font-weight:600; cursor:pointer; }
+.agdrawer .btn.gh { background:transparent; border:1px solid var(--dsw-alias-border-l2, #d4d7dc); color:inherit; font-weight:500; }
+.agdrawer .mini { border:1px solid var(--dsw-alias-border-l2, #d4d7dc); background:transparent; color:inherit; font-size:11.5px; padding:3px 10px; border-radius:7px; cursor:pointer; font-family:inherit; }
+.agdrawer .msg { font-size:12px; margin-bottom:9px; color:var(--dsw-alias-label-tertiary, #8a8f98); }
+.agdrawer .msg.err { color:#d64545; }
+.agdrawer .msg.ok { color:#31a24c; }
+@media (max-width: 900px) {
+  .ddp .agchain { grid-template-columns:1fr; }
+  .ddp .agarr { height:14px; }
+  .agdrawer .agmlist { grid-template-columns:1fr; }
+  .ddp .agm { flex-wrap:wrap; }
+}
 `;
     (function () {
       try {
@@ -3095,15 +3251,35 @@ body.desk-panel-open [class*="sidebarCol"] { transform: none !important; }
       "---",
       "name: my-helper",
       "description: 一句话说明它擅长什么、什么时候该用它",
-      "# tools: [read, grep]        # 可选：只允许这些工具（白名单；不写=全部）",
-      "# disallowed-tools: [write]  # 可选：禁用某些工具",
-      "# model: deepseek-v4-pro     # 可选：该子代理使用的模型",
-      "# background: true           # 可选：默认后台运行",
       "---",
       "",
       "你是一个……（写清楚：职责、工作方式、输出格式）",
       "",
     ].join("\n");
+    /* 子代理控制台 v2：能力分组 / 模型提示 / 快速模板 */
+    var AGT_TOOLS = [
+      ["read glob", "agt.abRead", "read / glob"],
+      ["grep", "agt.abGrep", "grep"],
+      ["bash", "agt.abBash", "bash"],
+      ["write edit", "agt.abWrite", "write / edit"],
+      ["web_search web_fetch", "agt.abWeb", "web_search"],
+      ["session_search", "agt.abHis", "session_search"]
+    ];
+    var AGT_MODEL_HINTS = {
+      "deepseek-flash": "快 · 省钱",
+      "deepseek-v4-pro": "最聪明 · 审查/写作/难任务",
+      "deepseek-v4-flash-vision-exp": "能看图",
+      "qwen3-max": "通义旗舰 · 中文强",
+      "qwen-max": "通义旗舰",
+      "qwen-plus": "均衡 · 便宜",
+      "qwen-turbo": "极速 · 简单活"
+    };
+    var AGT_TPL = {
+      reviewer: { name: "code-reviewer", description: "代码审查员：查 bug、边界与性能问题，给修改建议（只读不改）", persona: "你是团队的代码审查员。\n- 只读不写：不修改任何文件\n- 结论先行，按严重度排序\n- 每条给出：位置、为什么是问题、建议改法\n- 不确定就标注「待确认」，不编造", toolGroups: [0, 1, 2], model: "deepseek-v4-pro", background: false },
+      researcher: { name: "researcher", description: "资料研究员：做独立调研与资料整理，输出带来源的要点", persona: "你是资料研究员。\n- 只依据可核实来源，关键结论附出处；查不到就明说\n- 结论先行，先给 3-5 条核心发现\n- 中文输出，术语首次出现给一句解释", toolGroups: [0, 4, 3], model: "", background: true },
+      writer: { name: "writer", description: "文案写手：把要点写成清晰有节奏的中文文稿", persona: "你是中文文案写手。\n- 先问清读者与场景，再动笔\n- 结论先行、短句为主，避免 AI 腔\n- 输出两版供选：稳妥版 / 有表达欲版", toolGroups: [0, 3], model: "", background: false },
+      blank: { name: "", description: "", persona: "", toolGroups: [], model: "", background: false }
+    };
 
     function AgentsPanel(props) {
       var wide = !!(props && props.wide);
@@ -3111,21 +3287,30 @@ body.desk-panel-open [class*="sidebarCol"] { transform: none !important; }
       var open = openPair[0];
       var setOpen = openPair[1];
       useFvSync(open, setOpen);
-      var stPair = React.useState({ phase: "loading", items: [], role: "", msg: null, edit: null, editFile: "", editNew: false, tab: "defs", runsPhase: "", runs: [] });
+      var stPair = React.useState({
+        phase: "loading", items: [], role: "", mainModel: null, msg: null,
+        tab: "runs", runsPhase: "", runs: [], openRuns: {},
+        models: [], modelsPhase: "",
+        edit: null, editFile: "", editNew: false, editMode: "form", rawText: ""
+      });
       var st = stPair[0];
       var setSt = stPair[1];
 
       function pset(patch) {
-        setSt(function (prev) { var n = {}; for (var k in prev) n[k] = prev[k]; for (var k2 in patch) n[k2] = patch[k2]; return n; });
+        setSt(function (prev) {
+          var n = {};
+          for (var k in prev) n[k] = prev[k];
+          for (var k2 in patch) n[k2] = patch[k2];
+          return n;
+        });
       }
       function load() {
         pset({ phase: "loading" });
         fetch("/portal/api/panel/agents", { headers: { accept: "application/json" } })
           .then(function (r) { if (!r.ok) throw new Error("HTTP " + r.status); return r.json(); })
-          .then(function (d) { pset({ phase: "ready", items: d.items || [], role: d.role || "" }); })
+          .then(function (d) { pset({ phase: "ready", items: d.items || [], role: d.role || "", mainModel: d.mainModel || null }); })
           .catch(function () { pset({ phase: "error" }); });
       }
-      React.useEffect(function () { load(); }, []);
       function loadRuns() {
         pset({ runsPhase: "loading" });
         fetch("/portal/api/panel/agent-runs", { headers: { accept: "application/json" } })
@@ -3133,54 +3318,463 @@ body.desk-panel-open [class*="sidebarCol"] { transform: none !important; }
           .then(function (d) { pset({ runsPhase: "ready", runs: d.items || [] }); })
           .catch(function () { pset({ runsPhase: "error" }); });
       }
-      function fmtRunTime(ms) {
-        try {
-          var d = new Date(ms);
-          var p = function (n) { return (n < 10 ? "0" : "") + n; };
-          return (d.getMonth() + 1) + "-" + p(d.getDate()) + " " + p(d.getHours()) + ":" + p(d.getMinutes());
-        } catch (e) { return ""; }
+      function loadModels() {
+        if (st.modelsPhase === "loading" || st.modelsPhase === "ready") return;
+        pset({ modelsPhase: "loading" });
+        fetch("/api/session/modelCatalog", {
+          method: "POST",
+          headers: { "content-type": "application/json" },
+          body: JSON.stringify({ type: "client-request", rpcId: "desk-agt-models-" + Date.now(), method: "session/modelCatalog", payload: { args: {} } })
+        })
+          .then(function (r) { return r.json(); })
+          .then(function (j) {
+            var v = j && j.result && j.result.ok ? j.result.value : null;
+            if (!v || !v.groups) throw new Error("no catalog");
+            var flat = [];
+            for (var gi = 0; gi < v.groups.length; gi++) {
+              var g = v.groups[gi];
+              for (var mi = 0; mi < (g.models || []).length; mi++) {
+                var mm = g.models[mi];
+                flat.push({ id: mm.id, provider: g.id, name: mm.name || mm.id, hint: AGT_MODEL_HINTS[mm.id] || mm.description || "" });
+              }
+            }
+            pset({ modelsPhase: "ready", models: flat, mainModel: v["default"] || st.mainModel });
+          })
+          .catch(function () { pset({ modelsPhase: "error" }); });
       }
+      React.useEffect(function () { load(); }, []);
+      React.useEffect(function () {
+        if (!open) return;
+        loadModels();
+      }, [open]);
       React.useEffect(function () {
         if (!open || st.tab !== "runs") return;
         loadRuns();
         var iv = setInterval(loadRuns, 30000);
         return function () { clearInterval(iv); };
       }, [open, st.tab]);
-      function toggle() { var n = !open; setOpen(n); if (n) load(); }
-
-      function openEdit(fileName) {
-        if (!fileName) { pset({ edit: AGT_TEMPLATE, editFile: "", editNew: true, msg: null }); return; }
-        fetch("/portal/api/panel/agent?file=" + encodeURIComponent(fileName), { headers: { accept: "application/json" } })
-          .then(function (r) { return r.json(); })
-          .then(function (d) {
-            if (d && d.ok) pset({ edit: d.content, editFile: fileName, editNew: false, msg: null });
-            else pset({ msg: { kind: "err", text: (d && d.error) || tr("agt.readFail") } });
-          })
-          .catch(function () { pset({ msg: { kind: "err", text: tr("agt.readFail") } }); });
+      function toggle() { var n = !open; setOpen(n); if (n) { load(); } }
+      function fmtRunTime(ms) {
+        try {
+          var d = new Date(Number(ms || 0));
+          var p = function (n) { return (n < 10 ? "0" : "") + n; };
+          return p(d.getMonth() + 1) + "-" + p(d.getDate()) + " " + p(d.getHours()) + ":" + p(d.getMinutes());
+        } catch (e) { return ""; }
+      }
+      function fmtAgo(ms) {
+        try {
+          if (!ms) return "";
+          var s = Math.round((Date.now() - Number(ms)) / 1000);
+          if (s < 0) return "";
+          if (s < 60) return s + "s";
+          if (s < 3600) return Math.round(s / 60) + "m";
+          return Math.round(s / 3600) + "h";
+        } catch (e) { return ""; }
+      }
+      function toggleRun(key) {
+        var m = {};
+        for (var k in st.openRuns) m[k] = st.openRuns[k];
+        m[key] = !m[key];
+        pset({ openRuns: m });
       }
       function post(path, body, okText, after) {
-        pset({ msg: { kind: "info", text: tr("common.processing") } });
         fetch(path, { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify(body) })
-          .then(function (r) { return r.json().then(function (d) { return { status: r.status, d: d }; }); })
-          .then(function (res) {
-            if (res.status !== 200 || (res.d && res.d.error)) {
-              pset({ msg: { kind: "err", text: (res.d && res.d.error) || "HTTP " + res.status } });
-              return;
-            }
+          .then(function (r) { return r.json(); })
+          .then(function (d) {
+            if (d && d.error) { pset({ msg: { kind: "err", text: d.error } }); return; }
             pset({ msg: { kind: "ok", text: okText } });
-            if (after) after();
+            if (after) after(d || {});
           })
           .catch(function (e) { pset({ msg: { kind: "err", text: String((e && e.message) || e) } }); });
       }
-      function save() {
-        var m = /^name:\s*([A-Za-z0-9][A-Za-z0-9._-]*)\s*$/m.exec(st.edit || "");
-        var fname = st.editFile || (m ? m[1] + ".md" : "");
-        if (!fname) { pset({ msg: { kind: "err", text: tr("agt.fileNeeded") } }); return; }
-        post("/portal/api/admin/agent-save", { file: fname, content: st.edit }, tr("agt.saved"), function () { pset({ edit: null, editFile: "", editNew: false }); load(); });
+      function closeEdit() { pset({ edit: null, editFile: "", editNew: false, rawText: "", editMode: "form" }); }
+      function editMsg(kind, text) {
+        var f = st.edit;
+        if (!f) return;
+        var n = {};
+        for (var k in f) n[k] = f[k];
+        n.message = { kind: kind, text: text };
+        pset({ edit: n });
+      }
+      function blankFields() { return { name: "", description: "", persona: "", toolGroups: [], model: "", background: false, extras: [], message: null }; }
+      function parseInlineList(v) {
+        var s = String(v || "").trim();
+        var m = /^\[(.*)\]$/.exec(s);
+        if (!m) return s ? [s] : [];
+        var inner = m[1].trim();
+        if (!inner) return [];
+        return inner.split(",").map(function (x) { return x.trim().replace(/^["']|["']$/g, ""); }).filter(Boolean);
+      }
+      function groupsFromTools(list) {
+        var g = [];
+        var flat = list || [];
+        for (var i = 0; i < AGT_TOOLS.length; i++) {
+          var names = AGT_TOOLS[i][0].split(" ");
+          var all = true;
+          for (var j = 0; j < names.length; j++) { if (flat.indexOf(names[j]) < 0) { all = false; break; } }
+          if (all && names.length) g.push(i);
+        }
+        return g;
+      }
+      function composeTools(groups) {
+        var out = [];
+        for (var i = 0; i < (groups || []).length; i++) {
+          out = out.concat(String(AGT_TOOLS[groups[i]][0]).split(" "));
+        }
+        return out;
+      }
+      function composeDef(f) {
+        var lines = ["---"];
+        lines.push("name: " + String(f.name || "").trim());
+        lines.push("description: " + String(f.description || "").trim());
+        var tools = composeTools(f.toolGroups);
+        if (tools.length) lines.push("tools: [" + tools.join(", ") + "]");
+        if (f.model) lines.push("model: " + f.model);
+        if (f.background) lines.push("background: true");
+        for (var i = 0; i < (f.extras || []).length; i++) lines.push(f.extras[i]);
+        lines.push("---");
+        lines.push("");
+        lines.push(f.persona || "");
+        return lines.join("\n") + "\n";
+      }
+      function parseDef(text) {
+        var out = blankFields();
+        var m = /^---\r?\n([\s\S]*?)\r?\n---(?:\r?\n([\s\S]*))?$/.exec(String(text || ""));
+        if (!m) {
+          out.persona = String(text || "").trim();
+          out.message = { kind: "err", text: tr("agt.noFm") };
+          return out;
+        }
+        var fmLines = m[1].split(/\r?\n/);
+        out.persona = String(m[2] || "").trim();
+        var cont = false;
+        for (var i = 0; i < fmLines.length; i++) {
+          var line = fmLines[i];
+          if (!line.trim()) continue;
+          var kv = /^([A-Za-z][A-Za-z0-9_-]*):\s*(.*)$/.exec(line);
+          if (!kv) {
+            if (cont && /^\s+-/.test(line)) { out.extras.push(line); continue; }
+            cont = false;
+            out.extras.push(line);
+            continue;
+          }
+          var k = kv[1];
+          var v = kv[2].trim();
+          if ((k === "tools" || k === "disallowed-tools" || k === "disallowedTools") && v === "") { out.extras.push(line); cont = true; continue; }
+          cont = false;
+          if (k === "name") out.name = v.replace(/^["']|["']$/g, "");
+          else if (k === "description") out.description = v.replace(/^["']|["']$/g, "");
+          else if (k === "tools") out.toolGroups = groupsFromTools(parseInlineList(v));
+          else if (k === "model") out.model = v.replace(/^["']|["']$/g, "");
+          else if (k === "background") out.background = (v === "true");
+          else out.extras.push(line);
+        }
+        return out;
+      }
+      function openEdit(fileName) {
+        if (!fileName) {
+          pset({ edit: blankFields(), editFile: "", editNew: true, editMode: "form", rawText: "" });
+          return;
+        }
+        fetch("/portal/api/panel/agent?file=" + encodeURIComponent(fileName), { headers: { accept: "application/json" } })
+          .then(function (r) { return r.json(); })
+          .then(function (d) {
+            if (d && d.ok) {
+              var f = parseDef(d.content);
+              pset({ edit: f, editFile: fileName, editNew: false, editMode: "form", rawText: d.content });
+            } else {
+              pset({ msg: { kind: "err", text: (d && d.error) || tr("agt.readFail") } });
+            }
+          })
+          .catch(function () { pset({ msg: { kind: "err", text: tr("agt.readFail") } }); });
+      }
+      function toggleMode() {
+        if (st.editMode === "raw") {
+          var f = parseDef(st.rawText);
+          pset({ edit: f, editMode: "form" });
+        } else {
+          pset({ editMode: "raw", rawText: composeDef(st.edit) });
+        }
+      }
+      function applyTpl(kind) {
+        var T = AGT_TPL[kind] || AGT_TPL.blank;
+        var n = blankFields();
+        n.name = T.name;
+        n.description = T.description;
+        n.persona = T.persona;
+        n.toolGroups = T.toolGroups.slice();
+        n.model = T.model;
+        n.background = T.background;
+        if (kind !== "blank") n.message = { kind: "ok", text: tr("agt.tplFilled") };
+        pset({ edit: n });
+      }
+      function saveEdit() {
+        var f = st.edit;
+        if (!f) return;
+        var fname = st.editFile || "";
+        var text;
+        if (st.editMode === "raw") {
+          text = st.rawText;
+          if (!fname) {
+            var mm = /^name:\s*([A-Za-z0-9][A-Za-z0-9._-]*)\s*$/m.exec(text || "");
+            fname = mm ? mm[1] + ".md" : "";
+          }
+        } else {
+          var nm = String(f.name || "").trim();
+          if (!nm || !/^[A-Za-z0-9][A-Za-z0-9._-]*$/.test(nm)) { editMsg("err", tr("agt.fileNeeded")); return; }
+          if (!fname) fname = nm + ".md";
+          text = composeDef(f);
+        }
+        if (!fname) { editMsg("err", tr("agt.fileNeeded")); return; }
+        fetch("/portal/api/admin/agent-save", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ file: fname, content: text }) })
+          .then(function (r) { return r.json(); })
+          .then(function (d) {
+            if (d && d.error) { editMsg("err", d.error); return; }
+            pset({ msg: { kind: "ok", text: tr("agt.saved") } });
+            closeEdit();
+            load();
+          })
+          .catch(function (e) { editMsg("err", String((e && e.message) || e)); });
       }
       function remove(fileName) {
-        if (!window.confirm(tr("agt.confirmDel") + "\n" + fileName)) return;
+        if (!window.confirm(tr("agt.confirmDel") + " " + fileName)) return;
         post("/portal/api/admin/agent-delete", { file: fileName }, tr("agt.deleted"), function () { load(); });
+      }
+      function setDefModel(fileName, model) {
+        post("/portal/api/admin/agent-set-model", { file: fileName, model: model }, tr("agt.setOk"), function () { load(); });
+      }
+      function setMainModel(modelId) {
+        if (!modelId) return;
+        var m = null;
+        for (var i = 0; i < st.models.length; i++) { if (st.models[i].id === modelId) m = st.models[i]; }
+        if (!m) return;
+        var ops = [{ op: "set", path: ["provider"], value: m.provider }, { op: "set", path: ["model"], value: m.id }];
+        function ok() { pset({ mainModel: { provider: m.provider, model: m.id }, msg: { kind: "ok", text: tr("agt.setOk") } }); }
+        function send(payload, tag) {
+          return fetch("/api/settings/mutate", {
+            method: "POST",
+            headers: { "content-type": "application/json" },
+            body: JSON.stringify({ type: "client-request", rpcId: "desk-agt-setmain-" + tag + "-" + Date.now(), method: "settings/mutate", payload: payload })
+          }).then(function (r) { return r.json(); });
+        }
+        pset({ msg: { kind: "ok", text: "…" } });
+        send({ args: { ns: "agent-default-model", ops: ops } }, "b")
+          .then(function (j) {
+            if (j && j.result && j.result.ok) { ok(); return; }
+            pset({ msg: { kind: "err", text: "settings/mutate: " + JSON.stringify((j && j.result && j.result.error) || {}).slice(0, 160) } });
+          })
+          .catch(function (e) { pset({ msg: { kind: "err", text: String((e && e.message) || e) } }); });
+      }
+      function modelOptions(withFollow, selected) {
+        var arr = [];
+        if (withFollow) arr.push(h("option", { key: "_f", value: "" }, tr("agt.followModel")));
+        for (var i = 0; i < st.models.length; i++) {
+          var m = st.models[i];
+          arr.push(h("option", { key: "_" + m.id, value: m.id }, m.id + (m.hint ? " — " + m.hint : "")));
+        }
+        return arr;
+      }
+      function modelCard() {
+        if (st.phase !== "ready") return null;
+        var rows = [];
+        rows.push(h("div", { key: "main", className: "agm main" },
+          h("span", { className: "nm" }, tr("agt.assignMain")),
+          h("select", {
+            className: "inp",
+            value: (st.mainModel && st.mainModel.model) || "",
+            disabled: st.role !== "admin",
+            onChange: function (e) { setMainModel(e.target.value); }
+          }, [h("option", { key: "_p", value: "" }, "—")].concat(modelOptions(false)))
+        ));
+        for (var i = 0; i < st.items.length; i++) {
+          (function (it) {
+            rows.push(h("div", { key: "m" + it.fileName, className: "agm" },
+              h("span", { className: "nm" }, it.name || it.fileName),
+              h("select", {
+                className: "inp",
+                value: it.model || "",
+                disabled: st.role !== "admin",
+                onChange: function (e) { setDefModel(it.fileName, e.target.value); }
+              }, modelOptions(true))
+            ));
+          })(st.items[i]);
+        }
+        return h("div", { key: "massign", style: { border: "1px solid var(--dsw-alias-border-l2, #e8eaed)", borderRadius: "12px", background: "var(--dsw-alias-bg-layer-2, #fff)", padding: "12px 14px", marginBottom: "10px" } },
+          h("div", { style: { fontWeight: 650, fontSize: "13.5px" } }, tr("agt.assignTitle")),
+          h("div", { style: { fontSize: "11.5px", color: "var(--dsw-alias-label-tertiary, #8a8f98)", marginTop: "3px", lineHeight: 1.5 } }, tr("agt.assignHint")),
+          st.modelsPhase === "error" ? h("div", { className: "msg err", style: { marginTop: "6px" } }, tr("agt.needReload")) : null,
+          h("div", { style: { marginTop: "8px" } }, rows),
+          h("div", { style: { fontSize: "11.5px", color: "var(--dsw-alias-label-tertiary, #8a8f98)", marginTop: "7px", lineHeight: 1.5 } }, tr("agt.assignMainHint") + " " + tr("agt.assignSubHint"))
+        );
+      }
+      function stateOf(it) {
+        if (it.state === "running") return { txt: tr("agt.stRunning"), run: true };
+        if (it.state === "background") return { txt: tr("agt.stBackground"), run: true };
+        if (it.state === "bg-done") return { txt: tr("agt.stBgDone"), run: false };
+        if (it.state === "continuable") return { txt: tr("agt.stStarted"), run: false };
+        if (it.state === "returned") return { txt: tr("agt.stReturned"), run: false };
+        return { txt: String(it.state || ""), run: false };
+      }
+      function cmdText(it) {
+        var obj = { subagent_type: it.type || it.tool, prompt: it.prompt || "" };
+        if (it.label) obj.description = it.label;
+        if (it.model) obj.model = it.model + "  # 来自子代理定义（不写 = 跟随对话）";
+        return JSON.stringify(obj, null, 2);
+      }
+      function runBody(it) {
+        var chips = [];
+        chips.push(h("span", { key: "mode", className: "tag" }, it.mode === "one-shot" ? tr("agt.modeOnce") : (it.mode === "continuable" ? tr("agt.modeCont") : (it.mode || "—"))));
+        chips.push(h("span", { key: "model", className: "tag" }, it.model || tr("agt.followModel")));
+        var stp = [];
+        if (it.steps && it.steps.length) {
+          stp.push(h("ul", { key: "ul", className: "agsteps" }, it.steps.map(function (s, si) {
+            return h("li", { key: "s" + si },
+              h("span", { className: "k" }, s.kind === "tool" ? "🔧" : "💬"),
+              s.text,
+              h("span", { className: "tm" }, fmtAgo(s.time))
+            );
+          })));
+        } else {
+          stp.push(h("div", { key: "ns", className: "empty", style: { padding: "4px 0" } }, tr("agt.noSteps")));
+        }
+        return h("div", { key: "b", className: "agrow-b" },
+          h("div", { key: "ch", className: "agchain" },
+            h("div", { key: "ask", className: "agcbox" },
+              h("div", { className: "cl" }, tr("agt.cAsk")),
+              h("div", { className: "cv" }, it.ask || "—")
+            ),
+            h("div", { key: "ar", className: "agarr" }, "→"),
+            h("div", { key: "ord", className: "agcbox" },
+              h("div", { className: "cl" }, tr("agt.cOrder")),
+              h("div", { style: { marginTop: "4px", display: "flex", gap: "6px", flexWrap: "wrap" } }, chips),
+              h("details", { className: "agcmd" },
+                h("summary", null, tr("agt.cmdDetail")),
+                h("div", { className: "code", style: { marginTop: "6px", maxHeight: "220px" } }, cmdText(it))
+              )
+            )
+          ),
+          h("div", { key: "st" },
+            h("div", { className: "lb" }, tr("agt.cSteps")),
+            stp
+          ),
+          it.result ? h("div", { key: "res", className: "agres" },
+            h("div", { className: "cl" }, tr("agt.cResult")),
+            h("div", { className: "cv" }, String(it.result).slice(0, 1600))
+          ) : null
+        );
+      }
+      function runRow(it, ri) {
+        var key = String(it.sessionId || "") + "#" + String(it.childId || "") + "#" + String(it.time || 0) + "#" + ri;
+        var isOpen = !!st.openRuns[key];
+        var so = stateOf(it);
+        return h("div", { key: "rr" + ri, className: "agrow" + (isOpen ? " open" : "") },
+          h("div", { className: "agrow-h", onClick: function () { toggleRun(key); } },
+            h("span", { className: "caret" }, "▸"),
+            h("span", { className: "who" }, it.type || it.tool),
+            h("span", { className: "what" }, it.label || ""),
+            so.run ? h("span", { className: "agrun-pill" }, h("span", { className: "sp" }), so.txt) : h("span", { className: "tag" }, so.txt),
+            h("span", { className: "meta" }, fmtRunTime(it.time) + " · " + it.user + (it.title ? " · " + it.title : ""))
+          ),
+          isOpen ? runBody(it) : null
+        );
+      }
+      function drawerEl() {
+        if (st.edit == null) return null;
+        var f = st.edit;
+        var isAdminD = st.role === "admin";
+        function fld(patch) {
+          var n = {};
+          for (var k in f) n[k] = f[k];
+          for (var k2 in patch) n[k2] = patch[k2];
+          pset({ edit: n });
+        }
+        var kids = [];
+        if (f.message && f.message.text) kids.push(h("div", { key: "m", className: "msg " + (f.message.kind === "err" ? "err" : "ok") }, f.message.text));
+        if (st.editNew) kids.push(h("div", { key: "tpl", style: { display: "flex", alignItems: "center", gap: "6px", flexWrap: "wrap", marginBottom: "12px" } },
+          h("span", { style: { fontSize: "11px", color: "var(--dsw-alias-label-tertiary, #8a8f98)" } }, tr("agt.tplLabel")),
+          h("button", { key: "t1", className: "mini", onClick: function () { applyTpl("reviewer"); } }, tr("agt.tplReviewer")),
+          h("button", { key: "t2", className: "mini", onClick: function () { applyTpl("researcher"); } }, tr("agt.tplResearcher")),
+          h("button", { key: "t3", className: "mini", onClick: function () { applyTpl("writer"); } }, tr("agt.tplWriter")),
+          h("button", { key: "t4", className: "mini", onClick: function () { applyTpl("blank"); } }, tr("agt.tplBlank"))
+        ));
+        if (st.editMode === "raw") {
+          kids.push(h("div", { key: "raw", className: "agfield" },
+            h("label", null, tr("agt.advanced")),
+            h("div", { className: "hint" }, tr("agt.advancedHint")),
+            h("textarea", {
+              className: "inp ta",
+              readOnly: !isAdminD,
+              style: { minHeight: "320px", fontFamily: "ui-monospace, Menlo, Consolas, monospace", fontSize: "12px" },
+              value: st.rawText,
+              onChange: function (e) { pset({ rawText: e.target.value }); }
+            })
+          ));
+        } else {
+          kids.push(h("div", { key: "fn", className: "agfield" },
+            h("label", null, tr("agt.formName")),
+            h("div", { className: "hint" }, tr("agt.formNameHint")),
+            h("input", { className: "inp", readOnly: !isAdminD, value: f.name, onChange: function (e) { fld({ name: e.target.value }); } })
+          ));
+          kids.push(h("div", { key: "fd", className: "agfield" },
+            h("label", null, tr("agt.formDesc")),
+            h("div", { className: "hint" }, tr("agt.formDescHint")),
+            h("input", { className: "inp", readOnly: !isAdminD, value: f.description, onChange: function (e) { fld({ description: e.target.value }); } })
+          ));
+          kids.push(h("div", { key: "fp", className: "agfield" },
+            h("label", null, tr("agt.formPersona")),
+            h("div", { className: "hint" }, tr("agt.formPersonaHint")),
+            h("textarea", { className: "inp ta", readOnly: !isAdminD, style: { minHeight: "150px" }, value: f.persona, onChange: function (e) { fld({ persona: e.target.value }); } })
+          ));
+          kids.push(h("div", { key: "fa", className: "agfield" },
+            h("label", null, tr("agt.formAbil")),
+            h("div", { className: "hint" }, tr("agt.formAbilHint")),
+            h("div", { className: "agchips" }, AGT_TOOLS.map(function (t, ti) {
+              var on = (f.toolGroups || []).indexOf(ti) >= 0;
+              return h("button", { key: "ab" + ti, className: on ? "on" : "", onClick: function () {
+                if (!isAdminD) return;
+                var g = (f.toolGroups || []).slice();
+                var ix = g.indexOf(ti);
+                if (ix >= 0) g.splice(ix, 1); else g.push(ti);
+                fld({ toolGroups: g });
+              } }, h("span", null, tr(t[1])), h("small", null, t[2]));
+            }))
+          ));
+          kids.push(h("div", { key: "fm", className: "agfield" },
+            h("label", null, tr("agt.formModel")),
+            h("div", { className: "hint" }, tr("agt.formModelHint")),
+            h("div", { className: "agmlist" }, [{ id: "", hint: tr("agt.assignSubHint") }].concat(st.models).map(function (m) {
+              var on = (f.model || "") === m.id;
+              return h("button", { key: "mo" + (m.id || "_"), className: on ? "on" : "", onClick: function () { if (isAdminD) fld({ model: m.id }); } },
+                h("span", { className: "mn" }, m.id || tr("agt.followModel")),
+                h("span", { className: "mh" }, m.hint || "")
+              );
+            }))
+          ));
+          kids.push(h("div", { key: "fb", className: "agfield" },
+            h("label", { style: { display: "flex", alignItems: "center", gap: "8px", cursor: "pointer" } },
+              h("input", { type: "checkbox", checked: !!f.background, disabled: !isAdminD, onChange: function (e) { fld({ background: e.target.checked }); } }),
+              tr("agt.formBg"),
+              h("span", { className: "hint", style: { margin: 0 } }, tr("agt.formBgHint"))
+            )
+          ));
+          if (f.extras && f.extras.length) kids.push(h("div", { key: "fx", style: { fontSize: "11px", color: "var(--dsw-alias-label-tertiary, #8a8f98)", marginTop: "2px" } }, tr("agt.keepFields")));
+        }
+        return h("div", null,
+          h("div", { key: "sc", className: "agscrim show", onClick: closeEdit }),
+          h("div", { key: "dr", className: "agdrawer show", role: "dialog" },
+            h("div", { className: "dh" },
+              st.editNew ? tr("agt.new") : (st.editFile || ""),
+              h("button", { className: "mini", style: { marginLeft: "auto" }, onClick: closeEdit }, "✕")
+            ),
+            h("div", { className: "db2" }, kids),
+            h("div", { className: "dfoot" },
+              h("button", { className: "mini", onClick: toggleMode }, st.editMode === "raw" ? tr("agt.backForm") : tr("agt.rawBtn")),
+              h("span", { style: { marginLeft: "auto" } }),
+              h("button", { className: "btn gh", onClick: closeEdit }, tr("agt.cancel")),
+              isAdminD ? h("button", { className: "btn", onClick: saveEdit }, tr("agt.save")) : null
+            )
+          )
+        );
       }
 
       var trigger = h("button", { className: "ddb" + (wide ? "" : " rail") + (open ? " on" : ""), onClick: toggle, title: tr("agt.title") },
@@ -3192,97 +3786,85 @@ body.desk-panel-open [class*="sidebarCol"] { transform: none !important; }
       var isAdmin = st.role === "admin";
       var kids = [];
       if (st.msg) kids.push(h("div", { key: "msg", className: "msg " + (st.msg.kind === "err" ? "err" : "ok") }, st.msg.text));
-      if (st.edit != null) {
-        var editHead = st.editNew ? tr("agt.hintTitle") + "：" + tr("agt.hintBody") : (st.editFile || "");
-        kids.push(h("div", { key: "ed" },
-          h("div", { className: "lb" }, editHead),
-          h("textarea", { className: "inp ta", readOnly: !isAdmin, style: { minHeight: "340px", fontFamily: "ui-monospace, Menlo, Consolas, monospace", fontSize: "12.5px" }, value: st.edit, onChange: function (e) { pset({ edit: e.target.value }); } }),
-          h("div", { style: { display: "flex", gap: "8px", marginTop: "8px" } },
-            isAdmin ? h("button", { className: "btn", onClick: save }, tr("agt.save")) : null,
-            h("button", { className: "btn gh", onClick: function () { pset({ edit: null, editFile: "", editNew: false, msg: null }); } }, tr("agt.cancel"))
-          )
-        ));
-      } else if (st.phase === "loading") {
-        kids.push(h("div", { key: "ld", className: "empty" }, tr("agt.loading")));
-      } else if (st.phase === "error") {
-        kids.push(h("div", { key: "er", className: "empty" }, tr("usage.portalHint")));
-      } else {
-        kids.push(h("div", { key: "tabs", className: "tabs" },
-          h("button", { className: "tb" + (st.tab === "defs" ? " on" : ""), onClick: function () { pset({ tab: "defs" }); } }, tr("agt.tabDefs")),
-          h("button", { className: "tb" + (st.tab === "runs" ? " on" : ""), onClick: function () { pset({ tab: "runs" }); } }, tr("agt.tabRuns"))
-        ));
-        if (st.tab === "runs") {
-          if (st.runsPhase === "loading" && !(st.runs && st.runs.length)) kids.push(h("div", { key: "rld", className: "empty" }, tr("agt.loading")));
-          else if (st.runsPhase === "error") kids.push(h("div", { key: "rer", className: "empty" }, tr("usage.portalHint")));
-          else {
-            kids.push(h("div", { key: "rhd", style: { display: "flex", alignItems: "center", marginBottom: "6px" } },
-              h("span", { className: "lb", style: { margin: 0 } }, tr("agt.runsHint")),
-              h("button", { className: "mini", style: { marginLeft: "auto" }, onClick: loadRuns }, tr("agt.refresh"))
-            ));
-            var rr = [];
-            for (var ri = 0; ri < st.runs.length; ri++) {
-              (function (it) {
-                var stName = it.state === "returned" ? tr("agt.stReturned") : it.state === "background" ? tr("agt.stBackground") : it.state === "continuable" ? tr("agt.stStarted") : tr("agt.stRunning");
-                var stColor = it.state === "running" ? "#b7791f" : "var(--dsw-alias-label-secondary, #65676b)";
-                rr.push(h("div", { key: "rr" + ri + it.childId, className: "it" },
-                  h("div", { style: { display: "flex", alignItems: "center", gap: "8px" } },
-                    h("span", { style: { fontWeight: 600 } }, it.type || it.tool),
-                    h("span", { className: "t2", style: { margin: 0 } }, it.label || ""),
-                    h("span", { className: "tag", style: { color: stColor } }, stName),
-                    h("span", { style: { marginLeft: "auto", fontSize: "12px", opacity: 0.75 } }, fmtRunTime(it.time))
-                  ),
-                  h("div", { style: { fontSize: "12px", opacity: 0.7, marginTop: "2px" } }, it.user + (it.title ? " · " + it.title : "") + (it.mode ? " · " + it.mode : ""))
-                ));
-              })(st.runs[ri]);
-            }
-            kids.push(h("div", { key: "rrows" }, rr.length ? rr : h("div", { className: "empty" }, tr("agt.runsEmpty"))));
-          }
+      kids.push(h("div", { key: "tabs", className: "tabs" },
+        h("button", { key: "tb1", className: "tb" + (st.tab === "runs" ? " on" : ""), onClick: function () { pset({ tab: "runs" }); } }, tr("agt.tabRuns")),
+        h("button", { key: "tb2", className: "tb" + (st.tab === "defs" ? " on" : ""), onClick: function () { pset({ tab: "defs" }); } }, tr("agt.tabDefs"))
+      ));
+
+      if (st.tab === "runs") {
+        if (st.runsPhase === "loading" && !(st.runs && st.runs.length)) {
+          kids.push(h("div", { key: "rl", className: "empty" }, tr("agt.loading")));
+        } else if (st.runsPhase === "error" && !(st.runs && st.runs.length)) {
+          kids.push(h("div", { key: "re", className: "empty" }, tr("agt.readFail")));
         } else {
-        if (isAdmin) kids.push(h("div", { key: "act", style: { marginBottom: "8px" } }, h("button", { className: "btn", onClick: function () { openEdit(null); } }, tr("agt.new"))));
-        var rows = [];
-        for (var i = 0; i < st.items.length; i++) {
-          (function (it) {
-            var chips = [];
-            if (it.model) chips.push(h("span", { key: "m", className: "tag" }, tr("agt.model") + ": " + it.model));
-            if (it.tools && it.tools.length) chips.push(h("span", { key: "t", className: "tag" }, tr("agt.tools") + ": " + it.tools.join(",")));
-            if (it.provider === "fork") chips.push(h("span", { key: "f", className: "tag" }, tr("agt.fork")));
-            if (it.background) chips.push(h("span", { key: "b", className: "tag" }, tr("agt.background")));
-            if (it.maxDepth != null) chips.push(h("span", { key: "d", className: "tag" }, tr("agt.depth") + ": " + it.maxDepth));
-            var btns = [h("button", { key: "v", className: "mini", onClick: function () { openEdit(it.fileName); } }, tr("agt.view"))];
-            if (isAdmin) {
-              btns.push(h("button", { key: "e", className: "mini", onClick: function () { openEdit(it.fileName); } }, tr("agt.edit")));
-              btns.push(h("button", { key: "x", className: "mini", onClick: function () { remove(it.fileName); } }, tr("agt.del")));
-            }
-            rows.push(h("div", { key: "r" + it.fileName, className: "it" },
-              h("div", { style: { display: "flex", alignItems: "center", gap: "8px" } },
-                h("span", { style: { fontWeight: 600 } }, it.name || it.fileName),
-                it.ok ? null : h("span", { className: "tag", style: { color: "#c0392b" } }, tr("agt.broken")),
-                h("span", { style: { marginLeft: "auto", display: "inline-flex", gap: "6px" } }, btns)
-              ),
-              h("div", { className: "t2" }, it.description || ""),
-              chips.length ? h("div", { style: { marginTop: "4px", display: "flex", gap: "6px", flexWrap: "wrap" } }, chips) : null,
-              it.errors && it.errors.length ? h("div", { style: { color: "#c0392b", fontSize: "12px", marginTop: "4px" } }, it.errors.join("；")) : null,
-              it.warnings && it.warnings.length ? h("div", { style: { color: "#b7791f", fontSize: "12px", marginTop: "2px" } }, it.warnings.join("；")) : null
-            ));
-          })(st.items[i]);
+          var anyRunning = false;
+          for (var rq = 0; rq < st.runs.length; rq++) {
+            if (st.runs[rq].state === "running" || st.runs[rq].state === "background") anyRunning = true;
+          }
+          kids.push(h("div", { key: "rhd", style: { display: "flex", alignItems: "center", gap: "8px", marginBottom: "8px", flexWrap: "wrap" } },
+            h("span", { className: "lb", style: { margin: 0 } }, tr("agt.runsHint")),
+            anyRunning ? h("span", { className: "agrun-pill" }, h("span", { className: "sp" }), tr("agt.runningNow")) : null,
+            h("button", { className: "mini", style: { marginLeft: "auto" }, onClick: loadRuns }, tr("agt.refresh"))
+          ));
+          var rr = [];
+          for (var ri = 0; ri < st.runs.length; ri++) rr.push(runRow(st.runs[ri], ri));
+          kids.push(h("div", { key: "rrows" }, rr.length ? rr : h("div", { className: "empty" }, tr("agt.runsEmpty"))));
         }
-        kids.push(h("div", { key: "rows" }, rows.length ? rows : h("div", { className: "empty" }, tr("agt.empty") + " —— " + tr("agt.emptyHint"))));
-        kids.push(h("div", { key: "ft", className: "ft" }, tr("agt.usage")));
-        if (!isAdmin) kids.push(h("div", { key: "ro", className: "ft" }, tr("agt.adminOnly")));
+      } else {
+        if (st.phase === "loading" && !st.items.length) {
+          kids.push(h("div", { key: "ld", className: "empty" }, tr("agt.loading")));
+        } else if (st.phase === "error") {
+          kids.push(h("div", { key: "er", className: "empty" }, tr("agt.readFail")));
+        } else {
+          kids.push(modelCard());
+          kids.push(h("div", { key: "hint", className: "it", style: { display: "block" } },
+            h("div", { className: "t" }, tr("agt.hintTitle")),
+            h("div", { className: "d" }, tr("agt.hintBody"))
+          ));
+          if (isAdmin) kids.push(h("div", { key: "act", style: { margin: "4px 0 8px" } },
+            h("button", { className: "btn", onClick: function () { openEdit(null); } }, tr("agt.new"))
+          ));
+          var rows = [];
+          for (var i = 0; i < st.items.length; i++) {
+            (function (it) {
+              if (!it.ok) return;
+              var chips = [];
+              if (it.model) chips.push(h("span", { key: "c1", className: "tag" }, tr("agt.model") + ": " + it.model));
+              else chips.push(h("span", { key: "c1", className: "tag" }, tr("agt.model") + ": " + tr("agt.followModel")));
+              if (it.tools && it.tools.length) chips.push(h("span", { key: "c2", className: "tag" }, tr("agt.tools") + ": " + it.tools.join(", ")));
+              if (it.background) chips.push(h("span", { key: "c3", className: "tag" }, tr("agt.bg")));
+              var btns = [
+                h("button", { key: "v", className: "mini", onClick: function () { openEdit(it.fileName); } }, isAdmin ? tr("agt.edit") : tr("agt.view"))
+              ];
+              if (isAdmin) btns.push(h("button", { key: "d", className: "mini", onClick: function () { remove(it.fileName); } }, tr("agt.del")));
+              rows.push(h("div", { key: "it" + i, className: "it", style: { display: "block", border: "1px solid var(--dsw-alias-border-l2, #e8eaed)", borderRadius: "12px", background: "var(--dsw-alias-bg-layer-2, #fff)", padding: "12px 13px", marginBottom: "8px" } },
+                h("div", { className: "th" },
+                  h("span", { className: "t" }, it.name || it.fileName, h("span", { className: "bdg" }, it.fileName)),
+                  h("span", { style: { display: "flex", gap: "6px", flex: "0 0 auto" } }, btns)
+                ),
+                h("div", { className: "d" }, it.description || ""),
+                h("div", { style: { display: "flex", gap: "6px", flexWrap: "wrap", marginTop: "5px" } }, chips)
+              ));
+            })(st.items[i]);
+          }
+          kids.push(h("div", { key: "rows" }, rows.length ? rows : h("div", { className: "empty" }, tr("agt.empty") + " —— " + tr("agt.emptyHint"))));
+          kids.push(h("div", { key: "ft", className: "ft" }, tr("agt.usage")));
+          if (!isAdmin) kids.push(h("div", { key: "ro", className: "ft" }, tr("agt.adminOnly")));
         }
       }
+      kids.push(drawerEl());
 
-      return h("div", null,
-        trigger,
-        h("div", { key: "panel", className: "ddp fv" },
-          h("div", { className: "hd" },
-            h("span", { className: "ico" }, dicon("bots", 18)),
-            h("div", null, h("div", { className: "t1" }, tr("agt.title")), h("div", { className: "t2" }, tr("agt.sub"))),
-            h("button", { className: "x", onClick: toggle }, tr("fv.back"))
+      return h("div", null, trigger, h("div", { key: "panel", className: "ddp" + (wide ? " fv" : "") },
+        h("div", { className: "hd" },
+          h("span", { className: "ico" }, dicon("bots", 22)),
+          h("div", { style: { flex: 1, minWidth: 0 } },
+            h("div", { className: "t1" }, tr("agt.title")),
+            h("div", { className: "t2" }, tr("agt.sub"))
           ),
-          h("div", { className: "bd" }, kids)
-        )
-      );
+          h("button", { className: "x", onClick: function () { setOpen(false); } }, "← " + tr("fv.back"))
+        ),
+        h("div", { className: "bd" }, kids)
+      ));
     }
 
     /* ═══ 侧栏入口线性图标（统一 24×24 描边风格，stroke=currentColor） ═══ */

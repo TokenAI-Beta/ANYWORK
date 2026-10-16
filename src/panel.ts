@@ -391,7 +391,13 @@ export function deleteAgent(fileName: string, lang: string = 'zh'): { ok: true }
   }
   return { ok: true }
 }
-// —— 子代理活动（跨成员聚合「最近委派」：父会话的委派工具调用 + subagent/catalog 事实） ——
+// —— 子代理活动（跨成员聚合「最近委派」；含指派链与子会话工作步骤） ——
+
+export interface AgentRunStep {
+  kind: 'task' | 'tool' | 'say'
+  text: string
+  time: number
+}
 
 export interface AgentRunInfo {
   time: number
@@ -403,7 +409,13 @@ export interface AgentRunInfo {
   label: string
   mode: string
   childId: string
-  state: 'returned' | 'background' | 'continuable' | 'running'
+  state: 'returned' | 'background' | 'bg-done' | 'continuable' | 'running'
+  ask: string
+  prompt: string
+  model: string
+  steps: AgentRunStep[]
+  result: string
+  durationMs: number
 }
 
 const DELEGATE_TOOLS = new Set(['agent', 'subagent', 'subagent_fork', 'subagent_codex', 'subagent_claude_code'])
@@ -416,10 +428,14 @@ interface RunRowLite {
   label: string
   mode: string
   childId: string
-  state: AgentRunInfo['state']
+  state: 'returned' | 'background' | 'continuable' | 'running'
+  ask: string
+  prompt: string
+  result: string
 }
 
 const runFileCache = new Map<string, { key: string; sid: string; rows: RunRowLite[] }>()
+const childFileCache = new Map<string, { key: string; steps: AgentRunStep[]; lastAssistant: string; lastEventTime: number }>()
 
 function decodeSessionEventsFile(file: string): Record<string, unknown>[] {
   const out: Record<string, unknown>[] = []
@@ -459,26 +475,38 @@ function decodeSessionEventsFile(file: string): Record<string, unknown>[] {
 }
 
 function extractRuns(events: Record<string, unknown>[], sid: string): RunRowLite[] {
-  interface Call { seq: number; callId: string; name: string; type: string; desc: string; time: number }
+  interface Call { seq: number; callId: string; name: string; type: string; desc: string; prompt: string; ask: string; time: number }
   const calls: Call[] = []
   const catalogs: { seq: number; childId: string; label: string; mode: string; createdAt: number; time: number }[] = []
   const resultText = new Map<string, string>()
+  let lastUserText = ''
   for (const ev of events) {
     const type = String(ev.type ?? '')
     const data = (ev.data ?? {}) as Record<string, unknown>
-    if (type === 'tool/call') {
+    if (type === 'user/message') {
+      const msg = (data.message ?? {}) as Record<string, unknown>
+      const content = ((data.content ?? msg.content) ?? []) as unknown[]
+      let t = ''
+      for (const b of content) {
+        if (b && typeof b === 'object' && (b as Record<string, unknown>).type === 'text') t += String((b as Record<string, unknown>).text ?? '')
+      }
+      t = t.trim().replace(/\s+/g, ' ')
+      if (t && t.indexOf('<system-reminder') !== 0 && t.indexOf('Current runtime context') !== 0) lastUserText = t.slice(0, 220)
+    } else if (type === 'tool/call') {
       const name = String(data.name ?? '')
       if (!DELEGATE_TOOLS.has(name)) continue
       let subagentType = ''
       let desc = ''
+      let prompt = ''
       try {
         const args = JSON.parse(String(data.arguments ?? '{}')) as Record<string, unknown>
         subagentType = String(args.subagent_type ?? '')
         desc = String(args.description ?? '')
+        prompt = String(args.prompt ?? '').replace(/\s+/g, ' ').slice(0, 400)
       } catch {
         // 参数不是 JSON
       }
-      calls.push({ seq: Number(ev.seq ?? 0), callId: String(data.callId ?? ''), name, type: subagentType, desc, time: Number(ev.time ?? 0) })
+      calls.push({ seq: Number(ev.seq ?? 0), callId: String(data.callId ?? ''), name, type: subagentType, desc, prompt, ask: lastUserText, time: Number(ev.time ?? 0) })
     } else if (type === 'subagent/catalog') {
       catalogs.push({
         seq: Number(ev.seq ?? 0),
@@ -510,7 +538,7 @@ function extractRuns(events: Record<string, unknown>[], sid: string): RunRowLite
   }
   const rows: RunRowLite[] = []
   let ci = 0
-  for (const call of calls) {
+  for (const call of calls.sort((a, b) => a.seq - b.seq)) {
     let cat: (typeof catalogs)[number] | undefined
     for (; ci < catalogs.length; ci++) {
       if (catalogs[ci].seq > call.seq) {
@@ -520,7 +548,7 @@ function extractRuns(events: Record<string, unknown>[], sid: string): RunRowLite
       }
     }
     const res = resultText.get(call.callId)
-    const state: AgentRunInfo['state'] = res === undefined
+    const state: RunRowLite['state'] = res === undefined
       ? 'running'
       : res.includes('started background agent job')
         ? 'background'
@@ -536,6 +564,9 @@ function extractRuns(events: Record<string, unknown>[], sid: string): RunRowLite
       mode: cat?.mode ?? '',
       childId: cat?.childId ?? '',
       state,
+      ask: call.ask,
+      prompt: call.prompt,
+      result: (res ?? '').slice(0, 3000),
     })
   }
   return rows
@@ -560,7 +591,133 @@ function sessionTitleOf(home: string, sid: string): string {
   return ''
 }
 
-/** 聚合各成员最近 7 天的子代理委派（按发起时间倒序）。 */
+function findSessionFileUnder(sdir: string, sid: string): string | null {
+  let buckets: string[] = []
+  try {
+    buckets = readdirSync(sdir)
+  } catch {
+    return null
+  }
+  for (const b of buckets) {
+    const dir = join(sdir, b, sid)
+    try {
+      const files = readdirSync(dir)
+      const cand = files.find((n) => /^session(\.v\d+)?\.jsonl\.zstd$/.test(n))
+      if (cand) return join(dir, cand)
+    } catch {
+      // 不在这个桶
+    }
+  }
+  return null
+}
+
+function extractChildSteps(events: Record<string, unknown>[]): { steps: AgentRunStep[]; lastAssistant: string; lastEventTime: number } {
+  const steps: AgentRunStep[] = []
+  let lastAssistant = ''
+  let lastEventTime = 0
+  for (const ev of events) {
+    const t = String(ev.type ?? '')
+    const d = (ev.data ?? {}) as Record<string, unknown>
+    const time = Number(ev.time ?? 0)
+    if (time) lastEventTime = Math.max(lastEventTime, time)
+    if (t === 'tool/call') {
+      const name = String(d.name ?? '')
+      let argInfo = ''
+      try {
+        const a = JSON.parse(String(d.arguments ?? '{}')) as Record<string, unknown>
+        const pick = a.path ?? a.file_path ?? a.command ?? a.query ?? a.pattern ?? a.url
+        if (pick !== undefined) argInfo = String(pick).replace(/\s+/g, ' ').slice(0, 70)
+      } catch {
+        // 非 JSON
+      }
+      steps.push({ kind: 'tool', text: argInfo ? `${name}：${argInfo}` : name, time })
+    } else if (t === 'assistant/message') {
+      const msg = (d.message ?? {}) as Record<string, unknown>
+      const content = (msg.content ?? []) as unknown[]
+      let s = ''
+      for (const b of content) {
+        if (b && typeof b === 'object' && (b as Record<string, unknown>).type === 'text') s += String((b as Record<string, unknown>).text ?? '')
+      }
+      s = s.trim()
+      if (s) {
+        lastAssistant = s
+        steps.push({ kind: 'say', text: s.replace(/\s+/g, ' ').slice(0, 140), time })
+      }
+    }
+  }
+  return { steps: steps.slice(-14), lastAssistant: lastAssistant.slice(0, 3000), lastEventTime }
+}
+
+// —— 主对话默认模型（按成员读 settings.yaml 的 agent-default-model 段） ——
+
+export interface MainModelInfo {
+  provider: string
+  model: string
+  reasoningEffort?: string
+}
+
+export function readMainModel(username: string): MainModelInfo | null {
+  try {
+    const f = join(userHome(username), 'settings.yaml')
+    const text = readFileSync(f, 'utf8')
+    const m = /agent-default-model:\s*\n((?:[ \t]+[^\n]*\n?)+)/.exec(text)
+    const block = m ? m[1] : ''
+    if (!block) return null
+    const provider = (/^\s*provider:\s*([^\s#]+)/m.exec(block) ?? [])[1] ?? ''
+    const model = (/^\s*model:\s*([^\s#]+)/m.exec(block) ?? [])[1] ?? ''
+    if (!model) return null
+    const eff = (/^\s*reasoningEffort:\s*([^\s#]+)/m.exec(block) ?? [])[1]
+    return { provider, model, ...(eff ? { reasoningEffort: eff } : {}) }
+  } catch {
+    return null
+  }
+}
+
+/** 只改定义里的 model 字段（快速指派；传空 = 移除该字段 → 跟随对话）。 */
+export function setAgentModel(fileName: string, model: string, lang: string = 'zh'): { ok: true; fileName: string; model: string } | { error: string } {
+  const p = agentPath(fileName)
+  if (!p) return { error: L(lang, '文件名不合法', 'Invalid file name') }
+  if (!existsSync(p)) return { error: L(lang, '定义不存在', 'Definition not found') }
+  const val = String(model ?? '').trim()
+  if (val && !/^[A-Za-z0-9][A-Za-z0-9._-]*$/.test(val)) return { error: L(lang, '模型名不合法', 'Invalid model id') }
+  let text = ''
+  try {
+    text = readText(p)
+  } catch (e) {
+    return { error: L(lang, '读取失败：', 'Read failed: ') + String((e as Error)?.message || e) }
+  }
+  const lines = text.split('\n')
+  let close = -1
+  for (let i = 1; i < lines.length; i++) {
+    if (lines[i].trim() === '---') {
+      close = i
+      break
+    }
+  }
+  if (close === -1) return { error: L(lang, 'frontmatter 未闭合（先修好定义再改模型）', 'frontmatter is not closed') }
+  let idx = -1
+  for (let i = 1; i < close; i++) {
+    if (/^model\s*:/.test(lines[i])) {
+      idx = i
+      break
+    }
+  }
+  if (val) {
+    const line = `model: ${val}`
+    if (idx >= 0) lines[idx] = line
+    else lines.splice(close, 0, line)
+  } else if (idx >= 0) {
+    lines.splice(idx, 1)
+  }
+  try {
+    writeFileSync(p, lines.join('\n'))
+  } catch (e) {
+    return { error: L(lang, '写入失败：', 'Write failed: ') + String((e as Error)?.message || e) }
+  }
+  return { ok: true, fileName, model: val }
+}
+
+/** 聚合各成员最近 7 天的子代理委派（按发起时间倒序；含指派链/步骤/结果）。 */
 export function collectAgentRuns(db: DatabaseSync, limit = 30, viewer?: { user: string }): AgentRunInfo[] {
   let members: { username: string }[] = []
   try {
@@ -569,6 +726,12 @@ export function collectAgentRuns(db: DatabaseSync, limit = 30, viewer?: { user: 
     return []
   }
   if (viewer) members = members.filter((m) => m.username === viewer.user)
+  const defsByName = new Map<string, AgentDefInfo>()
+  try {
+    for (const d of collectAgents()) if (d.name) defsByName.set(d.name, d)
+  } catch {
+    // 忽略定义扫描失败
+  }
   const cutoff = Date.now() - 7 * 86400 * 1000
   const titleCache = new Map<string, string>()
   const all: AgentRunInfo[] = []
@@ -631,7 +794,38 @@ export function collectAgentRuns(db: DatabaseSync, limit = 30, viewer?: { user: 
           title = sessionTitleOf(home, f.sid)
           titleCache.set(f.sid, title)
         }
-        all.push({ ...r, user: m.username, title })
+        let state: AgentRunInfo['state'] = r.state
+        let steps: AgentRunStep[] = []
+        let result = r.result
+        let durationMs = 0
+        let childMtime = 0
+        if (r.childId) {
+          const cf = findSessionFileUnder(sdir, r.childId)
+          if (cf) {
+            try {
+              const st = statSync(cf)
+              childMtime = st.mtimeMs
+              const ckey = `${st.size}:${st.mtimeMs}`
+              let ch = childFileCache.get(cf)
+              if (!ch || ch.key !== ckey) {
+                ch = { key: ckey, ...extractChildSteps(decodeSessionEventsFile(cf)) }
+                childFileCache.set(cf, ch)
+                if (childFileCache.size > 300) {
+                  const first = childFileCache.keys().next().value
+                  if (first !== undefined) childFileCache.delete(first)
+                }
+              }
+              steps = ch.steps
+              if ((state === 'background' || state === 'bg-done') && ch.lastAssistant) result = ch.lastAssistant
+              if (ch.lastEventTime && r.time) durationMs = Math.max(0, ch.lastEventTime - r.time)
+            } catch {
+              // 跳过子会话
+            }
+          }
+          if (state === 'background' && childMtime && Date.now() - childMtime > 90000) state = 'bg-done'
+        }
+        const def = defsByName.get(r.type)
+        all.push({ ...r, state, steps, result, durationMs, user: m.username, title, model: def?.model ?? '' })
       }
     }
   }

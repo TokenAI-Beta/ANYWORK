@@ -19,7 +19,7 @@ import { kbSearch, listKbNotes, readKbNote, removeKbNote, saveKbNote } from './k
 import { listDrive, makeDir, movePath, removePath, resolveInDrive, saveToDrive, MAX_UPLOAD } from './drive.ts'
 import { addNotifyRoute, addReminder, dispatchNotify, listNotifyLog, listNotifyRoutes, listReminders, listRemindersSent, readOrCreateNotifyToken, removeNotifyRoute, removeReminder, toggleNotifyRoute } from './notify.ts'
 import { defaultDataDir } from './db.ts'
-import { collectAgentRuns, collectAgents, collectConnectors, collectPlatforms, collectPresets, collectSkills, deleteAgent, readAgent, readSkill, saveAgent } from './panel.ts'
+import { collectAgentRuns, collectAgents, collectConnectors, collectPlatforms, collectPresets, collectSkills, deleteAgent, readAgent, readMainModel, readSkill, saveAgent, setAgentModel } from './panel.ts'
 import { CONN_PLATFORMS, getConn, removeConn, setConn, testConn, validateConnConfig } from './conns.ts'
 import { collectOps } from './ops.ts'
 import { addTimer, autoStats, ensureRuleRows, listAutoLog, listAutos, removeAuto, toggleAuto, RULE_CATALOG, ruleEnabled } from './auto.ts'
@@ -1255,7 +1255,7 @@ export function startPortal(opts: PortalOptions) {
           return res.end(JSON.stringify({ error: 'login required' }))
         }
         res.writeHead(200, { 'content-type': 'application/json; charset=utf-8' })
-        return res.end(JSON.stringify({ ok: true, role: user.role, items: collectAgents() }))
+        return res.end(JSON.stringify({ ok: true, role: user.role, mainModel: readMainModel(user.username), items: collectAgents() }))
       }
       if (req.method === 'GET' && path === '/portal/api/panel/agent') {
         if (!user) {
@@ -2063,6 +2063,14 @@ export function startPortal(opts: PortalOptions) {
             res.end(JSON.stringify(obj))
           }
           return reply(deleteAgent(String(body.file ?? '').trim(), langOf(req)))
+        }
+        if (req.method === 'POST' && path === '/portal/api/admin/agent-set-model') {
+          const body = await readJsonBody()
+          const reply = (obj: Record<string, unknown>): void => {
+            res.writeHead(200, { 'content-type': 'application/json; charset=utf-8' })
+            res.end(JSON.stringify(obj))
+          }
+          return reply(setAgentModel(String(body.file ?? '').trim(), String(body.model ?? ''), langOf(req)))
         }
 
         if (req.method === 'GET' && path === '/portal/api/admin/channel-presets') {
