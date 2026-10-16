@@ -91,7 +91,24 @@ window.__ModuleLoader__.load({
       "agt.refresh": "刷新",
       "agt.runsHint": "最近 7 天团队的子代理委派",
       "agt.runsEmpty": "暂无子代理活动",
-      "agt.stReturned": "已返回",
+      "agt.filterLabel": "会话分类",
+      "agt.fAll": "全部",
+      "agt.nSess": "个会话",
+      "agt.nFlows": "条工作流",
+      "agt.nRunning": "运行中",
+      "agt.nSteps": "步",
+      "agt.moreSteps": "更早",
+      "agt.wTo": "派给 ",
+      "agt.wPending": "等待交活…",
+      "agt.untitled": "未命名会话",
+      "agt.emptyTitle": "现在没有进行中的工作",
+      "agt.emptyLeadA": "开个新任务，这里马上就有东西看——在对话里说一句就行，比如：",
+      "agt.emptyEg": "让 code-reviewer 审一下 demo/order_stats.py",
+      "agt.emptyLeadB": "它的「指令 → 派工 → 工作过程 → 结果」会实时出现在这个页面上，不用盯对话框。",
+      "agt.emptyGo": "＋ 去对话开个新任务",
+      "agt.emptyNote": "也可以什么都不做——有任务了这页自动“活”起来",
+      "agt.noMatch": "这个筛选下暂时没有工作流",
+      "agt.stReturned": "已完成",
       "agt.stBackground": "已后台启动",
       "agt.stStarted": "已发起",
       "agt.stRunning": "进行中",
@@ -684,7 +701,24 @@ window.__ModuleLoader__.load({
       "agt.refresh": "Refresh",
       "agt.runsHint": "Subagent delegations across the team \u2014 last 7 days",
       "agt.runsEmpty": "No subagent activity yet",
-      "agt.stReturned": "Returned",
+      "agt.filterLabel": "Sessions",
+      "agt.fAll": "All",
+      "agt.nSess": "sessions",
+      "agt.nFlows": "workflows",
+      "agt.nRunning": "running",
+      "agt.nSteps": "steps",
+      "agt.moreSteps": "earlier",
+      "agt.wTo": "to ",
+      "agt.wPending": "Waiting for handoff...",
+      "agt.untitled": "Untitled session",
+      "agt.emptyTitle": "Nothing in progress right now",
+      "agt.emptyLeadA": "Start a task and this page lights up. Just say it in chat, e.g.:",
+      "agt.emptyEg": "let code-reviewer review demo/order_stats.py",
+      "agt.emptyLeadB": "Its ask - dispatch - work - result shows up here in real time; no need to stare at the chat.",
+      "agt.emptyGo": "+ New task in chat",
+      "agt.emptyNote": "Or do nothing - this page comes alive once a task starts",
+      "agt.noMatch": "Nothing matches this filter yet",
+      "agt.stReturned": "Done",
       "agt.stBackground": "Background",
       "agt.stStarted": "Started",
       "agt.stRunning": "Running",
@@ -1536,6 +1570,68 @@ body.desk-panel-open [class*="sidebarCol"] { transform: none !important; }
   .ddp .agarr { height:14px; }
   .agdrawer .agmlist { grid-template-columns:1fr; }
   .ddp .agm { flex-wrap:wrap; }
+}
+/* ── 子代理控制台 v3：工作流程看板（会话分类栏 / 工作流卡片 / 空态） ── */
+.ddp .agsbar { display:flex; align-items:center; gap:6px; flex-wrap:wrap; padding:9px 11px; border:1px solid var(--dsw-alias-border-l2, #e8eaed); border-radius:12px; background:var(--dsw-alias-bg-layer-2, #fff); margin:10px 0 0; }
+.ddp .agsbar .cl { font-size:11px; color:var(--dsw-alias-label-tertiary, #8a8f98); margin-right:2px; }
+.ddp .agssep { width:1px; height:16px; background:var(--dsw-alias-border-l2, #e8eaed); margin:0 4px; }
+.ddp .agchip { display:inline-flex; align-items:center; gap:6px; border:1px solid var(--dsw-alias-border-l2, #d4d7dc); border-radius:999px; background:transparent; padding:3px 11px; font-size:12px; color:var(--dsw-alias-label-secondary, #5f6570); cursor:pointer; }
+.ddp .agchip:hover { background:rgba(127,127,127,.10); }
+.ddp .agchip.on { background:#4f7cf7; border-color:#4f7cf7; color:#fff; }
+.ddp .agchip .n { font-size:10.5px; font-weight:700; background:rgba(127,127,127,.14); border-radius:999px; min-width:18px; height:18px; display:inline-flex; align-items:center; justify-content:center; padding:0 5px; }
+.ddp .agchip.on .n { background:rgba(255,255,255,.25); color:#fff; }
+.ddp .agchip .lv { width:7px; height:7px; border-radius:50%; background:#d99a2b; }
+.ddp .agsum { font-size:12px; color:var(--dsw-alias-label-tertiary, #8a8f98); margin:9px 2px 10px; }
+.ddp .aggrp { margin-bottom:14px; }
+.ddp .aggrp-hd { display:flex; align-items:center; gap:8px; padding:5px 4px; cursor:pointer; flex-wrap:wrap; border-radius:8px; }
+.ddp .aggrp-hd:hover { background:rgba(127,127,127,.06); }
+.ddp .aggrp-hd .c2 { font-size:10px; color:var(--dsw-alias-label-tertiary, #8a8f98); transition:transform .15s; }
+.ddp .aggrp.cl .c2 { transform:rotate(-90deg); }
+.ddp .aggrp.cl .aggrp-bd { display:none; }
+.ddp .aggrp-hd .gn { font-weight:650; font-size:13.5px; }
+.ddp .aggrp-hd .gt { font-size:11.5px; }
+.ddp .aggrp-hd .gm { margin-left:auto; font-size:11.5px; color:var(--dsw-alias-label-tertiary, #8a8f98); }
+.ddp .agflow { border:1px solid var(--dsw-alias-border-l2, #e8eaed); border-radius:12px; background:var(--dsw-alias-bg-layer-2, #fff); margin:7px 0; overflow:hidden; cursor:pointer; transition:border-color .15s; }
+.ddp .agflow:hover { border-color:rgba(79,124,247,.45); }
+.ddp .agflow.run { border-color:rgba(217,154,43,.5); }
+.ddp .agflow-h { display:flex; align-items:center; gap:8px; padding:9px 12px 7px; flex-wrap:wrap; }
+.ddp .agflow-h .who { font-weight:650; font-size:13px; }
+.ddp .agflow-h .what { color:var(--dsw-alias-label-secondary, #5f6570); font-size:12px; min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.ddp .agflow-h .meta { margin-left:auto; font-size:11px; color:var(--dsw-alias-label-tertiary, #8a8f98); }
+.ddp .agflow-b { display:grid; grid-template-columns:1.05fr 14px 1fr 14px 1.5fr 14px 1.15fr; align-items:stretch; padding:2px 12px 11px; }
+.ddp .agcell { background:var(--dsw-alias-bg-base, #f6f7f8); border:1px solid var(--dsw-alias-border-l2, #e8eaed); border-radius:9px; padding:6px 9px; min-width:0; }
+.ddp .agcell .cl { font-size:10px; color:var(--dsw-alias-label-tertiary, #8a8f98); margin-bottom:2px; }
+.ddp .agcell .cv { font-size:12px; line-height:1.5; display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical; overflow:hidden; word-break:break-word; }
+.ddp .agar2 { display:flex; align-items:center; justify-content:center; color:var(--dsw-alias-label-tertiary, #8a8f98); font-size:11px; }
+.ddp .agpill { display:inline-flex; align-items:center; gap:4px; font-size:11px; border:1px solid var(--dsw-alias-border-l2, #e8eaed); border-radius:999px; padding:1.5px 8px; margin:2px 4px 0 0; background:var(--dsw-alias-bg-layer-2, #fff); color:var(--dsw-alias-label-secondary, #5f6570); max-width:100%; }
+.ddp .agpill b { font-weight:600; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; max-width:180px; }
+.ddp .agpill.cur { border-color:rgba(217,154,43,.5); color:#b7791f; background:color-mix(in srgb, #d99a2b 10%, transparent); }
+.ddp .agst { display:inline-flex; align-items:center; gap:5px; font-size:11px; border-radius:999px; padding:2px 9px; flex:0 0 auto; }
+.ddp .agst.run { color:#b7791f; background:color-mix(in srgb, #d99a2b 13%, transparent); }
+.ddp .agst.done { color:#31a24c; background:color-mix(in srgb, #31a24c 12%, transparent); }
+.ddp .agst.bg { color:#4f7cf7; background:color-mix(in srgb, #4f7cf7 12%, transparent); }
+.ddp .aglive { width:8px; height:8px; border-radius:50%; background:currentColor; animation:dshdesk-pulse 1.3s ease-in-out infinite; }
+@keyframes dshdesk-pulse { 0%,100% { opacity:1; } 50% { opacity:.45; } }
+.ddp .agempty { border:1px dashed var(--dsw-alias-border-l2, #d4d7dc); border-radius:12px; background:var(--dsw-alias-bg-layer-2, #fff); padding:24px 22px; margin-top:6px; }
+.ddp .agempty .e1 { font-size:15px; font-weight:700; margin-bottom:6px; }
+.ddp .agempty .e2 { font-size:12.5px; color:var(--dsw-alias-label-secondary, #5f6570); line-height:1.75; max-width:600px; }
+.ddp .agempty .e2 code { font-family:ui-monospace, Consolas, monospace; font-size:11.5px; background:var(--dsw-alias-bg-base, #f6f7f8); padding:1px 6px; border-radius:5px; }
+.ddp .agempty .e3 { margin-top:12px; display:flex; gap:10px; align-items:center; flex-wrap:wrap; }
+body[data-ds-dark-theme] .ddp .agst.run { color:#e0b25c; }
+body[data-ds-dark-theme] .ddp .agst.done { color:#7fc48f; }
+body[data-ds-dark-theme] .ddp .agst.bg { color:#8fb0f5; }
+body[data-ds-dark-theme] .ddp .agpill.cur { color:#e0b25c; }
+/* 工作流详情抽屉（复用 .agdrawer 壳） */
+.agdrawer .sec-l { font-size:10.5px; color:var(--dsw-alias-label-tertiary, #8a8f98); letter-spacing:.05em; margin:13px 0 4px; }
+.agdrawer .code { font-family:ui-monospace, Consolas, monospace; font-size:12px; line-height:1.65; background:var(--dsw-alias-bg-base, #f6f7f8); border:1px solid var(--dsw-alias-border-l2, #e8eaed); border-radius:10px; padding:10px 12px; white-space:pre-wrap; word-break:break-word; max-height:260px; overflow:auto; color:inherit; }
+.agdrawer .dsteps { list-style:none; margin:0; padding:0; }
+.agdrawer .dsteps li { padding:4px 0; font-size:12.5px; color:var(--dsw-alias-label-secondary, #5f6570); border-bottom:1px dashed var(--dsw-alias-border-l2, #e8eaed); }
+.agdrawer .dsteps li:last-child { border-bottom:0; }
+.agdrawer .dsteps li .tt { color:var(--dsw-alias-label-tertiary, #8a8f98); font-size:11px; margin-left:6px; }
+.agdrawer .dres { font-size:12.5px; line-height:1.7; white-space:pre-wrap; background:var(--dsw-alias-bg-base, #f6f7f8); border:1px solid var(--dsw-alias-border-l2, #e8eaed); border-radius:10px; padding:10px 12px; color:inherit; }
+@media (max-width: 900px) {
+  .ddp .agflow-b { grid-template-columns:1fr; gap:6px; }
+  .ddp .agar2 { height:12px; }
 }
 `;
     (function () {
@@ -3289,7 +3385,7 @@ body.desk-panel-open [class*="sidebarCol"] { transform: none !important; }
       useFvSync(open, setOpen);
       var stPair = React.useState({
         phase: "loading", items: [], role: "", mainModel: null, msg: null,
-        tab: "runs", runsPhase: "", runs: [], openRuns: {},
+        tab: "runs", runsPhase: "", runs: [], runFilter: "all", runView: null, collapsedG: {}, tickN: 0,
         models: [], modelsPhase: "",
         edit: null, editFile: "", editNew: false, editMode: "form", rawText: ""
       });
@@ -3347,12 +3443,18 @@ body.desk-panel-open [class*="sidebarCol"] { transform: none !important; }
         if (!open) return;
         loadModels();
       }, [open]);
+      var hasRunNow = anyRunning();
       React.useEffect(function () {
         if (!open || st.tab !== "runs") return;
         loadRuns();
-        var iv = setInterval(loadRuns, 30000);
+        var iv = setInterval(loadRuns, hasRunNow ? 8000 : 30000);
         return function () { clearInterval(iv); };
-      }, [open, st.tab]);
+      }, [open, st.tab, hasRunNow]);
+      React.useEffect(function () {
+        if (!open || st.tab !== "runs" || !hasRunNow) return;
+        var tick = setInterval(function () { pset({ tickN: (st.tickN || 0) + 1 }); }, 1000);
+        return function () { clearInterval(tick); };
+      }, [open, st.tab, hasRunNow]);
       function toggle() { var n = !open; setOpen(n); if (n) { load(); } }
       function fmtRunTime(ms) {
         try {
@@ -3370,12 +3472,6 @@ body.desk-panel-open [class*="sidebarCol"] { transform: none !important; }
           if (s < 3600) return Math.round(s / 60) + "m";
           return Math.round(s / 3600) + "h";
         } catch (e) { return ""; }
-      }
-      function toggleRun(key) {
-        var m = {};
-        for (var k in st.openRuns) m[k] = st.openRuns[k];
-        m[key] = !m[key];
-        pset({ openRuns: m });
       }
       function post(path, body, okText, after) {
         fetch(path, { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify(body) })
@@ -3473,7 +3569,7 @@ body.desk-panel-open [class*="sidebarCol"] { transform: none !important; }
       }
       function openEdit(fileName) {
         if (!fileName) {
-          pset({ edit: blankFields(), editFile: "", editNew: true, editMode: "form", rawText: "" });
+          pset({ edit: blankFields(), editFile: "", editNew: true, editMode: "form", rawText: "", runView: null });
           return;
         }
         fetch("/portal/api/panel/agent?file=" + encodeURIComponent(fileName), { headers: { accept: "application/json" } })
@@ -3481,7 +3577,7 @@ body.desk-panel-open [class*="sidebarCol"] { transform: none !important; }
           .then(function (d) {
             if (d && d.ok) {
               var f = parseDef(d.content);
-              pset({ edit: f, editFile: fileName, editNew: false, editMode: "form", rawText: d.content });
+              pset({ edit: f, editFile: fileName, editNew: false, editMode: "form", rawText: d.content, runView: null });
             } else {
               pset({ msg: { kind: "err", text: (d && d.error) || tr("agt.readFail") } });
             }
@@ -3607,13 +3703,21 @@ body.desk-panel-open [class*="sidebarCol"] { transform: none !important; }
           h("div", { style: { fontSize: "11.5px", color: "var(--dsw-alias-label-tertiary, #8a8f98)", marginTop: "7px", lineHeight: 1.5 } }, tr("agt.assignMainHint") + " " + tr("agt.assignSubHint"))
         );
       }
-      function stateOf(it) {
-        if (it.state === "running") return { txt: tr("agt.stRunning"), run: true };
-        if (it.state === "background") return { txt: tr("agt.stBackground"), run: true };
-        if (it.state === "bg-done") return { txt: tr("agt.stBgDone"), run: false };
-        if (it.state === "continuable") return { txt: tr("agt.stStarted"), run: false };
-        if (it.state === "returned") return { txt: tr("agt.stReturned"), run: false };
-        return { txt: String(it.state || ""), run: false };
+      // —— v3 工作流程看板 ——
+      function anyRunning() {
+        for (var i = 0; i < st.runs.length; i++) {
+          if (st.runs[i].state === "running") return true;
+        }
+        return false;
+      }
+      function secondsSince(ms) { return Math.max(0, Math.round((Date.now() - Number(ms || 0)) / 1000)); }
+      function fmtDur(sec) {
+        var s = Math.max(0, Number(sec) || 0);
+        if (s < 60) return s + "s";
+        var m = Math.floor(s / 60);
+        var r = s % 60;
+        if (m < 60) return m + "m" + (r ? r + "s" : "");
+        return Math.floor(m / 60) + "h" + (m % 60) + "m";
       }
       function cmdText(it) {
         var obj = { subagent_type: it.type || it.tool, prompt: it.prompt || "" };
@@ -3621,61 +3725,200 @@ body.desk-panel-open [class*="sidebarCol"] { transform: none !important; }
         if (it.model) obj.model = it.model + "  # 来自子代理定义（不写 = 跟随对话）";
         return JSON.stringify(obj, null, 2);
       }
-      function runBody(it) {
-        var chips = [];
-        chips.push(h("span", { key: "mode", className: "tag" }, it.mode === "one-shot" ? tr("agt.modeOnce") : (it.mode === "continuable" ? tr("agt.modeCont") : (it.mode || "—"))));
-        chips.push(h("span", { key: "model", className: "tag" }, it.model || tr("agt.followModel")));
-        var stp = [];
-        if (it.steps && it.steps.length) {
-          stp.push(h("ul", { key: "ul", className: "agsteps" }, it.steps.map(function (s, si) {
-            return h("li", { key: "s" + si },
-              h("span", { className: "k" }, s.kind === "tool" ? "🔧" : "💬"),
-              s.text,
-              h("span", { className: "tm" }, fmtAgo(s.time))
-            );
-          })));
-        } else {
-          stp.push(h("div", { key: "ns", className: "empty", style: { padding: "4px 0" } }, tr("agt.noSteps")));
-        }
-        return h("div", { key: "b", className: "agrow-b" },
-          h("div", { key: "ch", className: "agchain" },
-            h("div", { key: "ask", className: "agcbox" },
-              h("div", { className: "cl" }, tr("agt.cAsk")),
-              h("div", { className: "cv" }, it.ask || "—")
-            ),
-            h("div", { key: "ar", className: "agarr" }, "→"),
-            h("div", { key: "ord", className: "agcbox" },
-              h("div", { className: "cl" }, tr("agt.cOrder")),
-              h("div", { style: { marginTop: "4px", display: "flex", gap: "6px", flexWrap: "wrap" } }, chips),
-              h("details", { className: "agcmd" },
-                h("summary", null, tr("agt.cmdDetail")),
-                h("div", { className: "code", style: { marginTop: "6px", maxHeight: "220px" } }, cmdText(it))
-              )
-            )
-          ),
-          h("div", { key: "st" },
-            h("div", { className: "lb" }, tr("agt.cSteps")),
-            stp
-          ),
-          it.result ? h("div", { key: "res", className: "agres" },
-            h("div", { className: "cl" }, tr("agt.cResult")),
-            h("div", { className: "cv" }, String(it.result).slice(0, 1600))
-          ) : null
-        );
+      function runStateChip(it) {
+        if (it.state === "running") return h("span", { className: "agst run" }, h("span", { className: "aglive" }), tr("agt.stRunning") + " · " + fmtDur(secondsSince(it.time)));
+        if (it.state === "background") return h("span", { className: "agst run" }, h("span", { className: "aglive" }), tr("agt.stBackground"));
+        if (it.state === "bg-done") return h("span", { className: "agst bg" }, "● " + tr("agt.stBgDone"));
+        if (it.state === "continuable") return h("span", { className: "agst done" }, tr("agt.stStarted"));
+        return h("span", { className: "agst done" }, "✓ " + tr("agt.stReturned"));
       }
-      function runRow(it, ri) {
-        var key = String(it.sessionId || "") + "#" + String(it.childId || "") + "#" + String(it.time || 0) + "#" + ri;
-        var isOpen = !!st.openRuns[key];
-        var so = stateOf(it);
-        return h("div", { key: "rr" + ri, className: "agrow" + (isOpen ? " open" : "") },
-          h("div", { className: "agrow-h", onClick: function () { toggleRun(key); } },
-            h("span", { className: "caret" }, "▸"),
+      function flowCard(it, gi, fi) {
+        var steps = it.steps || [];
+        var pills = [];
+        var from = Math.max(0, steps.length - 3);
+        if (from > 0) pills.push(h("span", { key: "more", className: "agpill" }, "…" + tr("agt.moreSteps") + " " + from + " " + tr("agt.nSteps")));
+        for (var si = from; si < steps.length; si++) {
+          var s = steps[si];
+          var isCur = it.state === "running" && si === steps.length - 1;
+          pills.push(h("span", { key: "s" + si, className: "agpill" + (isCur ? " cur" : "") },
+            h("span", null, s.kind === "tool" ? "🔧" : "💬"),
+            h("b", null, s.text)
+          ));
+        }
+        var running = it.state === "running" || it.state === "background";
+        return h("div", { key: "f" + gi + "_" + fi, className: "agflow" + (running ? " run" : ""), onClick: function () { openRunView(it); } },
+          h("div", { className: "agflow-h" },
             h("span", { className: "who" }, it.type || it.tool),
             h("span", { className: "what" }, it.label || ""),
-            so.run ? h("span", { className: "agrun-pill" }, h("span", { className: "sp" }), so.txt) : h("span", { className: "tag" }, so.txt),
-            h("span", { className: "meta" }, fmtRunTime(it.time) + " · " + it.user + (it.title ? " · " + it.title : ""))
+            runStateChip(it),
+            h("span", { className: "meta" }, it.user + (it.title ? " · " + it.title : ""))
           ),
-          isOpen ? runBody(it) : null
+          h("div", { className: "agflow-b" },
+            h("div", { key: "c1", className: "agcell" },
+              h("div", { className: "cl" }, tr("agt.cAsk")),
+              h("div", { className: "cv" }, it.ask || it.prompt || "—")
+            ),
+            h("div", { key: "a1", className: "agar2" }, "→"),
+            h("div", { key: "c2", className: "agcell" },
+              h("div", { className: "cl" }, tr("agt.cOrder")),
+              h("div", { className: "cv" }, tr("agt.wTo") + (it.type || it.tool)),
+              h("div", { style: { marginTop: "2px", display: "flex", gap: "5px", flexWrap: "wrap" } },
+                h("span", { key: "m1", className: "tag" }, it.mode === "one-shot" ? tr("agt.modeOnce") : (it.mode === "continuable" ? tr("agt.modeCont") : (it.mode || "—"))),
+                h("span", { key: "m2", className: "tag" }, it.model || tr("agt.followModel"))
+              )
+            ),
+            h("div", { key: "a2", className: "agar2" }, "→"),
+            h("div", { key: "c3", className: "agcell" },
+              h("div", { className: "cl" }, tr("agt.cSteps") + "（" + steps.length + " " + tr("agt.nSteps") + "）"),
+              pills.length
+                ? h("div", null, pills)
+                : h("div", { className: "cv", style: { color: "var(--dsw-alias-label-tertiary, #8a8f98)" } }, tr("agt.noSteps"))
+            ),
+            h("div", { key: "a3", className: "agar2" }, "→"),
+            h("div", { key: "c4", className: "agcell" },
+              h("div", { className: "cl" }, tr("agt.cResult")),
+              running
+                ? h("div", { className: "cv", style: { color: "var(--dsw-alias-label-tertiary, #8a8f98)" } }, tr("agt.wPending"))
+                : h("div", { className: "cv" }, it.result || "—")
+            )
+          )
+        );
+      }
+      function chipEl(val, label, n, live) {
+        return h("button", { key: "ch_" + val, className: "agchip" + (st.runFilter === val ? " on" : ""), onClick: function () { pset({ runFilter: val }); } },
+          label + " ",
+          h("span", { className: "n" }, String(n)),
+          live ? h("span", { className: "lv" }) : null
+        );
+      }
+      function renderRunsTab() {
+        var out = [];
+        var runs = st.runs || [];
+        if (!runs.length) {
+          if (st.runsPhase === "loading") { out.push(h("div", { key: "rl", className: "empty" }, tr("agt.loading"))); return out; }
+          if (st.runsPhase === "error") { out.push(h("div", { key: "re", className: "empty" }, tr("agt.readFail"))); return out; }
+          out.push(h("div", { key: "eb", className: "agempty" },
+            h("div", { className: "e1" }, tr("agt.emptyTitle")),
+            h("div", { className: "e2" },
+              tr("agt.emptyLeadA"), h("br"),
+              h("code", null, tr("agt.emptyEg")), h("br"),
+              tr("agt.emptyLeadB")
+            ),
+            h("div", { className: "e3" },
+              h("button", { className: "btn", onClick: function () { setOpen(false); } }, tr("agt.emptyGo")),
+              h("span", { style: { fontSize: "11.5px", color: "var(--dsw-alias-label-tertiary, #8a8f98)" } }, tr("agt.emptyNote"))
+            )
+          ));
+          return out;
+        }
+        var bySess = [];
+        var sessIndex = {};
+        for (var i = 0; i < runs.length; i++) {
+          var sid = runs[i].sessionId || "?";
+          if (!(sid in sessIndex)) {
+            sessIndex[sid] = bySess.length;
+            bySess.push({ sid: sid, title: runs[i].title || tr("agt.untitled"), items: [] });
+          }
+          bySess[sessIndex[sid]].items.push(runs[i]);
+        }
+        var runN = 0;
+        for (var j = 0; j < runs.length; j++) { if (runs[j].state === "running" || runs[j].state === "background") runN++; }
+        var chips = [h("span", { key: "cl", className: "cl" }, tr("agt.filterLabel"))];
+        chips.push(chipEl("all", tr("agt.fAll"), runs.length, false));
+        chips.push(chipEl("running", tr("agt.stRunning"), runN, runN > 0));
+        chips.push(h("span", { key: "sep", className: "agssep" }));
+        for (var g = 0; g < bySess.length; g++) {
+          (function (grp) {
+            var rn = 0;
+            for (var q = 0; q < grp.items.length; q++) { if (grp.items[q].state === "running" || grp.items[q].state === "background") rn++; }
+            chips.push(h("button", {
+              key: "s" + grp.sid,
+              className: "agchip" + (st.runFilter === grp.sid ? " on" : ""),
+              onClick: function () { pset({ runFilter: st.runFilter === grp.sid ? "all" : grp.sid }); }
+            }, grp.title + " ", h("span", { className: "n" }, String(grp.items.length)), rn ? h("span", { className: "lv" }) : null));
+          })(bySess[g]);
+        }
+        out.push(h("div", { key: "sb", className: "agsbar" }, chips));
+        out.push(h("div", { key: "sum", className: "agsum" }, bySess.length + " " + tr("agt.nSess") + " · " + runs.length + " " + tr("agt.nFlows") + " · " + runN + " " + tr("agt.nRunning")));
+        var any = false;
+        var groups = [];
+        for (var g2 = 0; g2 < bySess.length; g2++) {
+          (function (grp) {
+            if (st.runFilter === "running") {
+              grp = { sid: grp.sid, title: grp.title, items: grp.items.filter(function (x) { return x.state === "running" || x.state === "background"; }) };
+            } else if (st.runFilter !== "all" && st.runFilter !== grp.sid) {
+              return;
+            }
+            if (!grp.items.length) return;
+            any = true;
+            var fj = [];
+            for (var fi = 0; fi < grp.items.length; fi++) fj.push(flowCard(grp.items[fi], g2, fi));
+            var rn2 = 0;
+            for (var q2 = 0; q2 < grp.items.length; q2++) { if (grp.items[q2].state === "running" || grp.items[q2].state === "background") rn2++; }
+            groups.push(h("section", { key: "g" + grp.sid, className: "aggrp" + (st.collapsedG[grp.sid] ? " cl" : "") },
+              h("div", { className: "aggrp-hd", onClick: function () {
+                var m = {};
+                for (var kk in st.collapsedG) m[kk] = st.collapsedG[kk];
+                m[grp.sid] = !m[grp.sid];
+                pset({ collapsedG: m });
+              } },
+                h("span", { className: "c2" }, "▼"),
+                h("span", { className: "gn" }, grp.title),
+                rn2 ? h("span", { className: "gt", style: { color: "#b7791f" } }, "● " + rn2 + " " + tr("agt.nRunning")) : null,
+                h("span", { className: "gm" }, grp.items.length + " " + tr("agt.nFlows"))
+              ),
+              h("div", { className: "aggrp-bd" }, fj)
+            ));
+          })(bySess[g2]);
+        }
+        if (!any) out.push(h("div", { key: "nm", className: "empty" }, tr("agt.noMatch")));
+        else out.push(h("div", { key: "grp" }, groups));
+        out.push(h("div", { key: "rf", style: { marginTop: "8px", textAlign: "right" } },
+          h("button", { className: "mini", onClick: loadRuns }, tr("agt.refresh"))
+        ));
+        return out;
+      }
+      function openRunView(it) {
+        var n = {};
+        for (var k in it) n[k] = it[k];
+        pset({ runView: n, edit: null, editFile: "", editNew: false, rawText: "", editMode: "form" });
+      }
+      function closeRunView() { pset({ runView: null }); }
+      function runDrawerEl() {
+        if (st.runView == null) return null;
+        var it = st.runView;
+        var steps = it.steps || [];
+        var sl = [];
+        for (var si = 0; si < steps.length; si++) {
+          sl.push(h("li", { key: "sl" + si }, (steps[si].kind === "tool" ? "🔧 " : "💬 ") + steps[si].text, h("span", { className: "tt" }, fmtAgo(steps[si].time))));
+        }
+        var running = it.state === "running" || it.state === "background";
+        return h("div", null,
+          h("div", { key: "sc", className: "agscrim show", onClick: closeRunView }),
+          h("div", { key: "dr", className: "agdrawer show", role: "dialog" },
+            h("div", { className: "dh" },
+              (it.type || it.tool) + " · " + (it.label || it.title || tr("agt.title")),
+              h("button", { className: "mini", style: { marginLeft: "auto" }, onClick: closeRunView }, "✕")
+            ),
+            h("div", { className: "db2" },
+              h("div", { key: "st", style: { display: "flex", gap: "7px", flexWrap: "wrap", alignItems: "center" } },
+                runStateChip(it),
+                h("span", { className: "tag" }, it.mode === "one-shot" ? tr("agt.modeOnce") : (it.mode || "—")),
+                h("span", { className: "tag" }, it.model || tr("agt.followModel")),
+                h("span", { style: { fontSize: "11.5px", color: "var(--dsw-alias-label-tertiary, #8a8f98)" } }, it.user + " · " + fmtRunTime(it.time))
+              ),
+              h("div", { key: "q", className: "sec-l" }, tr("agt.cAsk")),
+              h("div", { key: "qd", className: "dres" }, it.ask || it.prompt || "—"),
+              h("div", { key: "o", className: "sec-l" }, tr("agt.cmdDetail")),
+              h("div", { key: "od", className: "code" }, cmdText(it)),
+              h("div", { key: "s", className: "sec-l" }, tr("agt.cSteps") + "（" + steps.length + " " + tr("agt.nSteps") + "）"),
+              h("ul", { key: "su", className: "dsteps" }, sl.length ? sl : h("li", { key: "x" }, tr("agt.noSteps"))),
+              h("div", { key: "r", className: "sec-l" }, tr("agt.cResult")),
+              running
+                ? h("div", { key: "rd", className: "dres", style: { color: "var(--dsw-alias-label-tertiary, #8a8f98)" } }, tr("agt.wPending"))
+                : h("div", { key: "rd", className: "dres" }, it.result || "—")
+            )
+          )
         );
       }
       function drawerEl() {
@@ -3792,24 +4035,8 @@ body.desk-panel-open [class*="sidebarCol"] { transform: none !important; }
       ));
 
       if (st.tab === "runs") {
-        if (st.runsPhase === "loading" && !(st.runs && st.runs.length)) {
-          kids.push(h("div", { key: "rl", className: "empty" }, tr("agt.loading")));
-        } else if (st.runsPhase === "error" && !(st.runs && st.runs.length)) {
-          kids.push(h("div", { key: "re", className: "empty" }, tr("agt.readFail")));
-        } else {
-          var anyRunning = false;
-          for (var rq = 0; rq < st.runs.length; rq++) {
-            if (st.runs[rq].state === "running" || st.runs[rq].state === "background") anyRunning = true;
-          }
-          kids.push(h("div", { key: "rhd", style: { display: "flex", alignItems: "center", gap: "8px", marginBottom: "8px", flexWrap: "wrap" } },
-            h("span", { className: "lb", style: { margin: 0 } }, tr("agt.runsHint")),
-            anyRunning ? h("span", { className: "agrun-pill" }, h("span", { className: "sp" }), tr("agt.runningNow")) : null,
-            h("button", { className: "mini", style: { marginLeft: "auto" }, onClick: loadRuns }, tr("agt.refresh"))
-          ));
-          var rr = [];
-          for (var ri = 0; ri < st.runs.length; ri++) rr.push(runRow(st.runs[ri], ri));
-          kids.push(h("div", { key: "rrows" }, rr.length ? rr : h("div", { className: "empty" }, tr("agt.runsEmpty"))));
-        }
+        var rk = renderRunsTab();
+        for (var rki = 0; rki < rk.length; rki++) kids.push(rk[rki]);
       } else {
         if (st.phase === "loading" && !st.items.length) {
           kids.push(h("div", { key: "ld", className: "empty" }, tr("agt.loading")));
@@ -3852,6 +4079,7 @@ body.desk-panel-open [class*="sidebarCol"] { transform: none !important; }
           if (!isAdmin) kids.push(h("div", { key: "ro", className: "ft" }, tr("agt.adminOnly")));
         }
       }
+      kids.push(runDrawerEl());
       kids.push(drawerEl());
 
       return h("div", null, trigger, h("div", { key: "panel", className: "ddp" + (wide ? " fv" : "") },
