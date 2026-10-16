@@ -74,3 +74,15 @@ config:
   # notify: false                    # 完全关闭
 ```
 
+## 调用方式（v0.3.0：自然语言）
+
+对话里直接点名即可（助理按注入的系统提示精准路由）：
+
+- 「让 code-reviewer 审一下 demo/app.py」
+- 「交给 researcher 查一下…」
+- 「@probe-lite 看下这个文件」
+- 或显式：「用 agent 工具委派 code-reviewer，prompt：…」
+
+`description` 参数已降为可选（缺省时自动从任务文本生成标签）。名字不在目录里或意图有歧义时，
+助理会先追问一句——不会乱猜名字，也不会悄悄退回内置 `subagent` 工具。
+

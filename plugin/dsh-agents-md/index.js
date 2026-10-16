@@ -19,7 +19,7 @@ import { pathToFileURL } from 'node:url'
 import { scanCatalog } from './lib/catalog.js'
 
 export const name = 'dsh-agents-md'
-export const inject = ['tools', 'subagents']
+export const inject = ['tools', 'subagents', 'systemPrompt']
 
 // ── 配置与目录 ─────────────────────────────────────────────────────────────
 
@@ -192,7 +192,9 @@ function buildToolDescription(cfg, scan) {
     : '（暂无定义——请让管理员向 agents/ 目录添加 *.md 定义）'
   return [
     "Delegate a self-contained task to one of the team's predefined agents. Each runs in its own isolated context and returns only its final result — use it to offload focused, independent work without consuming this conversation's context.",
+    'Route by name: when the user points at a subagent in plain language (「让 code-reviewer 审一下 demo/app.py」「交给 researcher 查…」「@probe-lite 看下」), call this tool with subagent_type set to exactly that name — never a near guess.',
     'Give a complete, standalone prompt: by default the subagent does NOT see this conversation (fork definitions inherit it).',
+    'Example: subagent_type="code-reviewer", prompt="审查 demo/order_stats.py：读出文件，找出 bug 与安全隐患，按严重度排序并给出修改建议".',
     cfg.background ? 'For long-running tasks set run_in_background: true; collect the outcome with job_output and stop it with job_kill.' : '',
     '',
     'Available agents:',
@@ -248,6 +250,24 @@ export function apply(ctx, config) {
   const logInfo = (msg) => { console.log(`[dsh-agents-md] ${msg}`) }
   const logError = (msg) => { console.error(`[dsh-agents-md] ${msg}`) }
 
+  // —— 自然语言路由（系统提示词 section）：把点名短语精准映射到 subagent_type ——
+  try {
+    ctx.systemPrompt.section({
+      name: 'tool:agent',
+      order: ctx.systemPrompt.getSectionOrder('TOOL_SUBAGENT') - 50,
+      text: [
+        "The `agent` tool delegates to the team's named subagents (its description holds the catalog). Users usually ask in plain language: 「让 code-reviewer 审一下 demo/app.py」/「交给 researcher 查…」/「派 probe-lite 去…」/「@code-reviewer 看下这个文件」/「委派给 writer：…」.",
+        'When the user names a subagent or asks to hand work off:',
+        '1. Call `agent` with `subagent_type` set to EXACTLY that catalog name (never an approximate one).',
+        '2. Write a complete, standalone `prompt` — paths, scope, expected output; the subagent cannot see this conversation unless its definition is a fork type.',
+        '3. If the requested name is missing from the catalog or the intent is ambiguous, ask ONE short clarifying question — never guess and never silently substitute the built-in `subagent` tool.',
+        '4. After it returns, say which agent handled it and relay the result.',
+      ].join('\n'),
+    })
+  } catch (err) {
+    logError(`systemPrompt section registration failed: ${err?.message ?? err}`)
+  }
+
   ctx.effect(() => () => {
     if (state.timer) clearInterval(state.timer)
     const old = state.disposeTool
@@ -269,8 +289,7 @@ export function apply(ctx, config) {
         },
         description: {
           type: 'string',
-          required: true,
-          description: 'A short (3-5 word) label of the delegated task, for display.',
+          description: 'Optional short label (3-5 words) for task lists; derived from the task text when omitted.',
         },
         prompt: {
           type: 'string',
@@ -360,10 +379,13 @@ export function apply(ctx, config) {
           throw new Error(`provider "${providerName}" cannot enforce maxDepth (depthLimit capability missing)`)
         }
 
-        const label = String(args.description ?? '').trim() || `${typeName} task`
+        const promptText = String(args.prompt ?? '').trim()
+        if (!promptText) throw new Error('prompt must be a non-empty, standalone task description')
+        const label = String(args.description ?? '').trim()
+          || `${typeName}: ${promptText.replace(/\s+/g, ' ').slice(0, 48)}`
         const request = {
           label,
-          prompt: [{ type: 'text', text: String(args.prompt ?? '') }],
+          prompt: [{ type: 'text', text: promptText }],
           parent,
           ...(hasAgentOptions ? { agentOptions } : {}),
           ...(toolFilter ? { toolFilter } : {}),

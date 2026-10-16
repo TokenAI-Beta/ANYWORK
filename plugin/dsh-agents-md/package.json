@@ -1,6 +1,6 @@
 {
   "name": "dsh-agents-md",
-  "version": "0.2.0",
+  "version": "0.3.0",
   "private": true,
   "description": "agents/*.md 子代理定义桥：把 Markdown 定义的子代理接入 dsh subagent 委派体系（零依赖 host 组合插件）。",
   "type": "module",

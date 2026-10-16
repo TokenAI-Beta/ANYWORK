@@ -165,7 +165,7 @@
 - **入口**：侧栏「**子代理**」（整页）——上排切换「**定义** / **活动**」两页。
 - **定义页**：列出全部子代理（共享目录 `~/desk-data/agents/`）——含 model / tools / 默认后台等小标签，错误与提醒直接显示在行内。**管理员**可新建 / 编辑 / 删除（内联编辑器；成员只读，只显示「查看」）。
 - **怎么写定义**：两条 `---` 之间是配置——`name`、`description` 必填；可选 `tools`（工具白名单，如 `[read, grep, bash]`）、`disallowed-tools`（黑名单）、`model`（如 `deepseek-v4-pro`）、`effort`、`provider`（`spawn`=全新上下文〔默认〕；`fork`=继承当前对话）、`background: true`（本类默认后台跑）、`max-depth`；`---` 以下是它的**人设提示词**。保存后**下一轮对话自动生效**（约 20 秒内）。
-- **怎么用（对话里）**：直接说「**用 agent 工具委派 code-reviewer 检查……**」。前台 = 等结果返回；后台（`run_in_background` 或定义里 `background: true`）= 立即拿到任务号，完成后用 `job_output` 收结果；互不依赖的任务可以一次派好几个。
+- **怎么用（对话里）**：就像说话一样点名——「**让 code-reviewer 审一下 xxx**」「**交给 researcher：…**」「**@probe-lite 看下这个文件**」，助理会精准路由到该子代理（同名歧义时先追问一句，绝不乱猜）；想要最精确也可以显式说「用 agent 工具委派 code-reviewer，prompt：…」。前台 = 等结果返回；后台（`run_in_background` 或定义里 `background: true`）= 立即拿到任务号，完成后用 `job_output` 收结果；互不依赖的任务可以一次派好几个。
 - **活动页**：最近 7 天子代理委派记录（类型 / 任务标签 / 状态〔已返回 / 已后台启动 / 进行中〕/ 时间 / 发起人·会话）——**成员只看到自己的**，管理员看全员；30 秒自动刷新，「刷新」可手动拉取。
 - **结算通知（可选）**：子代理结束时经通知桥推一条给你（默认只推**后台任务**、目标 = 你的 `wechat-<用户名>` 通知路由）；开关/范围由管理员在实例插件配置里调（`notify.events: all` 或 `notify: false`）。
 - **注意**：`tools` 白名单要写 dsh 工具名（`read`/`grep`/`bash`/`web_search`/`write`…），写错会在委派时**报错提示**（不会静默忽略）；起步模板在 `agents-template/`（code-reviewer / researcher / probe-lite），定义由管理员维护。
