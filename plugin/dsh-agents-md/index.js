@@ -12,6 +12,7 @@
  * 的 dsh 安装”动态加载（由 process.argv[1] 推导，config.dshRoot 可覆盖）；
  * 其余一切经由 ctx 服务（tools / subagents / jobs）完成。
  */
+import { readFileSync } from 'node:fs'
 import { homedir } from 'node:os'
 import path from 'node:path'
 import { pathToFileURL } from 'node:url'
@@ -41,7 +42,22 @@ function normalizeConfig(config) {
       : (Number.isSafeInteger(cfg.maxDepth) && cfg.maxDepth >= 0 ? cfg.maxDepth : 3),
     background: cfg.background !== false,
     dshRoot: typeof cfg.dshRoot === 'string' ? cfg.dshRoot : '',
+    notify: cfg.notify === false ? null : {
+      url: typeof cfg.notify?.url === 'string' && cfg.notify.url ? cfg.notify.url : 'http://127.0.0.1:8080/portal/api/notify',
+      tokenFile: typeof cfg.notify?.tokenFile === 'string' && cfg.notify.tokenFile
+        ? cfg.notify.tokenFile
+        : path.join(process.env.HOME || homedir(), 'desk-data', 'notify.token'),
+      routes: Array.isArray(cfg.notify?.routes) ? cfg.notify.routes.map(String) : defaultNotifyRoutes(),
+      events: cfg.notify?.events === 'all' ? 'all' : 'background',
+    },
   }
+}
+
+/** 默认把结算通知发给“本人”的通知路由（按实例成员名推导，如 wechat-admin001）。 */
+function defaultNotifyRoutes() {
+  const home = process.env.DSH_HOME ?? ''
+  const member = home ? path.basename(home) : ''
+  return member ? [`wechat-${member}`] : []
 }
 
 /** 解析扫描目录：显式配置优先；其次实例私有；最后团队共享。前者同名优先。 */
@@ -184,6 +200,39 @@ function buildToolDescription(cfg, scan) {
   ].filter((x) => x !== '').join('\n')
 }
 
+// ── 结算通知（子代理跑完 → 通知桥） ─────────────────────────────────────────
+
+/** POST 一条结算通知到 desk-server 通知桥（令牌文件认证；按成员路由）。 */
+async function sendSettleNotify(cfg, info, meta) {
+  let token = ''
+  try {
+    token = readFileSync(cfg.notify.tokenFile, 'utf8').trim()
+  } catch {
+    console.error(`[dsh-agents-md] notify token unreadable: ${cfg.notify.tokenFile}`)
+    return
+  }
+  if (!token) return
+  const STOP_TEXT = { completed: '完成', aborted: '已取消', error: '失败', 'max-tokens': '达输出上限', refusal: '拒绝任务' }
+  const stop = STOP_TEXT[info?.stopReason] ?? String(info?.stopReason ?? '结束')
+  let snippet = ''
+  if (Array.isArray(info?.lastAssistantMessage)) {
+    snippet = info.lastAssistantMessage
+      .filter((b) => b && typeof b === 'object' && b.type === 'text' && typeof b.text === 'string')
+      .map((b) => b.text)
+      .join('')
+      .trim()
+  }
+  if (snippet.length > 280) snippet = `${snippet.slice(0, 280)}…`
+  const text = `🔧 子代理「${meta.label}」(${meta.type}) ${stop}${snippet ? `：${snippet}` : ''}`
+  const res = await fetch(cfg.notify.url, {
+    method: 'POST',
+    headers: { 'content-type': 'application/json', 'x-desk-notify-token': token },
+    body: JSON.stringify({ title: '子代理结算', text, source: 'agent-md', ...(cfg.notify.routes.length ? { routes: cfg.notify.routes } : {}) }),
+    signal: AbortSignal.timeout(15000),
+  })
+  if (!res.ok) console.error(`[dsh-agents-md] notify dispatch HTTP ${res.status}`)
+}
+
 // ── 插件本体 ────────────────────────────────────────────────────────────────
 
 export function apply(ctx, config) {
@@ -196,14 +245,11 @@ export function apply(ctx, config) {
     labelByRun: new Map(),
   }
 
-  const logInfo = (msg) => {
-    try { ctx.logger?.info?.(`[dsh-agents-md] ${msg}`) } catch { /* noop */ }
-  }
-  const logError = (msg) => {
-    try { ctx.logger?.error?.(`[dsh-agents-md] ${msg}`) } catch { console.error(`[dsh-agents-md] ${msg}`) }
-  }
+  const logInfo = (msg) => { console.log(`[dsh-agents-md] ${msg}`) }
+  const logError = (msg) => { console.error(`[dsh-agents-md] ${msg}`) }
 
   ctx.effect(() => () => {
+    if (state.timer) clearInterval(state.timer)
     const old = state.disposeTool
     state.disposeTool = null
     if (old) {
@@ -343,7 +389,7 @@ export function apply(ctx, config) {
               const controller = new AbortController()
               const start = ctx.subagents.start(providerName, { ...request, signal: controller.signal })
               start.then((run) => {
-                state.labelByRun.set(run.id, { type: typeName, label })
+                state.labelByRun.set(run.id, { type: typeName, label, mode: 'background' })
               }).catch(() => { /* 启动失败由 done 结算 */ })
               return {
                 cancel: (reason) => controller.abort(reason ?? 'background agent task killed'),
@@ -355,7 +401,7 @@ export function apply(ctx, config) {
         }
 
         const run = await ctx.subagents.start(providerName, { ...request, signal: exec.signal })
-        state.labelByRun.set(run.id, { type: typeName, label })
+        state.labelByRun.set(run.id, { type: typeName, label, mode: 'foreground' })
         return settleForeground(run)
       },
     })
@@ -386,10 +432,32 @@ export function apply(ctx, config) {
     logInfo(`registered tool "${cfg.toolName}": ${scan.defs.size} agent definition(s) usable${broken > 0 ? `, ${broken} broken/shadowed` : ''} — dirs: ${scan.dirs.join(', ')}`)
   }
 
+  // —— 结算通知：子代理结束 → 通知桥（默认只推后台任务、按成员路由）——
+  if (cfg.notify) {
+    ctx.on('subagent/end', (info) => {
+      try {
+        // 注意：事件里 runId 是每次观测新建的不透明 uuid；子会话 id 在 info.id，
+        // 与 start 结算后的 run.id 一致——按 info.id 匹配我们自己的记录。
+        const rid = String(info?.id ?? '')
+        const meta = state.labelByRun.get(rid)
+        if (!meta) return
+        state.labelByRun.delete(rid)
+        if (cfg.notify.events === 'background' && meta.mode !== 'background') return
+        void sendSettleNotify(cfg, info, meta).catch((err) => logError(`settle notify failed: ${err?.message ?? err}`))
+      } catch (err) {
+        logError(`notify hook error: ${err}`)
+      }
+    })
+  }
+
   const bootstrap = (async () => {
     state.helpers = await loadHelpers(cfg)
     logInfo(`dsh helpers loaded from ${state.helpers.root}`)
     await refresh(true)
+    // 定时摘查目录变化 → 重登记（编辑定义后无需任何工具调用即生效）
+    const timer = setInterval(() => { void refresh(false).catch(() => {}) }, 20000)
+    if (typeof timer.unref === 'function') timer.unref()
+    state.timer = timer
   })().catch((err) => {
     logError(`initialization failed: ${err?.stack ?? err}`)
   })

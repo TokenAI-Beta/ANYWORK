@@ -543,10 +543,25 @@ const SENDERS: Record<string, (target: string, msg: NotifyMsg) => Promise<string
   zoom: sendViaZoom,
 }
 
-export async function dispatchNotify(db: DatabaseSync, msg: NotifyMsg, opts?: { kind?: string; lang?: string }): Promise<NotifyResult[]> {
+export async function dispatchNotify(db: DatabaseSync, msg: NotifyMsg, opts?: { kind?: string; lang?: string; routes?: string[] }): Promise<NotifyResult[]> {
   if (opts && opts.lang && !msg.lang) msg.lang = opts.lang
   let routes = listNotifyRoutes(db).filter((r) => r.enabled === 1)
   if (opts && opts.kind) routes = routes.filter((r) => r.kind === opts.kind)
+  if (opts && opts.routes && opts.routes.length) {
+    const want = new Set(opts.routes)
+    const matched = routes.filter((r) => want.has(r.name))
+    if (!matched.length) {
+      return [
+        {
+          route: '(' + Ln(msg.lang, '未匹配到指定通道：', 'no route matched: ') + opts.routes.join(', ') + ')',
+          kind: '-',
+          ok: false,
+          info: Ln(msg.lang, '该成员还没有对应的通知通道（设置 →「通知」添加，按成员命名如 wechat-<用户名>）', 'No route for this member yet (add one in Settings → Notifications, e.g. wechat-<username>)'),
+        },
+      ]
+    }
+    routes = matched
+  }
   const results: NotifyResult[] = []
   for (const r of routes) {
     const sender = SENDERS[r.kind]

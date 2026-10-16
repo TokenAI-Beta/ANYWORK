@@ -12,11 +12,12 @@ mkdir -p "$home/.desk/agents" "$home/.desk/run" "$home/desk-data" "$home/desk-ba
 chmod 700 "$home/.desk" 2>/dev/null || true
 
 # ── 1) 共享区目录 + 模板 + 脚本 ──
-for d in kb drive skills presets hooks bin; do mkdir -p "$home/desk-data/$d"; done
+for d in kb drive skills presets hooks bin agents; do mkdir -p "$home/desk-data/$d"; done
 cp -rn "$repo/kb-template/." "$home/desk-data/kb/" 2>/dev/null || true
 cp -rn "$repo/drive-template/." "$home/desk-data/drive/" 2>/dev/null || true
 cp -rn "$repo/skills-template/." "$home/desk-data/skills/" 2>/dev/null || true
 cp -rn "$repo/presets-template/." "$home/desk-data/presets/" 2>/dev/null || true
+cp -rn "$repo/agents-template/." "$home/desk-data/agents/" 2>/dev/null || true
 for s in desk-notify desk-remind desk-kb; do
   if [ -f "$repo/scripts/$s" ]; then install -m 755 "$repo/scripts/$s" "$home/desk-data/bin/$s"; fi
 done
@@ -130,6 +131,7 @@ while IFS=$'\t' read -r u p h; do
   [ -n "${u:-}" ] || continue
   install_plugin "$u" "file:$repo/plugin/desk-panel" "dsh-desk-panel"
   install_plugin "$u" "https://github.com/Zagadka-3906/DSH-Transparent-UI-Plugin-dsh015.git" "dsh-client-ui-aqua"
+  install_plugin "$u" "link:$repo/plugin/dsh-agents-md" "dsh-agents-md"
   install_plugin "$u" "dsh-chat-import" "dsh-chat-import"
   # 版本锁定：dsh-better-sidebar 0.21.x 面向 dsh 0.1.7-rc 构建，装在本引擎 0.1.5-rc.2 上
   # 会让「文件」等标签页 React #130 崩溃（2026-09-27 云/本机双端实测）；0.19.1 = peerDeps ^0.1.5-rc.1 的适配版。

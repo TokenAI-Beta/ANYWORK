@@ -14,6 +14,33 @@ window.__ModuleLoader__.load({
     var DESK_NS = "desk-panel";
     var LOC_ZH = {
       "fv.back": "← 返回对话",
+      "agt.tab": "子代理",
+      "agt.title": "子代理",
+      "agt.sub": "团队共用的专属子代理（agents/*.md 定义）",
+      "agt.loading": "读取定义中…",
+      "agt.empty": "还没有子代理定义",
+      "agt.emptyHint": "点「新建」写第一张，定义对全团队生效。",
+      "agt.new": "新建",
+      "agt.edit": "编辑",
+      "agt.view": "查看",
+      "agt.del": "删除",
+      "agt.save": "保存",
+      "agt.cancel": "取消",
+      "agt.saved": "已保存——下一轮对话即生效",
+      "agt.deleted": "已删除",
+      "agt.confirmDel": "确定删除这个子代理定义？",
+      "agt.readFail": "读取失败",
+      "agt.adminOnly": "子代理定义仅管理员可改；你可以查看，并直接在对话里调用。",
+      "agt.broken": "有错误",
+      "agt.model": "模型",
+      "agt.tools": "工具",
+      "agt.fork": "继承对话",
+      "agt.background": "默认后台",
+      "agt.depth": "深度",
+      "agt.fileNeeded": "先在 frontmatter 里填 name（如 my-helper）",
+      "agt.usage": "对话里说「用 agent 工具委派 <名称>」即可调用；定义改动下一轮生效。",
+      "agt.hintTitle": "怎么写",
+      "agt.hintBody": "两条 --- 之间是配置（name/description 必填；tools/model/background 可选），下面是它的人设提示词。",
       "asst.groupTeam": "团队角色",
       "asst.defaultTag": "默认",
       "skl.platforms": "消息平台",
@@ -526,6 +553,33 @@ window.__ModuleLoader__.load({
     };
     var LOC_EN = {
       "fv.back": "← Back to chat",
+      "agt.tab": "Agents",
+      "agt.title": "Agents",
+      "agt.sub": "Team-shared specialized subagents (agents/*.md)",
+      "agt.loading": "Loading definitions…",
+      "agt.empty": "No agent definitions yet",
+      "agt.emptyHint": "Hit New to write your first one — it applies to the whole team.",
+      "agt.new": "New",
+      "agt.edit": "Edit",
+      "agt.view": "View",
+      "agt.del": "Delete",
+      "agt.save": "Save",
+      "agt.cancel": "Cancel",
+      "agt.saved": "Saved — effective from the next turn",
+      "agt.deleted": "Deleted",
+      "agt.confirmDel": "Delete this agent definition?",
+      "agt.readFail": "Failed to load",
+      "agt.adminOnly": "Only admins can edit agent definitions; you can view and use them in chat.",
+      "agt.broken": "Broken",
+      "agt.model": "Model",
+      "agt.tools": "Tools",
+      "agt.fork": "Inherits chat",
+      "agt.background": "Background by default",
+      "agt.depth": "Depth",
+      "agt.fileNeeded": "Fill “name” in the frontmatter first (e.g. my-helper)",
+      "agt.usage": "In chat, say \u201cdelegate <name> with the agent tool\u201d; edits apply next turn.",
+      "agt.hintTitle": "How to write",
+      "agt.hintBody": "Config lives between the --- lines (name/description required; tools/model/background optional); the body below is the persona.",
       "asst.groupTeam": "Team roles",
       "asst.defaultTag": "Default",
       "skl.platforms": "Messaging platforms",
@@ -3018,6 +3072,149 @@ body.desk-panel-open [class*="sidebarCol"] { transform: none !important; }
       );
     }
 
+    /* ═══ 「子代理」：agents/*.md 定义管理（侧栏整页入口，order 89） ═══ */
+    var AGT_TEMPLATE = [
+      "---",
+      "name: my-helper",
+      "description: 一句话说明它擅长什么、什么时候该用它",
+      "# tools: [read, grep]        # 可选：只允许这些工具（白名单；不写=全部）",
+      "# disallowed-tools: [write]  # 可选：禁用某些工具",
+      "# model: deepseek-v4-pro     # 可选：该子代理使用的模型",
+      "# background: true           # 可选：默认后台运行",
+      "---",
+      "",
+      "你是一个……（写清楚：职责、工作方式、输出格式）",
+      "",
+    ].join("\n");
+
+    function AgentsPanel(props) {
+      var wide = !!(props && props.wide);
+      var openPair = React.useState(false);
+      var open = openPair[0];
+      var setOpen = openPair[1];
+      useFvSync(open, setOpen);
+      var stPair = React.useState({ phase: "loading", items: [], role: "", msg: null, edit: null, editFile: "", editNew: false });
+      var st = stPair[0];
+      var setSt = stPair[1];
+
+      function pset(patch) {
+        setSt(function (prev) { var n = {}; for (var k in prev) n[k] = prev[k]; for (var k2 in patch) n[k2] = patch[k2]; return n; });
+      }
+      function load() {
+        pset({ phase: "loading" });
+        fetch("/portal/api/panel/agents", { headers: { accept: "application/json" } })
+          .then(function (r) { if (!r.ok) throw new Error("HTTP " + r.status); return r.json(); })
+          .then(function (d) { pset({ phase: "ready", items: d.items || [], role: d.role || "" }); })
+          .catch(function () { pset({ phase: "error" }); });
+      }
+      React.useEffect(function () { load(); }, []);
+      function toggle() { var n = !open; setOpen(n); if (n) load(); }
+
+      function openEdit(fileName) {
+        if (!fileName) { pset({ edit: AGT_TEMPLATE, editFile: "", editNew: true, msg: null }); return; }
+        fetch("/portal/api/panel/agent?file=" + encodeURIComponent(fileName), { headers: { accept: "application/json" } })
+          .then(function (r) { return r.json(); })
+          .then(function (d) {
+            if (d && d.ok) pset({ edit: d.content, editFile: fileName, editNew: false, msg: null });
+            else pset({ msg: { kind: "err", text: (d && d.error) || tr("agt.readFail") } });
+          })
+          .catch(function () { pset({ msg: { kind: "err", text: tr("agt.readFail") } }); });
+      }
+      function post(path, body, okText, after) {
+        pset({ msg: { kind: "info", text: tr("common.processing") } });
+        fetch(path, { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify(body) })
+          .then(function (r) { return r.json().then(function (d) { return { status: r.status, d: d }; }); })
+          .then(function (res) {
+            if (res.status !== 200 || (res.d && res.d.error)) {
+              pset({ msg: { kind: "err", text: (res.d && res.d.error) || "HTTP " + res.status } });
+              return;
+            }
+            pset({ msg: { kind: "ok", text: okText } });
+            if (after) after();
+          })
+          .catch(function (e) { pset({ msg: { kind: "err", text: String((e && e.message) || e) } }); });
+      }
+      function save() {
+        var m = /^name:\s*([A-Za-z0-9][A-Za-z0-9._-]*)\s*$/m.exec(st.edit || "");
+        var fname = st.editFile || (m ? m[1] + ".md" : "");
+        if (!fname) { pset({ msg: { kind: "err", text: tr("agt.fileNeeded") } }); return; }
+        post("/portal/api/admin/agent-save", { file: fname, content: st.edit }, tr("agt.saved"), function () { pset({ edit: null, editFile: "", editNew: false }); load(); });
+      }
+      function remove(fileName) {
+        if (!window.confirm(tr("agt.confirmDel") + "\n" + fileName)) return;
+        post("/portal/api/admin/agent-delete", { file: fileName }, tr("agt.deleted"), function () { load(); });
+      }
+
+      var trigger = h("button", { className: "ddb" + (wide ? "" : " rail") + (open ? " on" : ""), onClick: toggle, title: tr("agt.title") },
+        h("span", { className: "ic" }, dicon("bots", 15)),
+        wide ? h("span", { className: "lbl" }, tr("agt.tab")) : null
+      );
+      if (!open) return h("div", null, trigger);
+
+      var isAdmin = st.role === "admin";
+      var kids = [];
+      if (st.msg) kids.push(h("div", { key: "msg", className: "msg " + (st.msg.kind === "err" ? "err" : "ok") }, st.msg.text));
+      if (st.edit != null) {
+        var editHead = st.editNew ? tr("agt.hintTitle") + "：" + tr("agt.hintBody") : (st.editFile || "");
+        kids.push(h("div", { key: "ed" },
+          h("div", { className: "lb" }, editHead),
+          h("textarea", { className: "inp ta", readOnly: !isAdmin, style: { minHeight: "340px", fontFamily: "ui-monospace, Menlo, Consolas, monospace", fontSize: "12.5px" }, value: st.edit, onChange: function (e) { pset({ edit: e.target.value }); } }),
+          h("div", { style: { display: "flex", gap: "8px", marginTop: "8px" } },
+            isAdmin ? h("button", { className: "btn", onClick: save }, tr("agt.save")) : null,
+            h("button", { className: "btn gh", onClick: function () { pset({ edit: null, editFile: "", editNew: false, msg: null }); } }, tr("agt.cancel"))
+          )
+        ));
+      } else if (st.phase === "loading") {
+        kids.push(h("div", { key: "ld", className: "empty" }, tr("agt.loading")));
+      } else if (st.phase === "error") {
+        kids.push(h("div", { key: "er", className: "empty" }, tr("usage.portalHint")));
+      } else {
+        if (isAdmin) kids.push(h("div", { key: "act", style: { marginBottom: "8px" } }, h("button", { className: "btn", onClick: function () { openEdit(null); } }, tr("agt.new"))));
+        var rows = [];
+        for (var i = 0; i < st.items.length; i++) {
+          (function (it) {
+            var chips = [];
+            if (it.model) chips.push(h("span", { key: "m", className: "tag" }, tr("agt.model") + ": " + it.model));
+            if (it.tools && it.tools.length) chips.push(h("span", { key: "t", className: "tag" }, tr("agt.tools") + ": " + it.tools.join(",")));
+            if (it.provider === "fork") chips.push(h("span", { key: "f", className: "tag" }, tr("agt.fork")));
+            if (it.background) chips.push(h("span", { key: "b", className: "tag" }, tr("agt.background")));
+            if (it.maxDepth != null) chips.push(h("span", { key: "d", className: "tag" }, tr("agt.depth") + ": " + it.maxDepth));
+            var btns = [h("button", { key: "v", className: "mini", onClick: function () { openEdit(it.fileName); } }, tr("agt.view"))];
+            if (isAdmin) {
+              btns.push(h("button", { key: "e", className: "mini", onClick: function () { openEdit(it.fileName); } }, tr("agt.edit")));
+              btns.push(h("button", { key: "x", className: "mini", onClick: function () { remove(it.fileName); } }, tr("agt.del")));
+            }
+            rows.push(h("div", { key: "r" + it.fileName, className: "it" },
+              h("div", { style: { display: "flex", alignItems: "center", gap: "8px" } },
+                h("span", { style: { fontWeight: 600 } }, it.name || it.fileName),
+                it.ok ? null : h("span", { className: "tag", style: { color: "#c0392b" } }, tr("agt.broken")),
+                h("span", { style: { marginLeft: "auto", display: "inline-flex", gap: "6px" } }, btns)
+              ),
+              h("div", { className: "t2" }, it.description || ""),
+              chips.length ? h("div", { style: { marginTop: "4px", display: "flex", gap: "6px", flexWrap: "wrap" } }, chips) : null,
+              it.errors && it.errors.length ? h("div", { style: { color: "#c0392b", fontSize: "12px", marginTop: "4px" } }, it.errors.join("；")) : null,
+              it.warnings && it.warnings.length ? h("div", { style: { color: "#b7791f", fontSize: "12px", marginTop: "2px" } }, it.warnings.join("；")) : null
+            ));
+          })(st.items[i]);
+        }
+        kids.push(h("div", { key: "rows" }, rows.length ? rows : h("div", { className: "empty" }, tr("agt.empty") + " —— " + tr("agt.emptyHint"))));
+        kids.push(h("div", { key: "ft", className: "ft" }, tr("agt.usage")));
+        if (!isAdmin) kids.push(h("div", { key: "ro", className: "ft" }, tr("agt.adminOnly")));
+      }
+
+      return h("div", null,
+        trigger,
+        h("div", { key: "panel", className: "ddp fv" },
+          h("div", { className: "hd" },
+            h("span", { className: "ico" }, dicon("bots", 18)),
+            h("div", null, h("div", { className: "t1" }, tr("agt.title")), h("div", { className: "t2" }, tr("agt.sub"))),
+            h("button", { className: "x", onClick: toggle }, tr("fv.back"))
+          ),
+          h("div", { className: "bd" }, kids)
+        )
+      );
+    }
+
     /* ═══ 侧栏入口线性图标（统一 24×24 描边风格，stroke=currentColor） ═══ */
     var DESK_ICONS = {
       hub: ["M20 20a2 2 0 0 0 2-2V8a2 2 0 0 0-2-2h-7.9a2 2 0 0 1-1.69-.9L9.6 3.9A2 2 0 0 0 7.93 3H4a2 2 0 0 0-2 2v13a2 2 0 0 0 2 2Z"],
@@ -3054,6 +3251,7 @@ body.desk-panel-open [class*="sidebarCol"] { transform: none !important; }
       trash: ["M4 7h16", "M9.5 7V5a1 1 0 0 1 1-1h3a1 1 0 0 1 1 1v2", "M6.5 7l1 13h9l1-13"],
       plus: ["M12 5v14", "M5 12h14"],
       chart: ["M3 3v18h18", "M7 14l4-4 3 3 5-6"],
+      bots: ["circle|12,4,1.6", "M12 5.6V8", "rect|4,8,16,11,2", "circle|9,12.5,1.4", "circle|15,12.5,1.4", "M9 19v2.6", "M15 19v2.6"],
     };
     function dicon(name, size) {
       var list = DESK_ICONS[name] || [];
@@ -5876,6 +6074,19 @@ body.desk-panel-open [class*="sidebarCol"] { transform: none !important; }
             },
           },
           AutomationPanel
+        );
+      });
+      ctx.slots.inject("sidebar.footer.action", function () {
+        return ctx.slots.register(
+          {
+            name: "sidebar.footer.action",
+            id: "desk-agents",
+            order: 89,
+            label: function () {
+              return tr("agt.tab");
+            },
+          },
+          AgentsPanel
         );
       });
       ctx.slots.inject("sidebar.footer.action", function () {

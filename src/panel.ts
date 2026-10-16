@@ -1,10 +1,12 @@
 // 侧栏面板数据采集（只读）：助理（Agent 预设）/ 专家技能 / 连接器 / 自动化
 // 说明：全部从共享区与只读状态读取，不改任何文件；供 portal.ts 的 /portal/api/panel/* 使用。
-import { existsSync, readdirSync, readFileSync, statSync } from 'node:fs'
+import { existsSync, mkdirSync, readdirSync, readFileSync, statSync, unlinkSync, writeFileSync } from 'node:fs'
 import { join } from 'node:path'
 import { homedir } from 'node:os'
 import type { DatabaseSync } from 'node:sqlite'
 import { defaultDataDir } from './db.ts'
+// 与 dsh-agents-md 插件共用同一份 agents/*.md 解析/校验（纯 JS，零依赖）
+import { normalizeAgentDef, parseAgentMd } from '../plugin/dsh-agents-md/lib/scan.js'
 
 const L = (lang: string, zh: string, en: string): string => (lang === 'en' ? en : zh)
 
@@ -269,4 +271,121 @@ export function collectConnectors(db: DatabaseSync, lang: string = 'zh'): Connec
   })
 
   return items
+}
+// —— 子代理定义（agents/*.md；与 dsh-agents-md 插件共用同一解析器） ——
+
+export interface AgentDefInfo {
+  fileName: string
+  name: string
+  description: string
+  tools?: string[]
+  disallowedTools?: string[]
+  model?: string
+  effort?: string
+  provider?: string
+  background?: boolean
+  maxDepth?: number
+  color?: string
+  persona: string
+  mtimeMs: number
+  ok: boolean
+  errors: string[]
+  warnings: string[]
+}
+
+const AGENTS_DIR = join(defaultDataDir(), 'agents')
+const AGENT_FILE_RE = /^[A-Za-z0-9][A-Za-z0-9._-]{0,63}\.md$/
+
+function toAgentInfo(fileName: string, mtimeMs: number, text: string): AgentDefInfo {
+  const parsed = parseAgentMd(text)
+  if ('error' in parsed) {
+    return { fileName, name: fileName.replace(/\.md$/i, ''), description: '', persona: '', mtimeMs, ok: false, errors: [parsed.error], warnings: [] }
+  }
+  const def = normalizeAgentDef({ file: join(AGENTS_DIR, fileName), source: AGENTS_DIR, data: parsed.data, body: parsed.body, parseWarnings: parsed.warnings })
+  return {
+    fileName,
+    name: def.name || fileName.replace(/\.md$/i, ''),
+    description: def.description || '',
+    tools: def.tools,
+    disallowedTools: def.disallowedTools,
+    model: def.model,
+    effort: def.effort,
+    provider: def.provider,
+    background: def.background,
+    maxDepth: def.maxDepth,
+    color: def.color,
+    persona: (def.persona || '').slice(0, 1200),
+    mtimeMs,
+    ok: def.errors.length === 0,
+    errors: def.errors,
+    warnings: def.warnings,
+  }
+}
+
+/** 列出共享目录下的全部子代理定义（含错误/告警），供面板展示。 */
+export function collectAgents(): AgentDefInfo[] {
+  let names: string[] = []
+  try {
+    names = readdirSync(AGENTS_DIR).filter((n) => n.toLowerCase().endsWith('.md') && !n.startsWith('.')).sort()
+  } catch {
+    // 目录不存在按空处理
+  }
+  const out: AgentDefInfo[] = []
+  for (const n of names) {
+    try {
+      const st = statSync(join(AGENTS_DIR, n))
+      out.push(toAgentInfo(n, st.mtimeMs, readText(join(AGENTS_DIR, n))))
+    } catch {
+      // 读不了就跳过
+    }
+  }
+  return out
+}
+
+function agentPath(fileName: string): string | null {
+  const n = String(fileName || '').trim()
+  if (!AGENT_FILE_RE.test(n) || n.includes('..')) return null
+  return join(AGENTS_DIR, n)
+}
+
+/** 读取单个定义的原文（编辑器用）。 */
+export function readAgent(fileName: string, lang: string = 'zh'): { ok: true; fileName: string; content: string } | { error: string } {
+  const p = agentPath(fileName)
+  if (!p) return { error: L(lang, '文件名不合法（需要 <名称>.md）', 'Invalid file name (expected <name>.md)') }
+  if (!existsSync(p)) return { error: L(lang, '定义不存在', 'Definition not found') }
+  return { ok: true, fileName, content: readText(p).slice(0, 60000) }
+}
+
+/** 保存定义（先校验：有硬错误直接拒绝并回复原因）。 */
+export function saveAgent(fileName: string, content: string, lang: string = 'zh'): { ok: true; fileName: string; def: AgentDefInfo } | { error: string } {
+  const p = agentPath(fileName)
+  if (!p) return { error: L(lang, '文件名不合法（需要 <名称>.md，仅字母数字 . _ -）', 'Invalid file name (expected <name>.md; letters, digits, . _ - only)') }
+  const text = String(content ?? '')
+  if (!text.trim()) return { error: L(lang, '内容不能为空', 'Content cannot be empty') }
+  if (text.length > 60000) return { error: L(lang, '内容过长（>60KB）', 'Content too large (>60KB)') }
+  const parsed = parseAgentMd(text)
+  if ('error' in parsed) return { error: L(lang, '保存被拒：', 'Save rejected: ') + parsed.error }
+  const def = normalizeAgentDef({ file: p, source: AGENTS_DIR, data: parsed.data, body: parsed.body, parseWarnings: parsed.warnings })
+  if (def.errors.length) return { error: L(lang, '保存被拒，定义有错误：', 'Save rejected, definition has errors: ') + def.errors.join('; ') }
+  try {
+    mkdirSync(AGENTS_DIR, { recursive: true })
+    writeFileSync(p, text.endsWith('\n') ? text : text + '\n')
+  } catch (e) {
+    return { error: L(lang, '写入失败：', 'Write failed: ') + String((e as Error)?.message || e) }
+  }
+  const st = statSync(p)
+  return { ok: true, fileName, def: toAgentInfo(fileName, st.mtimeMs, text) }
+}
+
+/** 删除定义。 */
+export function deleteAgent(fileName: string, lang: string = 'zh'): { ok: true } | { error: string } {
+  const p = agentPath(fileName)
+  if (!p) return { error: L(lang, '文件名不合法', 'Invalid file name') }
+  if (!existsSync(p)) return { error: L(lang, '定义不存在', 'Definition not found') }
+  try {
+    unlinkSync(p)
+  } catch (e) {
+    return { error: L(lang, '删除失败：', 'Delete failed: ') + String((e as Error)?.message || e) }
+  }
+  return { ok: true }
 }

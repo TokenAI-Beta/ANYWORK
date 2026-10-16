@@ -19,7 +19,7 @@ import { kbSearch, listKbNotes, readKbNote, removeKbNote, saveKbNote } from './k
 import { listDrive, makeDir, movePath, removePath, resolveInDrive, saveToDrive, MAX_UPLOAD } from './drive.ts'
 import { addNotifyRoute, addReminder, dispatchNotify, listNotifyLog, listNotifyRoutes, listReminders, listRemindersSent, readOrCreateNotifyToken, removeNotifyRoute, removeReminder, toggleNotifyRoute } from './notify.ts'
 import { defaultDataDir } from './db.ts'
-import { collectConnectors, collectPlatforms, collectPresets, collectSkills, readSkill } from './panel.ts'
+import { collectAgents, collectConnectors, collectPlatforms, collectPresets, collectSkills, deleteAgent, readAgent, readSkill, saveAgent } from './panel.ts'
 import { CONN_PLATFORMS, getConn, removeConn, setConn, testConn, validateConnConfig } from './conns.ts'
 import { collectOps } from './ops.ts'
 import { addTimer, autoStats, ensureRuleRows, listAutoLog, listAutos, removeAuto, toggleAuto, RULE_CATALOG, ruleEnabled } from './auto.ts'
@@ -1019,7 +1019,12 @@ export function startPortal(opts: PortalOptions) {
           res.writeHead(400, { 'content-type': 'application/json; charset=utf-8' })
           return res.end(JSON.stringify({ error: L(langOf(req), 'text 不能为空', 'text cannot be empty') }))
         }
-        const results = await dispatchNotify(db, { title: String(body.title ?? '').trim(), text, source: String(body.source ?? 'agent') })
+        const routeFilter = Array.isArray(body.routes) ? (body.routes as unknown[]).map((x) => String(x)) : []
+        const results = await dispatchNotify(
+          db,
+          { title: String(body.title ?? '').trim(), text, source: String(body.source ?? 'agent') },
+          routeFilter.length ? { routes: routeFilter } : undefined,
+        )
         res.writeHead(200, { 'content-type': 'application/json; charset=utf-8' })
         return res.end(JSON.stringify({ results }))
       }
@@ -1242,6 +1247,23 @@ export function startPortal(opts: PortalOptions) {
         }
         res.writeHead(200, { 'content-type': 'application/json; charset=utf-8' })
         return res.end(JSON.stringify({ ok: true, role: user.role, reminders: listReminders(db), recent: listRemindersSent(db, 5) }))
+      }
+      // —— 子代理（agents/*.md 定义管理）——
+      if (req.method === 'GET' && path === '/portal/api/panel/agents') {
+        if (!user) {
+          res.writeHead(401, { 'content-type': 'application/json' })
+          return res.end(JSON.stringify({ error: 'login required' }))
+        }
+        res.writeHead(200, { 'content-type': 'application/json; charset=utf-8' })
+        return res.end(JSON.stringify({ ok: true, role: user.role, items: collectAgents() }))
+      }
+      if (req.method === 'GET' && path === '/portal/api/panel/agent') {
+        if (!user) {
+          res.writeHead(401, { 'content-type': 'application/json' })
+          return res.end(JSON.stringify({ error: 'login required' }))
+        }
+        res.writeHead(200, { 'content-type': 'application/json; charset=utf-8' })
+        return res.end(JSON.stringify(readAgent(url.searchParams.get('file') ?? '', langOf(req))))
       }
       // —— 自动化（成员自建定时任务 + 团队规则卡）——
       if (req.method === 'GET' && path === '/portal/api/auto') {
@@ -2017,6 +2039,22 @@ export function startPortal(opts: PortalOptions) {
           // 先回响应，再退出进程让 systemd（Restart=always）拉起新进程加载新 key
           setTimeout(() => process.exit(0), 800)
           return
+        }
+        if (req.method === 'POST' && path === '/portal/api/admin/agent-save') {
+          const body = await readJsonBody()
+          const reply = (obj: Record<string, unknown>): void => {
+            res.writeHead(200, { 'content-type': 'application/json; charset=utf-8' })
+            res.end(JSON.stringify(obj))
+          }
+          return reply(saveAgent(String(body.file ?? '').trim(), String(body.content ?? ''), langOf(req)))
+        }
+        if (req.method === 'POST' && path === '/portal/api/admin/agent-delete') {
+          const body = await readJsonBody()
+          const reply = (obj: Record<string, unknown>): void => {
+            res.writeHead(200, { 'content-type': 'application/json; charset=utf-8' })
+            res.end(JSON.stringify(obj))
+          }
+          return reply(deleteAgent(String(body.file ?? '').trim(), langOf(req)))
         }
 
         if (req.method === 'GET' && path === '/portal/api/admin/channel-presets') {

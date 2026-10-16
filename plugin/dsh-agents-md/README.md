@@ -56,3 +56,21 @@ DSH_HOME=<实例> node <dsh>/apps/cli/lib/bin.js plugin --profile web add link:<
 - 前台默认等结果；`background: true`（定义级）或调用参数 `run_in_background: true` → 走 jobs 后台任务（`job_output` 收取 / `job_kill` 停止）。
 - per-def 的模型/推理强度/工具过滤/深度/persona 依赖 provider 能力；内置 spawn/fork 全支持，不支持时**响亮报错**而非静默忽略。
 - 与 Claude Code 定义的对应：`name`/`description` 同名同义；`tools` = 工具白名单；`model` = 模型；正文 = 系统提示词（此处为 persona）；`background` = 后台默认。
+
+## 结算通知（可选）
+
+子代理结束时，插件经通知桥 `POST <url>`（令牌文件认证）推送
+「🔧 子代理「<label>」(<type>) 完成：…」。默认**只推后台任务**、目标路由按实例成员名推导
+（`wechat-<成员名>`，容器即 `/data/desk-data/notify.token` + `http://127.0.0.1:8080/portal/api/notify`）。
+可在 row config 覆盖或关闭：
+
+```yaml
+config:
+  notify:
+    events: all                    # background（默认）| all
+    routes: [wechat-admin001]      # 覆盖默认目标（精确路由名）
+    url: http://127.0.0.1:8080/portal/api/notify
+    tokenFile: /data/desk-data/notify.token
+  # notify: false                    # 完全关闭
+```
+
