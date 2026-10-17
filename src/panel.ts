@@ -418,7 +418,7 @@ export interface AgentRunInfo {
   durationMs: number
 }
 
-const DELEGATE_TOOLS = new Set(['agent', 'subagent', 'subagent_fork', 'subagent_codex', 'subagent_claude_code'])
+const DELEGATE_TOOLS = new Set(['agent', 'subagent', 'subagent_fork', 'subagent_codex'])
 
 interface RunRowLite {
   time: number
