@@ -185,7 +185,7 @@ export function readBotChat(
       let text = ''
       for (const b of content) if (b && typeof b === 'object' && (b as Record<string, unknown>).type === 'text') text += String((b as Record<string, unknown>).text ?? '')
       text = text.trim()
-      if (!text || text.startsWith('[设定]')) continue
+      if (!text || text.startsWith('[设定]') || text.startsWith('<system-reminder') || text.startsWith('Current runtime context')) continue
       messages.push({ role: 'user', text, time: t })
     } else if (ev.type === 'assistant/message') {
       const msg = (d.message ?? {}) as Record<string, unknown>

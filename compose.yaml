@@ -32,6 +32,11 @@ services:
       ANYWORK_TRUSTED_HOSTS: "${ANYWORK_TRUSTED_HOSTS:-}"
       DEEPSEEK_API_KEY: "${DEEPSEEK_API_KEY:?请在 .env 中设置 DEEPSEEK_API_KEY}"
       TZ: "${TZ:-Asia/Shanghai}"
+      # 本地出口代理：Docker 容器直连被 TLS 重置时用（指向宿主代理；端口变了改 .env 的 HOST_PROXY）
+      HTTP_PROXY: "${HOST_PROXY:-http://host.docker.internal:59527}"
+      HTTPS_PROXY: "${HOST_PROXY:-http://host.docker.internal:59527}"
+      NO_PROXY: "localhost,127.0.0.1,host.docker.internal"
+      NODE_USE_ENV_PROXY: "1"
 
 volumes:
   anywork-data:

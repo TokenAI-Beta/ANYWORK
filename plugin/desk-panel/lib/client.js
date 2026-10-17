@@ -4095,6 +4095,589 @@ body[data-ds-dark-theme] .ddp .agpill.cur { color:#e0b25c; }
       ));
     }
 
+
+    /* ═══ 「Bots」：常驻 Bot 与群聊（P4 UI，接 panel/bots + bot-chat + room-* API） ═══ */
+    var BTS_STYLE_ID = "desk-bots-css";
+    var BTS_CSS = [
+      ".bts-wrap{display:grid;grid-template-columns:252px minmax(0,1fr);gap:12px;min-height:520px;align-items:start}",
+      "@media(max-width:780px){.bts-wrap{grid-template-columns:1fr}.bts-rail{max-height:none;border-right:0;padding-right:0;border-bottom:1px solid var(--dsw-alias-border-l2,#e8eaed);padding-bottom:8px}}",
+      ".bts-rail{display:flex;flex-direction:column;gap:2px;border-right:1px solid var(--dsw-alias-border-l2,#e8eaed);padding-right:10px;max-height:66vh;overflow-y:auto}",
+      ".bts-sec{display:flex;align-items:center;justify-content:space-between;font-size:10.5px;font-weight:700;letter-spacing:.08em;color:var(--dsw-alias-label-tertiary,#8a8f98);margin:10px 2px 4px;text-transform:uppercase}",
+      ".bts-sec .mini2{border:0;background:transparent;color:inherit;cursor:pointer;font-size:13px;line-height:1;padding:2px 4px;border-radius:6px}",
+      ".bts-sec .mini2:hover{background:rgba(127,127,127,.14)}",
+      ".bts-row{display:flex;align-items:center;gap:9px;width:100%;padding:7px 8px;border:0;border-radius:9px;background:transparent;color:inherit;text-align:left;cursor:pointer;font-size:13px}",
+      ".bts-row:hover{background:rgba(127,127,127,.09)}",
+      ".bts-row.on{background:color-mix(in srgb,var(--dsw-alias-state-business-primary,#4f7cf7) 14%,transparent)}",
+      ".bts-row .col{flex:1;min-width:0}",
+      ".bts-row .n{display:flex;align-items:center;gap:5px;font-weight:600;font-size:13px;line-height:1.3}",
+      ".bts-row .n .dot{width:6px;height:6px;border-radius:99px;background:#2fbf71;flex:0 0 auto}",
+      ".bts-row .n .dot.off{background:#b8bcc4}",
+      ".bts-row .p{font-size:11.5px;color:var(--dsw-alias-label-tertiary,#8a8f98);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin-top:1px}",
+      ".bts-row .tm{font-size:10.5px;color:var(--dsw-alias-label-tertiary,#8a8f98);flex:0 0 auto}",
+      ".bts-av{flex:0 0 auto;display:flex;align-items:center;justify-content:center;color:#fff;font-weight:700;overflow:hidden;background:#8b5cf6;font-size:12px}",
+      ".bts-av img{width:100%;height:100%;object-fit:cover}",
+      ".bts-chat{display:flex;flex-direction:column;min-height:520px;max-height:66vh;border:1px solid var(--dsw-alias-border-l2,#e8eaed);border-radius:14px;background:var(--dsw-alias-bg-layer-2,#fff);overflow:hidden}",
+      ".bts-h{display:flex;align-items:center;gap:8px;padding:9px 11px;border-bottom:1px solid var(--dsw-alias-border-l2,#e8eaed);flex:0 0 auto}",
+      ".bts-h .ttl{font-size:14px;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}",
+      ".bts-h .sub{font-size:10.5px;color:var(--dsw-alias-label-tertiary,#8a8f98);flex:0 0 auto}",
+      ".bts-h .sp{flex:1}",
+      ".bts-ico{border:0;background:transparent;color:var(--dsw-alias-label-tertiary,#8a8f98);cursor:pointer;border-radius:7px;padding:4px 6px;font-size:13px;line-height:1}",
+      ".bts-ico:hover{background:rgba(127,127,127,.14);color:var(--dsw-alias-label-primary,#1f2329)}",
+      ".bts-ico.dgr:hover{color:#d64545}",
+      ".bts-act{border-bottom:1px solid var(--dsw-alias-border-l2,#e8eaed);flex:0 0 auto}",
+      ".bts-act .bar{display:flex;align-items:center;gap:6px;padding:2px 10px}",
+      ".bts-act .tg{display:flex;align-items:center;gap:6px;flex:1;min-width:0;border:0;background:transparent;color:var(--dsw-alias-label-tertiary,#8a8f98);font-size:11px;cursor:pointer;padding:5px 2px;text-align:left}",
+      ".bts-act .tg:hover{color:var(--dsw-alias-label-primary,#1f2329)}",
+      ".bts-act .tg b{font-weight:700;flex:0 0 auto}",
+      ".bts-act .lst{padding:0 11px 6px;display:flex;flex-direction:column;gap:3px}",
+      ".bts-act .ev{display:flex;gap:6px;font-size:10.8px;color:var(--dsw-alias-label-secondary,#5a6067)}",
+      ".bts-act .ev .t{margin-left:auto;color:var(--dsw-alias-label-tertiary,#8a8f98);font-size:10px}",
+      ".bts-log{flex:1;min-height:120px;overflow-y:auto;padding:9px 12px;display:flex;flex-direction:column;gap:7px}",
+      ".bts-e{display:flex;flex-direction:column;gap:2px}",
+      ".bts-e .em{display:flex;align-items:baseline;gap:7px}",
+      ".bts-e .nm{font-size:11px;font-weight:700;color:var(--dsw-alias-state-business-primary,#4f7cf7);border:0;background:none;padding:0;cursor:pointer;font-family:inherit}",
+      ".bts-e .nm.you{color:var(--dsw-alias-label-primary,#1f2329);cursor:default}",
+      ".bts-e .tm{font-size:10px;color:var(--dsw-alias-label-tertiary,#8a8f98)}",
+      ".bts-e .tx{font-size:12.3px;line-height:1.55;color:var(--dsw-alias-label-secondary,#4a5058);white-space:pre-wrap;word-break:break-word}",
+      ".bts-th{font-size:10.5px;color:var(--dsw-alias-state-business-primary,#4f7cf7);padding:1px 0 2px 1px}",
+      ".bts-work{font-size:11px;font-style:italic;color:var(--dsw-alias-label-tertiary,#8a8f98);padding:2px 1px 4px}",
+      ".bts-empty{padding:34px 12px;text-align:center;font-size:12.5px;color:var(--dsw-alias-label-tertiary,#8a8f98)}",
+      ".bts-empty .btn{margin-top:10px}",
+      ".bts-cmp{border-top:1px solid var(--dsw-alias-border-l2,#e8eaed);padding:8px;flex:0 0 auto;position:relative}",
+      ".bts-box{display:flex;align-items:flex-end;gap:6px;border:1px solid var(--dsw-alias-border-l2,#d4d7dc);border-radius:10px;padding:6px 6px 6px 9px;background:var(--dsw-alias-bg-base,#f7f8fa)}",
+      ".bts-box:focus-within{border-color:var(--dsw-alias-state-business-primary,#4f7cf7)}",
+      ".bts-box textarea{flex:1;resize:none;border:0;background:transparent;color:inherit;font-size:12.5px;line-height:1.5;max-height:92px;font-family:inherit;outline:none;padding:2px 0}",
+      ".bts-box textarea::placeholder{color:var(--dsw-alias-label-tertiary,#9aa0a8)}",
+      ".bts-send{height:27px;padding:0 11px;border-radius:7px;border:0;background:var(--dsw-alias-state-business-primary,#4f7cf7);color:#fff;font-size:12px;cursor:pointer;flex:0 0 auto}",
+      ".bts-send:disabled{opacity:.45;cursor:default}",
+      ".bts-stop{display:inline-flex;align-items:center;gap:4px;border:0;background:transparent;color:var(--dsw-alias-state-business-primary,#4f7cf7);font-size:10.8px;cursor:pointer;padding:2px 5px;border-radius:5px}",
+      ".bts-stop:hover{background:rgba(79,124,247,.12)}",
+      ".bts-ment{position:absolute;left:10px;bottom:56px;width:240px;background:var(--dsw-alias-bg-layer-2,#fff);border:1px solid var(--dsw-alias-border-l2,#d4d7dc);border-radius:10px;box-shadow:0 10px 28px rgba(16,24,40,.18);padding:4px;z-index:30;max-height:220px;overflow:auto}",
+      ".bts-ment .mi{display:flex;align-items:center;gap:7px;padding:5px 7px;border-radius:7px;font-size:12px;color:inherit;cursor:pointer}",
+      ".bts-ment .mi:hover,.bts-ment .mi.sel{background:rgba(127,127,127,.12)}",
+      ".bts-ment .mi .h{margin-left:auto;font-size:10.5px;color:var(--dsw-alias-label-tertiary,#8a8f98)}",
+      ".bts-modal{position:absolute;inset:0;z-index:40;display:flex;align-items:center;justify-content:center;background:rgba(15,23,42,.34);backdrop-filter:blur(2px);border-radius:inherit}",
+      ".bts-card{width:min(520px,calc(100% - 28px));max-height:86%;overflow:auto;background:var(--dsw-alias-bg-layer-2,#fff);border:1px solid var(--dsw-alias-border-l2,#e8eaed);border-radius:14px;padding:18px;box-shadow:0 24px 60px rgba(16,24,40,.28)}",
+      ".bts-card h3{margin:0 0 3px;font-size:15px;font-weight:700}",
+      ".bts-card .ps{margin:0 0 13px;font-size:11.5px;color:var(--dsw-alias-label-tertiary,#8a8f98)}",
+      ".bts-f{margin-bottom:11px}",
+      ".bts-f label{display:block;font-size:11px;font-weight:600;color:var(--dsw-alias-label-secondary,#5a6067);margin-bottom:4px}",
+      ".bts-f input,.bts-f textarea,.bts-f select{width:100%;box-sizing:border-box;background:var(--dsw-alias-bg-base,#f7f8fa);border:1px solid var(--dsw-alias-border-l2,#d4d7dc);border-radius:8px;color:inherit;font-size:12.5px;padding:7px 9px;font-family:inherit;outline:none}",
+      ".bts-f input:focus,.bts-f textarea:focus{border-color:var(--dsw-alias-state-business-primary,#4f7cf7)}",
+      ".bts-f .row2{display:flex;gap:8px}",
+      ".bts-pick{border:1px solid var(--dsw-alias-border-l2,#e8eaed);border-radius:9px;overflow:hidden;margin-bottom:10px}",
+      ".bts-pick .pr{display:flex;align-items:center;gap:8px;padding:7px 9px;border-bottom:1px solid var(--dsw-alias-border-l2,#e8eaed);font-size:12px}",
+      ".bts-pick .pr:last-child{border-bottom:0}",
+      ".bts-pick .pr .sp{flex:1}",
+      ".bts-ck{width:15px;height:15px;border-radius:4px;border:1px solid var(--dsw-alias-border-l2,#c8ccd2);display:flex;align-items:center;justify-content:center;font-size:10px;color:#fff;cursor:pointer;flex:0 0 auto}",
+      ".bts-ck.on{background:var(--dsw-alias-state-business-primary,#4f7cf7);border-color:var(--dsw-alias-state-business-primary,#4f7cf7)}",
+      ".bts-foot{display:flex;justify-content:flex-end;gap:8px;margin-top:6px}",
+      ".bts-toast{margin:0 0 8px;padding:8px 10px;border-radius:9px;font-size:12px;background:#e8f7ee;color:#1f7a4d}",
+      ".bts-toast.err{background:#fdeaea;color:#b02a2a}"
+    ].join("");
+    function btsEnsureCss() {
+      if (typeof document === "undefined") return;
+      if (document.getElementById(BTS_STYLE_ID)) return;
+      var s = document.createElement("style");
+      s.id = BTS_STYLE_ID;
+      s.textContent = BTS_CSS;
+      document.head.appendChild(s);
+    }
+    var BTS_COLORS = ["#8b5cf6", "#0ea5e9", "#f59e0b", "#10b981", "#ef4444", "#6366f1", "#14b8a6", "#d946ef"];
+    function btsColor(name) {
+      var s = String(name || "bot");
+      var n = 0;
+      for (var i = 0; i < s.length; i++) n = (n * 31 + s.charCodeAt(i)) % 997;
+      return BTS_COLORS[n % BTS_COLORS.length];
+    }
+    function btsAvatar(bot, name, size) {
+      var nm = String((bot && bot.name) || name || "?");
+      var av = (bot && bot.avatar) || {};
+      var shape = av.shape || "blobatar";
+      var style = { width: size + "px", height: size + "px", borderRadius: shape === "circle" ? "50%" : shape === "squircle" ? "30%" : shape === "org" ? "8px" : "44% 56% 58% 42% / 52% 44% 56% 48%", background: av.color || btsColor(nm), fontSize: Math.round(size * 0.38) + "px" };
+      if (!av.color && shape !== "squircle") style.background = "linear-gradient(140deg," + btsColor(nm) + ",color-mix(in srgb," + btsColor(nm) + " 55%,#111))";
+      return h("div", { className: "bts-av", style: style }, av.image ? h("img", { src: av.image, alt: "" }) : nm.slice(0, 1).toUpperCase());
+    }
+    function btsTime(ts) {
+      try {
+        var n = Number(ts || 0);
+        if (!n) return "";
+        if (n < 1e12) n = n * 1000;
+        var d = new Date(n);
+        var p = function (x) { return (x < 10 ? "0" : "") + x; };
+        return p(d.getHours()) + ":" + p(d.getMinutes());
+      } catch (e) { return ""; }
+    }
+    function btsAgo(ts) {
+      try {
+        var n = Number(ts || 0);
+        if (!n) return "";
+        if (n < 1e12) n = n * 1000;
+        var s = Math.round((Date.now() - n) / 1000);
+        if (s < 60) return s + "s";
+        if (s < 3600) return Math.round(s / 60) + "m";
+        if (s < 86400) return Math.round(s / 3600) + "h";
+        return Math.round(s / 86400) + "d";
+      } catch (e) { return ""; }
+    }
+
+    function BotsPanel(props) {
+      var wide = !!(props && props.wide);
+      var openPair = React.useState(false);
+      var open = openPair[0];
+      var setOpen = openPair[1];
+      useFvSync(open, setOpen);
+      var stPair = React.useState({
+        phase: "loading", role: "", bots: [], rooms: [], view: "roster",
+        roomId: "", botName: "", room: null, act: null, chat: null, chatPhase: "",
+        draft: "", mention: null, sending: false, formBot: null, formRoom: null, msg: null
+      });
+      var st = stPair[0];
+      var setSt = stPair[1];
+      var taRef = React.useRef(null);
+
+      function pset(patch) {
+        setSt(function (prev) {
+          var n = {};
+          for (var k in prev) n[k] = prev[k];
+          for (var k2 in patch) n[k2] = patch[k2];
+          return n;
+        });
+      }
+      function toast(kind, text) { pset({ msg: { kind: kind, text: text } }); }
+      function load() {
+        fetch("/portal/api/panel/bots", { headers: { accept: "application/json" } })
+          .then(function (r) { if (!r.ok) throw new Error("HTTP " + r.status); return r.json(); })
+          .then(function (d) { pset({ phase: "ready", role: d.role || "", bots: d.items || [], rooms: d.rooms || [] }); })
+          .catch(function () { pset({ phase: "error" }); });
+      }
+      function loadRoom(id) {
+        if (!id) return;
+        fetch("/portal/api/panel/room?id=" + encodeURIComponent(id), { headers: { accept: "application/json" } })
+          .then(function (r) { return r.json(); })
+          .then(function (d) { if (d && d.room) pset({ room: d.room }); });
+        fetch("/portal/api/panel/room-activity?id=" + encodeURIComponent(id), { headers: { accept: "application/json" } })
+          .then(function (r) { return r.json(); })
+          .then(function (d) { if (d && d.ok) pset({ act: d }); });
+      }
+      function loadChat(name) {
+        if (!name) return;
+        fetch("/portal/api/panel/bot-chat?name=" + encodeURIComponent(name), { headers: { accept: "application/json" } })
+          .then(function (r) { return r.json(); })
+          .then(function (d) { if (d && d.ok) pset({ chat: d, chatPhase: "" }); else pset({ chatPhase: "" }); })
+          .catch(function () { pset({ chatPhase: "" }); });
+      }
+      React.useEffect(function () { btsEnsureCss(); load(); }, []);
+      React.useEffect(function () { if (open) load(); }, [open]);
+      React.useEffect(function () {
+        if (!open || st.view !== "room" || !st.roomId) return;
+        var iv = setInterval(function () { loadRoom(st.roomId); }, st.act && st.act.running ? 2500 : 9000);
+        return function () { clearInterval(iv); };
+      }, [open, st.view, st.roomId, st.act && st.act.running]);
+      function toggle() { var n = !open; setOpen(n); if (n) load(); }
+      function openBot(bot) {
+        pset({ view: "bot", botName: bot.name, chat: null, chatPhase: "loading", msg: null, draft: "", mention: null });
+        fetch("/portal/api/panel/bot-chat-open", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ name: bot.name }) })
+          .then(function (r) { return r.json(); })
+          .then(function (d) { if (d && d.error) { toast("err", d.error); pset({ chatPhase: "" }); return; } loadChat(bot.name); })
+          .catch(function () { pset({ chatPhase: "" }); });
+      }
+      function openRoom(room) {
+        pset({ view: "room", roomId: room.id, room: room, act: null, msg: null, draft: "", mention: null });
+        loadRoom(room.id);
+      }
+      function back() { pset({ view: "roster", roomId: "", botName: "", room: null, act: null, chat: null }); }
+      function sendChat() {
+        var text = String(st.draft || "").trim();
+        if (!text || st.sending) return;
+        pset({ sending: true, chatPhase: "waiting", draft: "", mention: null });
+        var before = ((st.chat && st.chat.messages) || []).length;
+        fetch("/portal/api/panel/bot-chat-send", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ name: st.botName, text: text }) })
+          .then(function (r) { return r.json(); })
+          .then(function (d) {
+            pset({ sending: false });
+            if (d && d.error) { toast("err", d.error); pset({ chatPhase: "" }); return; }
+            var tries = 0;
+            var iv = setInterval(function () {
+              tries++;
+              fetch("/portal/api/panel/bot-chat?name=" + encodeURIComponent(st.botName), { headers: { accept: "application/json" } })
+                .then(function (r) { return r.json(); })
+                .then(function (j) {
+                  if (j && j.ok) {
+                    var n = (j.messages || []).length;
+                    pset({ chat: j });
+                    if (n > before + 1 || tries > 60) { clearInterval(iv); pset({ chatPhase: "" }); }
+                  }
+                });
+              if (tries > 60) { clearInterval(iv); pset({ chatPhase: "" }); }
+            }, 2500);
+          })
+          .catch(function () { pset({ sending: false, chatPhase: "" }); });
+      }
+      function sendRoom() {
+        var text = String(st.draft || "").trim();
+        if (!text || st.sending) return;
+        pset({ sending: true, draft: "", mention: null });
+        fetch("/portal/api/panel/room-send", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ id: st.roomId, text: text }) })
+          .then(function (r) { return r.json(); })
+          .then(function (d) {
+            pset({ sending: false });
+            if (d && d.error) { toast("err", d.error); return; }
+            setTimeout(function () { loadRoom(st.roomId); }, 500);
+          })
+          .catch(function () { pset({ sending: false }); });
+      }
+      function stopRoom() {
+        fetch("/portal/api/panel/room-stop", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ id: st.roomId }) })
+          .then(function (r) { return r.json(); })
+          .then(function () { setTimeout(function () { loadRoom(st.roomId); }, 400); });
+      }
+      function openBotForm(bot) {
+        pset({
+          formBot: bot
+            ? { name: bot.name, title: bot.title || "", description: bot.description || "", persona: bot.persona || "", model: bot.model || "", shape: (bot.avatar && bot.avatar.shape) || "blobatar", color: (bot.avatar && bot.avatar.color) || "#8b5cf6", edit: true }
+            : { name: "", title: "", description: "", persona: "", model: "", shape: "blobatar", color: "#8b5cf6", edit: false }
+        });
+      }
+      function saveBot() {
+        var f = st.formBot;
+        if (!f) return;
+        fetch("/portal/api/admin/bot-save", {
+          method: "POST", headers: { "content-type": "application/json" },
+          body: JSON.stringify({ name: f.name, title: f.title, description: f.description, persona: f.persona, model: f.model, avatarShape: f.shape, avatarColor: f.shape === "blobatar" ? "" : f.color })
+        }).then(function (r) { return r.json(); }).then(function (d) {
+          if (d && d.error) { toast("err", d.error); return; }
+          pset({ formBot: null });
+          toast("ok", "已保存");
+          load();
+        });
+      }
+      function removeBot(bot) {
+        if (!window.confirm("删除 Bot「" + (bot.title || bot.name) + "」？它的聊天记录会保留在各自的会话里。")) return;
+        fetch("/portal/api/admin/bot-delete", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ name: bot.name }) })
+          .then(function (r) { return r.json(); }).then(function (d) {
+            if (d && d.error) { toast("err", d.error); return; }
+            pset({ view: "roster", botName: "" });
+            load();
+          });
+      }
+      function openRoomForm(room) {
+        pset({
+          formRoom: room
+            ? { id: room.id, name: room.name, members: (room.members || []).slice(), edit: true }
+            : { id: "", name: "", members: [], edit: false }
+        });
+      }
+      function toggleMember(name) {
+        var f = st.formRoom;
+        if (!f) return;
+        var m = (f.members || []).slice();
+        var i = m.indexOf(name);
+        if (i >= 0) m.splice(i, 1); else m.push(name);
+        pset({ formRoom: { id: f.id, name: f.name, members: m, edit: f.edit } });
+      }
+      function saveRoom() {
+        var f = st.formRoom;
+        if (!f) return;
+        fetch("/portal/api/admin/room-save", {
+          method: "POST", headers: { "content-type": "application/json" },
+          body: JSON.stringify({ id: f.id || undefined, name: f.name, members: f.members })
+        }).then(function (r) { return r.json(); }).then(function (d) {
+          if (d && d.error) { toast("err", d.error); return; }
+          pset({ formRoom: null });
+          toast("ok", "已保存");
+          load();
+          if (d.room) openRoom(d.room);
+        });
+      }
+      function removeRoom(room) {
+        if (!window.confirm("解散群聊「" + room.name + "」？")) return;
+        fetch("/portal/api/admin/room-delete", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ id: room.id }) })
+          .then(function (r) { return r.json(); }).then(function (d) {
+            if (d && d.error) { toast("err", d.error); return; }
+            pset({ view: "roster", roomId: "", room: null });
+            load();
+          });
+      }
+      function botByName(name) {
+        for (var i = 0; i < st.bots.length; i++) if (st.bots[i].name === name) return st.bots[i];
+        return null;
+      }
+      function lastPreview(room) {
+        if (room && room.log && room.log.length) {
+          var e = room.log[room.log.length - 1];
+          return e.from.name + "：" + String(e.text || "").replace(/\s+/g, " ").slice(0, 42);
+        }
+        return (room.members || []).length + " 名成员";
+      }
+
+      function mentionQuery() {
+        var el = taRef.current;
+        if (!el) return null;
+        var caret = el.selectionStart || 0;
+        var upto = String(st.draft || "").slice(0, caret);
+        var m = /(^|\s)@([a-zA-Z0-9._-]*)$/.exec(upto);
+        if (!m) return null;
+        return { q: m[2].toLowerCase(), start: caret - m[2].length - 1 };
+      }
+      function insertMention(handle) {
+        var q = mentionQuery();
+        if (!q) return;
+        var cur = String(st.draft || "");
+        var next = cur.slice(0, q.start) + "@" + handle + " " + cur.slice((taRef.current && taRef.current.selectionStart) || cur.length);
+        pset({ draft: next, mention: null });
+        setTimeout(function () { if (taRef.current) { taRef.current.focus(); var p = q.start + handle.length + 2; try { taRef.current.setSelectionRange(p, p); } catch (e) {} } }, 0);
+      }
+      function onDraft(e) {
+        var val = e.target.value;
+        var caret = typeof e.target.selectionStart === "number" ? e.target.selectionStart : val.length;
+        var upto = String(val).slice(0, caret);
+        var m = /(^|\s)@([a-zA-Z0-9._-]*)$/.exec(upto);
+        pset({ draft: val, mention: m ? { q: (m[2] || "").toLowerCase(), list: st.room ? st.room.members : [] } : null });
+      }
+
+      var isAdmin = st.role === "admin";
+
+      function rosterEl() {
+        var botRows = [];
+        for (var i = 0; i < st.bots.length; i++) {
+          (function (b) {
+            var active = st.view === "bot" && st.botName === b.name;
+            botRows.push(h("button", { key: "b" + b.name, className: "bts-row" + (active ? " on" : ""), onClick: function () { openBot(b); } },
+              btsAvatar(b, b.name, 30),
+              h("div", { className: "col" },
+                h("div", { className: "n" }, h("span", { className: "dot" + (b.ok ? "" : " off") }), b.title || b.name),
+                h("div", { className: "p" }, b.description || ("@" + b.name))
+              )
+            ));
+          })(st.bots[i]);
+        }
+        var roomRows = [];
+        for (var j = 0; j < st.rooms.length; j++) {
+          (function (r) {
+            var active = st.view === "room" && st.roomId === r.id;
+            roomRows.push(h("button", { key: "r" + r.id, className: "bts-row" + (active ? " on" : ""), onClick: function () { openRoom(r); } },
+              btsAvatar({ name: r.name, avatar: { shape: "org", color: "#6b7280" } }, r.name, 30),
+              h("div", { className: "col" },
+                h("div", { className: "n" }, r.name),
+                h("div", { className: "p" }, lastPreview(r))
+              )
+            ));
+          })(st.rooms[j]);
+        }
+        return h("div", { className: "bts-rail" },
+          h("div", { className: "bts-sec" }, h("span", null, "BOTS"), isAdmin ? h("button", { className: "mini2", title: "新建 Bot", onClick: function () { openBotForm(null); } }, "＋") : null),
+          botRows.length ? botRows : h("div", { className: "p", style: { padding: "4px 8px", fontSize: "11.5px", opacity: .65 } }, isAdmin ? "还没有 Bot，点右上角 ＋ 新建" : "还没有 Bot"),
+          h("div", { className: "bts-sec" }, h("span", null, "群聊"), isAdmin ? h("button", { className: "mini2", title: "新建群聊", onClick: function () { openRoomForm(null); } }, "＋") : null),
+          roomRows.length ? roomRows : h("div", { className: "p", style: { padding: "4px 8px", fontSize: "11.5px", opacity: .65 } }, isAdmin ? "还没有群聊" : "还没有群聊")
+        );
+      }
+
+      function emptyEl() {
+        return h("div", { className: "bts-empty" },
+          h("div", null, "左边选一个 Bot 直接聊，或进群聊看成员协作。"),
+          isAdmin ? h("div", { style: { marginTop: "8px", display: "flex", gap: "8px", justifyContent: "center" } },
+            h("button", { className: "btn", onClick: function () { openBotForm(null); } }, "新建 Bot"),
+            h("button", { className: "btn gh", onClick: function () { openRoomForm(null); } }, "新建群聊")
+          ) : null
+        );
+      }
+
+      function botChatEl() {
+        var b = botByName(st.botName);
+        var chat = st.chat;
+        var msgs = (chat && chat.messages) || [];
+        var logKids = [];
+        for (var i = 0; i < msgs.length; i++) {
+          (function (mm) {
+            var you = mm.role === "user";
+            logKids.push(h("div", { key: "m" + i, className: "bts-e", style: you ? { alignItems: "flex-end" } : null },
+              h("div", { className: "em" }, h("span", { className: "nm" + (you ? " you" : "") }, you ? "你" : ((b && (b.title || b.name)) || st.botName)), h("span", { className: "tm" }, btsTime(mm.time))),
+              h("div", { className: "tx", style: you ? { background: "rgba(127,127,127,.08)", borderRadius: "9px", padding: "6px 9px" } : null }, mm.text)
+            ));
+          })(msgs[i]);
+        }
+        if (st.chatPhase === "waiting") logKids.push(h("div", { key: "wait", className: "bts-work" }, ((b && (b.title || b.name)) || st.botName) + " 正在思考…"));
+        if (!msgs.length && st.chatPhase !== "waiting") logKids.push(h("div", { key: "empty", className: "bts-empty" }, "还没有对话。说点什么开始。"));
+        return h("div", { className: "bts-chat" },
+          h("div", { className: "bts-h" },
+            !wide ? h("button", { className: "bts-ico", onClick: back }, "←") : null,
+            b ? btsAvatar(b, st.botName, 24) : null,
+            h("div", { className: "ttl" }, (b && (b.title || b.name)) || st.botName),
+            h("span", { className: "sub" }, b && b.model ? b.model : "默认模型"),
+            h("span", { className: "sp" }),
+            isAdmin && b ? h("button", { className: "bts-ico", title: "编辑资料", onClick: function () { openBotForm(b); } }, "⚙") : null,
+            isAdmin && b ? h("button", { className: "bts-ico dgr", title: "删除", onClick: function () { removeBot(b); } }, "🗑") : null
+          ),
+          h("div", { className: "bts-log" }, logKids),
+          h("div", { className: "bts-cmp" },
+            h("div", { className: "bts-box" },
+              h("textarea", { ref: taRef, rows: 1, value: st.draft, placeholder: "给 " + ((b && (b.title || b.name)) || st.botName) + " 发消息…", onChange: onDraft, onKeyDown: function (e) { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); sendChat(); } } }),
+              h("button", { className: "bts-send", disabled: !String(st.draft || "").trim() || st.sending, onClick: sendChat }, "发送")
+            )
+          )
+        );
+      }
+
+      function roomEl() {
+        var room = st.room;
+        if (!room) return h("div", { className: "bts-empty" }, "加载中…");
+        var act = st.act || { running: false, turn: "", activity: [] };
+        var evs = (act.activity || []).slice(-6).reverse();
+        var logKids = [];
+        var log = room.log || [];
+        for (var i = 0; i < log.length; i++) {
+          (function (e2, idx) {
+            var you = e2.from.kind === "user";
+            var b = botByName(e2.from.name);
+            var replyLink = null;
+            logKids.push(h("div", { key: "e" + idx, className: "bts-e" },
+              h("div", { className: "em" },
+                h("span", { className: "nm" + (you ? " you" : "") }, you ? "你" : ((b && (b.title || b.name)) || e2.from.name)),
+                h("span", { className: "tm" }, btsTime(e2.at))
+              ),
+              h("div", { className: "tx" }, e2.text)
+            ));
+          })(log[i], i);
+        }
+        if (act.running) logKids.push(h("div", { key: "run", className: "bts-work" }, (act.turn ? ((botByName(act.turn) || {}).title || act.turn) : "成员") + " 正在思考…"));
+        if (!log.length && !act.running) logKids.push(h("div", { key: "em", className: "bts-empty" }, "发第一条消息，成员会依次回应。"));
+        var latest = (act.activity || []).length ? (act.activity || [])[act.activity.length - 1] : null;
+        var latestText = latest ? ((latest.member ? ((botByName(latest.member) || {}).title || latest.member) + " · " : "") + (latest.kind === "working" ? "正在处理" : latest.kind === "reply" ? "已回复" : latest.kind === "done" ? "完成" : latest.kind === "stopped" ? "已停止" : latest.kind === "error" ? "出错" : latest.kind)) : "暂无活动";
+
+        var mentionEl = null;
+        if (st.mention) {
+          var mlist = [{ handle: "everyone", label: "所有人" }];
+          var mem = room.members || [];
+          for (var mi = 0; mi < mem.length; mi++) {
+            var mb = botByName(mem[mi]);
+            mlist.push({ handle: mem[mi], label: (mb && (mb.title || mb.name)) || mem[mi] });
+          }
+          var q = (st.mention.q || "");
+          var items = mlist.filter(function (x) { return !q || x.handle.toLowerCase().indexOf(q) === 0 || String(x.label).toLowerCase().indexOf(q) === 0; });
+          var rows = [];
+          for (var xi = 0; xi < items.length; xi++) {
+            (function (it) {
+              rows.push(h("div", { key: "mi" + it.handle, className: "mi", onClick: function () { insertMention(it.handle); } },
+                h("span", null, "@" + it.handle),
+                h("span", { className: "h" }, it.label)
+              ));
+            })(items[xi]);
+          }
+          if (rows.length) mentionEl = h("div", { className: "bts-ment" }, rows);
+        }
+
+        return h("div", { className: "bts-chat" },
+          h("div", { className: "bts-h" },
+            !wide ? h("button", { className: "bts-ico", onClick: back }, "←") : null,
+            btsAvatar({ name: room.name, avatar: { shape: "org", color: "#6b7280" } }, room.name, 24),
+            h("div", { className: "ttl" }, room.name),
+            h("span", { className: "sub" }, (room.members || []).length + " 名成员"),
+            h("span", { className: "sp" }),
+            isAdmin ? h("button", { className: "bts-ico", title: "群聊设置", onClick: function () { openRoomForm(room); } }, "⚙") : null,
+            isAdmin ? h("button", { className: "bts-ico dgr", title: "解散群聊", onClick: function () { removeRoom(room); } }, "🗑") : null
+          ),
+          h("div", { className: "bts-act" },
+            h("div", { className: "bar" },
+              h("button", { className: "tg", onClick: function () { pset({ actOpen: !st.actOpen }); } }, h("span", null, st.actOpen ? "▾" : "›"), h("b", null, "活动"), h("span", { style: { minWidth: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" } }, latestText + (latest ? " · " + btsAgo(latest.at) : ""))),
+              act.running ? h("button", { className: "bts-stop", onClick: stopRoom }, "■ 停止") : null
+            ),
+            st.actOpen ? h("div", { className: "lst" }, evs.length ? evs.map(function (ev2, k) { return h("div", { key: "ev" + k, className: "ev" }, h("span", null, (ev2.member ? ((botByName(ev2.member) || {}).title || ev2.member) + " · " : "") + (ev2.kind === "working" ? "正在处理…" : ev2.kind === "reply" ? "已回复" : ev2.kind === "done" ? "本轮完成" : ev2.kind === "stopped" ? "已停止" : ev2.kind === "error" ? "出错" : ev2.kind)), h("span", { className: "t" }, btsAgo(ev2.at))) }) : h("div", { className: "ev" }, "暂无活动")) : null
+          ),
+          h("div", { className: "bts-log" }, logKids),
+          h("div", { className: "bts-cmp" },
+            mentionEl,
+            h("div", { className: "bts-box" },
+              h("textarea", { ref: taRef, rows: 1, value: st.draft, placeholder: "给 " + room.name + " 发消息（@ 成员或 @everyone）…", onChange: onDraft, onKeyDown: function (e) { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); sendRoom(); } } }),
+              h("button", { className: "bts-send", disabled: !String(st.draft || "").trim() || st.sending, onClick: sendRoom }, "发送")
+            )
+          )
+        );
+      }
+
+      function modalEl() {
+        var fb = st.formBot;
+        var fr = st.formRoom;
+        if (!fb && !fr) return null;
+        var kids;
+        if (fb) {
+          kids = [
+            h("h3", { key: "t" }, fb.edit ? "编辑 Bot" : "新建 Bot"),
+            h("p", { className: "ps", key: "p" }, "一个 Bot = 一份常驻身份：自己的模型、工具与人设，一条永久对话。"),
+            h("div", { className: "bts-f", key: "n" }, h("label", null, "名称（小写）"), h("input", { value: fb.name, disabled: fb.edit, placeholder: "例如 reviewer", onChange: function (e) { pset({ formBot: { name: e.target.value.toLowerCase().replace(/[^a-z0-9._-]/g, ""), title: fb.title, description: fb.description, persona: fb.persona, model: fb.model, shape: fb.shape, color: fb.color, edit: fb.edit } }); } })),
+            h("div", { className: "bts-f", key: "t2" }, h("label", null, "头衔"), h("input", { value: fb.title, placeholder: "例如 代码审查员", onChange: function (e) { pset({ formBot: { name: fb.name, title: e.target.value, description: fb.description, persona: fb.persona, model: fb.model, shape: fb.shape, color: fb.color, edit: fb.edit } }); } })),
+            h("div", { className: "bts-f", key: "d" }, h("label", null, "简介"), h("input", { value: fb.description, placeholder: "一句话说明它负责什么", onChange: function (e) { pset({ formBot: { name: fb.name, title: fb.title, description: e.target.value, persona: fb.persona, model: fb.model, shape: fb.shape, color: fb.color, edit: fb.edit } }); } })),
+            h("div", { className: "bts-f", key: "pe" }, h("label", null, "人设"), h("textarea", { rows: 4, value: fb.persona, placeholder: "它怎么说话、按什么规则干活…", onChange: function (e) { pset({ formBot: { name: fb.name, title: fb.title, description: fb.description, persona: e.target.value, model: fb.model, shape: fb.shape, color: fb.color, edit: fb.edit } }); } })),
+            h("div", { className: "bts-f", key: "m" }, h("label", null, "模型（留空 = 跟随对话）"), h("input", { value: fb.model, placeholder: "deepseek-flash", onChange: function (e) { pset({ formBot: { name: fb.name, title: fb.title, description: fb.description, persona: fb.persona, model: e.target.value, shape: fb.shape, color: fb.color, edit: fb.edit } }); } })),
+            h("div", { className: "bts-f", key: "av" }, h("div", { className: "row2" },
+              h("select", { value: fb.shape, onChange: function (e) { pset({ formBot: { name: fb.name, title: fb.title, description: fb.description, persona: fb.persona, model: fb.model, shape: e.target.value, color: fb.color, edit: fb.edit } }); } },
+                h("option", { value: "blobatar" }, "blobatar"), h("option", { value: "squircle" }, "squircle"), h("option", { value: "circle" }, "circle")),
+              fb.shape !== "blobatar" ? h("input", { type: "color", value: fb.color, style: { width: "56px", padding: "2px" }, onChange: function (e) { pset({ formBot: { name: fb.name, title: fb.title, description: fb.description, persona: fb.persona, model: fb.model, shape: fb.shape, color: e.target.value, edit: fb.edit } }); } }) : null
+            )),
+            h("div", { className: "bts-foot", key: "f" },
+              h("button", { className: "btn gh", onClick: function () { pset({ formBot: null }); } }, "取消"),
+              h("button", { className: "btn", disabled: !fb.name || !(fb.title || fb.description || fb.persona), onClick: saveBot }, "保存")
+            )
+          ];
+        } else {
+          var picks = [];
+          for (var i = 0; i < st.bots.length; i++) {
+            (function (b) {
+              var on = (fr.members || []).indexOf(b.name) >= 0;
+              picks.push(h("div", { key: "p" + b.name, className: "pr" },
+                btsAvatar(b, b.name, 24),
+                h("div", null, h("div", null, b.title || b.name), h("div", { style: { fontSize: "10.5px", opacity: .65 } }, "@" + b.name)),
+                h("span", { className: "sp" }),
+                h("div", { className: "bts-ck" + (on ? " on" : ""), onClick: function () { toggleMember(b.name); } }, on ? "✓" : "")
+              ));
+            })(st.bots[i]);
+          }
+          kids = [
+            h("h3", { key: "t" }, fr.edit ? "群聊设置" : "新建群聊"),
+            h("p", { className: "ps", key: "p" }, "把两个以上的 Bot 拉进一个房间，各自以独立身份发言。"),
+            h("div", { className: "bts-f", key: "n" }, h("label", null, "群聊名称"), h("input", { value: fr.name, placeholder: "例如 Research, Coding, Coach", onChange: function (e) { pset({ formRoom: { id: fr.id, name: e.target.value, members: fr.members, edit: fr.edit } }); } })),
+            h("label", { key: "ml", style: { display: "block", fontSize: "11px", fontWeight: 600, marginBottom: "4px" } }, "成员（至少 2 个）"),
+            h("div", { key: "pl", className: "bts-pick" }, picks.length ? picks : h("div", { className: "pr" }, "还没有 Bot，先去创建一个")),
+            h("div", { className: "bts-foot", key: "f" },
+              h("button", { className: "btn gh", onClick: function () { pset({ formRoom: null }); } }, "取消"),
+              h("button", { className: "btn", disabled: !fr.name || (fr.members || []).length < 2, onClick: saveRoom }, fr.edit ? "保存" : "创建群聊")
+            )
+          ];
+        }
+        return h("div", { className: "bts-modal" }, h("div", { className: "bts-card" }, kids));
+      }
+
+      var trigger = h("button", { className: "ddb" + (wide ? "" : " rail") + (open ? " on" : ""), onClick: toggle, title: "Bots" },
+        h("span", { className: "ic" }, dicon("bots", 15)),
+        wide ? h("span", { className: "lbl" }, "Bots") : null
+      );
+      if (!open) return h("div", null, trigger);
+
+      var bodyKids = [];
+      if (st.msg) bodyKids.push(h("div", { key: "toast", className: "bts-toast" + (st.msg.kind === "err" ? " err" : "") }, st.msg.text));
+      if (st.phase === "loading") bodyKids.push(h("div", { key: "ld", className: "bts-empty" }, "加载中…"));
+      else if (st.phase === "error") bodyKids.push(h("div", { key: "er", className: "bts-empty" }, "读取失败，稍后再试"));
+      else {
+        bodyKids.push(h("div", { key: "wrap", className: "bts-wrap", style: { position: "relative" } },
+          rosterEl(),
+          st.view === "bot" ? botChatEl() : st.view === "room" ? roomEl() : emptyEl()
+        ));
+      }
+      bodyKids.push(modalEl());
+
+      return h("div", null, trigger, h("div", { key: "panel", className: "ddp" + (wide ? " fv" : "") },
+        h("div", { className: "hd" },
+          h("span", { className: "ico" }, dicon("bots", 22)),
+          h("div", { style: { flex: 1, minWidth: 0 } },
+            h("div", { className: "t1" }, "Bots"),
+            h("div", { className: "t2" }, "团队共用的常驻 Bot 与群聊：定义在共享区，聊天各自独立")
+          ),
+          h("button", { className: "x", onClick: function () { setOpen(false); } }, "← " + tr("fv.back"))
+        ),
+        h("div", { className: "bd" }, bodyKids)
+      ));
+    }
+
     /* ═══ 侧栏入口线性图标（统一 24×24 描边风格，stroke=currentColor） ═══ */
     var DESK_ICONS = {
       hub: ["M20 20a2 2 0 0 0 2-2V8a2 2 0 0 0-2-2h-7.9a2 2 0 0 1-1.69-.9L9.6 3.9A2 2 0 0 0 7.93 3H4a2 2 0 0 0-2 2v13a2 2 0 0 0 2 2Z"],
@@ -6967,6 +7550,19 @@ body[data-ds-dark-theme] .ddp .agpill.cur { color:#e0b25c; }
             },
           },
           AgentsPanel
+        );
+      });
+      ctx.slots.inject("sidebar.footer.action", function () {
+        return ctx.slots.register(
+          {
+            name: "sidebar.footer.action",
+            id: "desk-bots",
+            order: 90,
+            label: function () {
+              return "Bots";
+            },
+          },
+          BotsPanel
         );
       });
       ctx.slots.inject("sidebar.footer.action", function () {
