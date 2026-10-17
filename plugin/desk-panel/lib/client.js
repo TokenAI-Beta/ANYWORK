@@ -4142,6 +4142,9 @@ body[data-ds-dark-theme] .ddp .agpill.cur { color:#e0b25c; }
       ".bts-th{font-size:10.5px;color:var(--dsw-alias-state-business-primary,#4f7cf7);padding:1px 0 2px 1px}",
       ".bts-work{font-size:11px;font-style:italic;color:var(--dsw-alias-label-tertiary,#8a8f98);padding:2px 1px 4px}",
       ".bts-empty{padding:34px 12px;text-align:center;font-size:12.5px;color:var(--dsw-alias-label-tertiary,#8a8f98)}",
+      ".bts-wrap.narrow{display:flex;flex-direction:column;height:calc(100vh - 120px);min-height:0}",
+      ".bts-wrap.narrow .bts-rail{max-height:none;border-right:0;padding-right:0;border-bottom:1px solid var(--dsw-alias-border-l2,#e8eaed);padding-bottom:6px}",
+      ".bts-wrap.narrow .bts-chat{flex:1;min-height:0;max-height:none}",
       ".bts-empty .btn{margin-top:10px}",
       ".bts-cmp{border-top:1px solid var(--dsw-alias-border-l2,#e8eaed);padding:8px;flex:0 0 auto;position:relative}",
       ".bts-box{display:flex;align-items:flex-end;gap:6px;border:1px solid var(--dsw-alias-border-l2,#d4d7dc);border-radius:10px;padding:6px 6px 6px 9px;background:var(--dsw-alias-bg-base,#f7f8fa)}",
@@ -4223,6 +4226,7 @@ body[data-ds-dark-theme] .ddp .agpill.cur { color:#e0b25c; }
 
     function BotsPanel(props) {
       var wide = !!(props && props.wide);
+      var narrow = (typeof window !== "undefined" && window.matchMedia) ? window.matchMedia("(max-width: 780px)").matches : false;
       var openPair = React.useState(false);
       var open = openPair[0];
       var setOpen = openPair[1];
@@ -4501,7 +4505,7 @@ body[data-ds-dark-theme] .ddp .agpill.cur { color:#e0b25c; }
         if (!msgs.length && st.chatPhase !== "waiting") logKids.push(h("div", { key: "empty", className: "bts-empty" }, "还没有对话。说点什么开始。"));
         return h("div", { className: "bts-chat" },
           h("div", { className: "bts-h" },
-            !wide ? h("button", { className: "bts-ico", onClick: back }, "←") : null,
+            (!wide || narrow) ? h("button", { className: "bts-ico", onClick: back }, "←") : null,
             b ? btsAvatar(b, st.botName, 24) : null,
             h("div", { className: "ttl" }, (b && (b.title || b.name)) || st.botName),
             h("span", { className: "sub" }, b && b.model ? b.model : "默认模型"),
@@ -4569,7 +4573,7 @@ body[data-ds-dark-theme] .ddp .agpill.cur { color:#e0b25c; }
 
         return h("div", { className: "bts-chat" },
           h("div", { className: "bts-h" },
-            !wide ? h("button", { className: "bts-ico", onClick: back }, "←") : null,
+            (!wide || narrow) ? h("button", { className: "bts-ico", onClick: back }, "←") : null,
             btsAvatar({ name: room.name, avatar: { shape: "org", color: "#6b7280" } }, room.name, 24),
             h("div", { className: "ttl" }, room.name),
             h("span", { className: "sub" }, (room.members || []).length + " 名成员"),
@@ -4647,7 +4651,7 @@ body[data-ds-dark-theme] .ddp .agpill.cur { color:#e0b25c; }
         return h("div", { className: "bts-modal" }, h("div", { className: "bts-card" }, kids));
       }
 
-      var trigger = h("button", { className: "ddb" + (wide ? "" : " rail") + (open ? " on" : ""), onClick: toggle, title: "Bots" },
+      var trigger = h("button", { className: "ddb" + (wide ? "" : " rail") + (open ? " on" : ""), onClick: toggle, title: "Bots", "data-desk": "bots" },
         h("span", { className: "ic" }, dicon("bots", 15)),
         wide ? h("span", { className: "lbl" }, "Bots") : null
       );
@@ -4658,8 +4662,8 @@ body[data-ds-dark-theme] .ddp .agpill.cur { color:#e0b25c; }
       if (st.phase === "loading") bodyKids.push(h("div", { key: "ld", className: "bts-empty" }, "加载中…"));
       else if (st.phase === "error") bodyKids.push(h("div", { key: "er", className: "bts-empty" }, "读取失败，稍后再试"));
       else {
-        bodyKids.push(h("div", { key: "wrap", className: "bts-wrap", style: { position: "relative" } },
-          rosterEl(),
+        bodyKids.push(h("div", { key: "wrap", className: "bts-wrap" + (narrow ? " narrow" : ""), style: { position: "relative" } },
+          narrow && st.view !== "roster" ? null : rosterEl(),
           st.view === "bot" ? botChatEl() : st.view === "room" ? roomEl() : emptyEl()
         ));
       }
