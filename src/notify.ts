@@ -1,5 +1,5 @@
-// 通知桥：把消息推给工作台外的渠道（webhook / 通知平台如微信）
-// 零依赖：webhook 走全局 fetch；Hermes 走 Windows 侧 CLI（WSL interop 可直接执行）
+// 通知桥：把消息推给工作台外的渠道（webhook / 中继平台如微信）
+// 零依赖：webhook 走全局 fetch；中继走 Windows 侧 CLI（WSL interop 可直接执行）
 import { execFile } from 'node:child_process'
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs'
 import { createHmac, randomBytes } from 'node:crypto'

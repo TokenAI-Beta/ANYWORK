@@ -271,7 +271,7 @@ footer { font-size: 12.5px; color: #9aa0a6; padding: 28px 0 36px; }
 .login-wrap .card { padding: 30px 28px 26px; }
 .login-wrap h1 { margin-bottom: 4px; font-size: 20px; }
 
-/* —— v3 主题（2026-10-14：统一设计令牌）—— */
+/* —— v3 暖纸主题（2026-10-14：统一设计令牌）—— */
 :root { --acc:#577da8; --acc2:#43658e; --accT:rgba(87,125,168,.16);
   /* 强调色：浅色主题=雾蓝 #577DA8；深色主题=松绿 #93B78A（供工作台主题使用） */
   --page:#faf9f5; --surface:#fff; --oat:#f0eee6; --warm-border:#dedcd1; --warm-border-soft:#e9e6dd;
@@ -781,7 +781,7 @@ export function startPortal(opts: PortalOptions) {
       // —— 工作台内小组件：移动端样式 + 用量 JSON ——
       if (req.method === 'GET' && path === '/portal/static/desk-mobile.css') {
         res.writeHead(200, { 'content-type': 'text/css; charset=utf-8', 'cache-control': 'no-cache' })
-        return res.end(DESK_MOBILE_CSS + CLAUDE_M_CSS)
+        return res.end(DESK_MOBILE_CSS + DESK_MOBILE_THEME_CSS)
       }
       if (req.method === 'GET' && path === '/portal/api/usage') {
         if (!user) {
@@ -2615,11 +2615,11 @@ export function startPortal(opts: PortalOptions) {
   return server
 }
 
-const CLAUDE_M_CSS = `
-/* ===== Claude 移动端风格（暖黑 + 陶土）· 2026-10-15 =====
+const DESK_MOBILE_THEME_CSS = `
+/* ===== 暖黑移动端主题（暖黑 + 陶土）· 2026-10-15 =====
    仅作用于 ≤820px（手机/窄屏）；令牌对齐 dsh 的 --dsw-alias-*；
    作用域挂在 html[data-desk-wb]（工作台专有标记），门户页不受影响。
-   参考来源：统一设计令牌 + 手机视口验证（390×844）。 */
+   设计基准：暖黑/陶土色板与 390×844 手机视口验证。 */
 @media (max-width: 820px) {
 html[data-desk-wb] body {
   --dsw-alias-bg-base: #151515 !important;
@@ -2708,7 +2708,7 @@ html[data-desk-wb] .haTdLq_brandIdentity .haTdLq_brandName {
   font-size: 17px !important; font-weight: 600 !important; color: #F0EFEC !important;
 }
 html[data-desk-wb] .haTdLq_toggle svg { width: 18px !important; height: 18px !important; }
-/* 新会话 = Claude「新建」风格 */
+/* 新会话 = 「新建」样式 */
 html[data-desk-wb] .haTdLq_newSession {
   width: 100% !important; height: 46px !important; border-radius: 12px !important;
   background: rgba(255,255,255,0.07) !important; border: 0 !important;

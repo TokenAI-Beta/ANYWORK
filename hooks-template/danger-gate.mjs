@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-// DSH-ANYWORK 团队安全闸门 · PreToolUse 检查器（Claude Code 钩子方言）
+// DSH-ANYWORK 团队安全闸门 · PreToolUse 检查器（PreToolUse 钩子方言）
 // 输入：stdin 的钩子载荷 JSON（tool_name / tool_input.command / cwd …）
 // 输出：放行 = 静默退出；拦截 = stdout 输出 permissionDecision（deny / ask）
 // 规则：同目录 rules.json（每次调用重读，改完即生效；语法错则跳过该条）

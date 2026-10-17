@@ -13,7 +13,7 @@ log() { echo "[provision:$u] $*"; }
 
 log "开始自动配置（端口 $p，家目录 $h）"
 
-# 1) 实例目录 + 共享区软链（与 bootstrap 同款）
+# 1) 实例目录 + 共享区软链（与 bootstrap 一致）
 mkdir -p "$h"
 chmod 700 "$h"
 ln -sfn "$home/desk-data/skills" "$h/skills"

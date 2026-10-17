@@ -2,8 +2,7 @@
 
 把工作台的 `agents/*.md` 定义（Markdown + YAML frontmatter，正文 = persona）接入
 dsh 的委派（subagent）体系：模型获得一个 `agent` 工具，按 `subagent_type` 把独立
-任务交给定义好的子代理——**独立上下文、只返回最终结果**（Claude Code subagents
-的对应玩法，跑在 dsh 引擎上）。
+任务交给定义好的子代理——**独立上下文、只返回最终结果**（跑在 dsh 引擎上）。
 
 零依赖、零构建：纯 ESM JavaScript（只用 node 内置模块）。引擎助手
 （`defineTool` / `settleRun`）在运行时从**正在运行的 dsh 安装**动态加载
@@ -55,7 +54,7 @@ DSH_HOME=<实例> node <dsh>/apps/cli/lib/bin.js plugin --profile web add link:<
 - 定义目录内容变化（文件名/mtime/size 指纹）→ 下一次工具调用前自动重登记，工具描述里的目录随之刷新。
 - 前台默认等结果；`background: true`（定义级）或调用参数 `run_in_background: true` → 走 jobs 后台任务（`job_output` 收取 / `job_kill` 停止）。
 - per-def 的模型/推理强度/工具过滤/深度/persona 依赖 provider 能力；内置 spawn/fork 全支持，不支持时**响亮报错**而非静默忽略。
-- 与 Claude Code 定义的对应：`name`/`description` 同名同义；`tools` = 工具白名单；`model` = 模型；正文 = 系统提示词（此处为 persona）；`background` = 后台默认。
+- 字段对应：`name`/`description` 同名同义；`tools` = 工具白名单；`model` = 模型；正文 = 系统提示词（此处为 persona）；`background` = 后台默认。
 
 ## 结算通知（可选）
 

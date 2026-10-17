@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# 给各实例装「团队安全闸门」（hooks-claude-code 桥 + 危险命令策略）——幂等可重复跑
+# 给各实例装「团队安全闸门」（hooks 桥 + 危险命令策略）——幂等可重复跑
 # 用法: bash scripts/install-hooks.sh
 set -euo pipefail
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"

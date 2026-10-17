@@ -1,6 +1,6 @@
 # 团队安全闸门（hooks-template）
 
-对每个成员实例的 **bash 工具**做执行前检查（dsh 官方 `hooks-claude-code` 桥的 PreToolUse 拦截点）：
+对每个成员实例的 **bash 工具**做执行前检查（dsh 官方 hooks 桥的 PreToolUse 拦截点）：
 
 - `deny`（默认拦截）：明显破坏性命令 —— 递归强删关键路径、写块设备、删密钥/库文件、fork 炸弹、停用工作台服务、关机重启等。
 - `ask`（弹审批）：风险但常见的操作 —— sudo、`curl | bash`、force push、递归改权限/属主、绝对路径递归删除（工作区外）等。成员在会话里看到审批框，允许才执行。
@@ -20,7 +20,7 @@
 bash scripts/install-hooks.sh   # 幂等：铺 ~/desk-data/hooks/ + 各实例挂桥 + 重启提示
 ```
 
-脚本会把本目录三件套复制到 `~/desk-data/hooks/`，并给每个实例的 profile 补丁挂上 `hooks-claude-code` 行（`configPath` 指向共享区）。
+脚本会把本目录三件套复制到 `~/desk-data/hooks/`，并给每个实例的 profile 补丁挂上 hooks 桥行（`configPath` 指向共享区）。
 
 ## 调规则
 
