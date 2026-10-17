@@ -20,6 +20,7 @@ import { listDrive, makeDir, movePath, removePath, resolveInDrive, saveToDrive, 
 import { addNotifyRoute, addReminder, dispatchNotify, listNotifyLog, listNotifyRoutes, listReminders, listRemindersSent, readOrCreateNotifyToken, removeNotifyRoute, removeReminder, toggleNotifyRoute } from './notify.ts'
 import { defaultDataDir } from './db.ts'
 import { collectAgentRuns, collectAgents, collectConnectors, collectPlatforms, collectPresets, collectSkills, deleteAgent, readAgent, readMainModel, readSkill, saveAgent, setAgentModel } from './panel.ts'
+import { appendRoomEntry, collectBots, collectRooms, deleteBot, deleteRoom, getRoom, readBot, saveBot, saveRoom } from './bots.ts'
 import { CONN_PLATFORMS, getConn, removeConn, setConn, testConn, validateConnConfig } from './conns.ts'
 import { collectOps } from './ops.ts'
 import { addTimer, autoStats, ensureRuleRows, listAutoLog, listAutos, removeAuto, toggleAuto, RULE_CATALOG, ruleEnabled } from './auto.ts'
@@ -1273,6 +1274,31 @@ export function startPortal(opts: PortalOptions) {
         res.writeHead(200, { 'content-type': 'application/json; charset=utf-8' })
         return res.end(JSON.stringify({ ok: true, items: collectAgentRuns(db, 30, user.role === 'admin' ? undefined : { user: String(user.username) }) }))
       }
+      // —— Bots（常驻身份 + 群聊房间）——
+      if (req.method === 'GET' && path === '/portal/api/panel/bots') {
+        if (!user) {
+          res.writeHead(401, { 'content-type': 'application/json' })
+          return res.end(JSON.stringify({ error: 'login required' }))
+        }
+        res.writeHead(200, { 'content-type': 'application/json; charset=utf-8' })
+        return res.end(JSON.stringify({ ok: true, role: user.role, items: collectBots(), rooms: collectRooms() }))
+      }
+      if (req.method === 'GET' && path === '/portal/api/panel/bot') {
+        if (!user) {
+          res.writeHead(401, { 'content-type': 'application/json' })
+          return res.end(JSON.stringify({ error: 'login required' }))
+        }
+        res.writeHead(200, { 'content-type': 'application/json; charset=utf-8' })
+        return res.end(JSON.stringify(readBot(url.searchParams.get('name') ?? '', langOf(req))))
+      }
+      if (req.method === 'GET' && path === '/portal/api/panel/room') {
+        if (!user) {
+          res.writeHead(401, { 'content-type': 'application/json' })
+          return res.end(JSON.stringify({ error: 'login required' }))
+        }
+        res.writeHead(200, { 'content-type': 'application/json; charset=utf-8' })
+        return res.end(JSON.stringify(getRoom(url.searchParams.get('id') ?? '', langOf(req))))
+      }
       // —— 自动化（成员自建定时任务 + 团队规则卡）——
       if (req.method === 'GET' && path === '/portal/api/auto') {
         if (!user) {
@@ -2071,6 +2097,60 @@ export function startPortal(opts: PortalOptions) {
             res.end(JSON.stringify(obj))
           }
           return reply(setAgentModel(String(body.file ?? '').trim(), String(body.model ?? ''), langOf(req)))
+        }
+        if (req.method === 'POST' && path === '/portal/api/admin/bot-save') {
+          const body = await readJsonBody()
+          const reply = (obj: Record<string, unknown>): void => {
+            res.writeHead(200, { 'content-type': 'application/json; charset=utf-8' })
+            res.end(JSON.stringify(obj))
+          }
+          return reply(saveBot({
+            name: body.name,
+            title: body.title,
+            description: body.description,
+            persona: body.persona,
+            model: body.model,
+            tools: body.tools,
+            avatarShape: body.avatar_shape ?? body.avatarShape,
+            avatarColor: body.avatar_color ?? body.avatarColor,
+            avatarImage: body.avatar_image ?? body.avatarImage,
+          }, langOf(req)))
+        }
+        if (req.method === 'POST' && path === '/portal/api/admin/bot-delete') {
+          const body = await readJsonBody()
+          const reply = (obj: Record<string, unknown>): void => {
+            res.writeHead(200, { 'content-type': 'application/json; charset=utf-8' })
+            res.end(JSON.stringify(obj))
+          }
+          return reply(deleteBot(String(body.name ?? '').trim(), langOf(req)))
+        }
+        if (req.method === 'POST' && path === '/portal/api/admin/room-save') {
+          const body = await readJsonBody()
+          const reply = (obj: Record<string, unknown>): void => {
+            res.writeHead(200, { 'content-type': 'application/json; charset=utf-8' })
+            res.end(JSON.stringify(obj))
+          }
+          return reply(saveRoom({ id: body.id, name: body.name, members: body.members }, langOf(req)))
+        }
+        if (req.method === 'POST' && path === '/portal/api/admin/room-delete') {
+          const body = await readJsonBody()
+          const reply = (obj: Record<string, unknown>): void => {
+            res.writeHead(200, { 'content-type': 'application/json; charset=utf-8' })
+            res.end(JSON.stringify(obj))
+          }
+          return reply(deleteRoom(String(body.id ?? '').trim(), langOf(req)))
+        }
+        if (req.method === 'POST' && path === '/portal/api/admin/room-message') {
+          const body = await readJsonBody()
+          const reply = (obj: Record<string, unknown>): void => {
+            res.writeHead(200, { 'content-type': 'application/json; charset=utf-8' })
+            res.end(JSON.stringify(obj))
+          }
+          return reply(appendRoomEntry(String(body.id ?? '').trim(), {
+            from: { kind: 'user', name: String(body.from ?? 'You') },
+            text: String(body.text ?? ''),
+            thread: body.thread ? String(body.thread) : undefined,
+          }, langOf(req)))
         }
 
         if (req.method === 'GET' && path === '/portal/api/admin/channel-presets') {
