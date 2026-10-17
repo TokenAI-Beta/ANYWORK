@@ -22,6 +22,7 @@ import { defaultDataDir } from './db.ts'
 import { collectAgentRuns, collectAgents, collectConnectors, collectPlatforms, collectPresets, collectSkills, deleteAgent, readAgent, readMainModel, readSkill, saveAgent, setAgentModel } from './panel.ts'
 import { appendRoomEntry, collectBots, collectRooms, deleteBot, deleteRoom, getRoom, readBot, saveBot, saveRoom } from './bots.ts'
 import { cancelBotChat, ensureBotChat, readBotChat, sendBotMessage } from './bot-chat.ts'
+import { roomSnapshot, startRoomTurn, stopRoom } from './rooms-run.ts'
 import { CONN_PLATFORMS, getConn, removeConn, setConn, testConn, validateConnConfig } from './conns.ts'
 import { collectOps } from './ops.ts'
 import { addTimer, autoStats, ensureRuleRows, listAutoLog, listAutos, removeAuto, toggleAuto, RULE_CATALOG, ruleEnabled } from './auto.ts'
@@ -1338,6 +1339,40 @@ export function startPortal(opts: PortalOptions) {
           return reply(await sendBotMessage(db, String(user.username), name, String(body.text ?? ''), langOf(req)))
         }
         return reply(await cancelBotChat(db, String(user.username), name))
+      }
+      // —— 群聊轮转（发一句 → 成员串行回复；活动流 + 停止）——
+      if (req.method === 'GET' && path === '/portal/api/panel/room-activity') {
+        if (!user) {
+          res.writeHead(401, { 'content-type': 'application/json' })
+          return res.end(JSON.stringify({ error: 'login required' }))
+        }
+        const id = String(url.searchParams.get('id') ?? '')
+        const room = getRoom(id, langOf(req))
+        const snap = roomSnapshot(id)
+        res.writeHead(200, { 'content-type': 'application/json; charset=utf-8' })
+        return res.end(JSON.stringify({ ok: true, ...snap, activity: 'room' in room ? room.room.activity : [] }))
+      }
+      if (req.method === 'POST' && (path === '/portal/api/panel/room-send' || path === '/portal/api/panel/room-stop')) {
+        if (!user) {
+          res.writeHead(401, { 'content-type': 'application/json' })
+          return res.end(JSON.stringify({ error: 'login required' }))
+        }
+        let body: Record<string, unknown> = {}
+        try {
+          const v = JSON.parse(await readBody(req)) as unknown
+          if (v && typeof v === 'object') body = v as Record<string, unknown>
+        } catch {
+          body = {}
+        }
+        const reply = (obj: Record<string, unknown>): void => {
+          res.writeHead(200, { 'content-type': 'application/json; charset=utf-8' })
+          res.end(JSON.stringify(obj))
+        }
+        const id = String(body.id ?? '').trim()
+        if (path === '/portal/api/panel/room-send') {
+          return reply(await startRoomTurn(db, String(user.username), id, String(body.text ?? ''), langOf(req)))
+        }
+        return reply(await stopRoom(db, String(user.username), id, langOf(req)))
       }
       // —— 自动化（成员自建定时任务 + 团队规则卡）——
       if (req.method === 'GET' && path === '/portal/api/auto') {

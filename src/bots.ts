@@ -36,11 +36,20 @@ export interface RoomEntry {
   images?: unknown[]
 }
 
+export interface RoomActivity {
+  at: number
+  kind: 'join' | 'working' | 'reply' | 'done' | 'error' | 'stopped'
+  member?: string
+  thread?: string
+  text?: string
+}
+
 export interface RoomInfo {
   id: string
   name: string
   members: string[]
   log: RoomEntry[]
+  activity: RoomActivity[]
   revision: number
   createdAt: number
   updatedAt: number
@@ -281,6 +290,18 @@ function normalizeRoom(r: RoomInfo): RoomInfo {
     revision: Number(r.revision ?? 0) || 0,
     createdAt: Number(r.createdAt ?? 0) || Date.now(),
     updatedAt: Number(r.updatedAt ?? 0) || Date.now(),
+    activity: Array.isArray(r.activity)
+      ? r.activity
+          .filter((a) => a && typeof a === 'object' && typeof (a as RoomActivity).kind === 'string')
+          .slice(-200)
+          .map((a) => ({
+            at: Number(a.at ?? 0) || Date.now(),
+            kind: String(a.kind) as RoomActivity['kind'],
+            ...(a.member ? { member: String(a.member) } : {}),
+            ...(a.thread ? { thread: String(a.thread) } : {}),
+            ...(a.text ? { text: String(a.text).slice(0, 300) } : {}),
+          }))
+      : [],
   }
 }
 
@@ -344,6 +365,7 @@ export function saveRoom(input: RoomSaveInput, lang: string = 'zh'): { ok: true;
     name,
     members,
     log: [],
+    activity: [],
     revision: 1,
     createdAt: now,
     updatedAt: now,
@@ -393,4 +415,28 @@ export function appendRoomEntry(id: string, input: RoomEntryInput, lang: string 
   const w = writeRoomsRaw(data)
   if ('error' in w) return { error: L(lang, '写入失败：', 'Write failed: ') + w.error }
   return { ok: true, room, entry }
+}
+
+/** 追加一条房间活动（保留最近 200 条）。 */
+export function appendRoomActivity(
+  id: string,
+  ev: { kind: RoomActivity['kind']; member?: string; thread?: string; text?: string },
+  lang: string = 'zh',
+): { ok: true; room: RoomInfo } | { error: string } {
+  const data = readRoomsRaw()
+  const room = data.rooms.find((r) => r.id === String(id || '').trim())
+  if (!room) return { error: L(lang, '房间不存在', 'Room not found') }
+  room.activity.push({
+    at: Date.now(),
+    kind: ev.kind,
+    ...(ev.member ? { member: String(ev.member) } : {}),
+    ...(ev.thread ? { thread: String(ev.thread) } : {}),
+    ...(ev.text ? { text: String(ev.text).slice(0, 300) } : {}),
+  })
+  if (room.activity.length > 200) room.activity = room.activity.slice(-200)
+  room.revision += 1
+  room.updatedAt = Date.now()
+  const w = writeRoomsRaw(data)
+  if ('error' in w) return { error: L(lang, '写入失败：', 'Write failed: ') + w.error }
+  return { ok: true, room }
 }
