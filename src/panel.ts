@@ -437,7 +437,7 @@ interface RunRowLite {
 const runFileCache = new Map<string, { key: string; sid: string; rows: RunRowLite[] }>()
 const childFileCache = new Map<string, { key: string; steps: AgentRunStep[]; lastAssistant: string; lastEventTime: number }>()
 
-function decodeSessionEventsFile(file: string): Record<string, unknown>[] {
+export function decodeSessionEventsFile(file: string): Record<string, unknown>[] {
   const out: Record<string, unknown>[] = []
   let buf: Buffer
   try {
@@ -591,7 +591,7 @@ function sessionTitleOf(home: string, sid: string): string {
   return ''
 }
 
-function findSessionFileUnder(sdir: string, sid: string): string | null {
+export function findSessionFileUnder(sdir: string, sid: string): string | null {
   let buckets: string[] = []
   try {
     buckets = readdirSync(sdir)

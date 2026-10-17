@@ -21,6 +21,7 @@ import { addNotifyRoute, addReminder, dispatchNotify, listNotifyLog, listNotifyR
 import { defaultDataDir } from './db.ts'
 import { collectAgentRuns, collectAgents, collectConnectors, collectPlatforms, collectPresets, collectSkills, deleteAgent, readAgent, readMainModel, readSkill, saveAgent, setAgentModel } from './panel.ts'
 import { appendRoomEntry, collectBots, collectRooms, deleteBot, deleteRoom, getRoom, readBot, saveBot, saveRoom } from './bots.ts'
+import { cancelBotChat, ensureBotChat, readBotChat, sendBotMessage } from './bot-chat.ts'
 import { CONN_PLATFORMS, getConn, removeConn, setConn, testConn, validateConnConfig } from './conns.ts'
 import { collectOps } from './ops.ts'
 import { addTimer, autoStats, ensureRuleRows, listAutoLog, listAutos, removeAuto, toggleAuto, RULE_CATALOG, ruleEnabled } from './auto.ts'
@@ -1298,6 +1299,45 @@ export function startPortal(opts: PortalOptions) {
         }
         res.writeHead(200, { 'content-type': 'application/json; charset=utf-8' })
         return res.end(JSON.stringify(getRoom(url.searchParams.get('id') ?? '', langOf(req))))
+      }
+      // —— Bot 常驻会话（每成员各自一条）——
+      if (req.method === 'GET' && path === '/portal/api/panel/bot-chat') {
+        if (!user) {
+          res.writeHead(401, { 'content-type': 'application/json' })
+          return res.end(JSON.stringify({ error: 'login required' }))
+        }
+        res.writeHead(200, { 'content-type': 'application/json; charset=utf-8' })
+        return res.end(JSON.stringify(readBotChat(String(user.username), String(url.searchParams.get('name') ?? ''))))
+      }
+      if (
+        req.method === 'POST' &&
+        (path === '/portal/api/panel/bot-chat-open' ||
+          path === '/portal/api/panel/bot-chat-send' ||
+          path === '/portal/api/panel/bot-chat-cancel')
+      ) {
+        if (!user) {
+          res.writeHead(401, { 'content-type': 'application/json' })
+          return res.end(JSON.stringify({ error: 'login required' }))
+        }
+        let body: Record<string, unknown> = {}
+        try {
+          const v = JSON.parse(await readBody(req)) as unknown
+          if (v && typeof v === 'object') body = v as Record<string, unknown>
+        } catch {
+          body = {}
+        }
+        const name = String(body.name ?? '').trim()
+        const reply = (obj: Record<string, unknown>): void => {
+          res.writeHead(200, { 'content-type': 'application/json; charset=utf-8' })
+          res.end(JSON.stringify(obj))
+        }
+        if (path === '/portal/api/panel/bot-chat-open') {
+          return reply(await ensureBotChat(db, String(user.username), name, langOf(req)))
+        }
+        if (path === '/portal/api/panel/bot-chat-send') {
+          return reply(await sendBotMessage(db, String(user.username), name, String(body.text ?? ''), langOf(req)))
+        }
+        return reply(await cancelBotChat(db, String(user.username), name))
       }
       // —— 自动化（成员自建定时任务 + 团队规则卡）——
       if (req.method === 'GET' && path === '/portal/api/auto') {
