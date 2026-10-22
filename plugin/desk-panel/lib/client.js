@@ -621,6 +621,67 @@ window.__ModuleLoader__.load({
       "sec.notify": "通知",
       "sec.ops": "运维",
       "sec.tasks": "任务板",
+      "bts.saved": "已保存",
+      "bts.confirmDelBotPfx": "删除 Bot「",
+      "bts.confirmDelBotSfx": "」？它的聊天记录会保留在各自的会话里。",
+      "bts.confirmDelRoomPfx": "解散群聊「",
+      "bts.confirmDelRoomSfx": "」？",
+      "bts.membersSuffix": " 名成员",
+      "bts.newBot": "新建 Bot",
+      "bts.noBotsAdmin": "还没有 Bot，点右上角 ＋ 新建",
+      "bts.noBots": "还没有 Bot",
+      "bts.secRooms": "群聊",
+      "bts.noRooms": "还没有群聊",
+      "bts.pickHint": "左边选一个 Bot 直接聊，或进群聊看成员协作。",
+      "bts.newRoom": "新建群聊",
+      "bts.you": "你",
+      "bts.thinking": " 正在思考…",
+      "bts.noChats": "还没有对话。说点什么开始。",
+      "bts.defaultModel": "默认模型",
+      "bts.editProfile": "编辑资料",
+      "bts.delete": "删除",
+      "bts.msgToPfx": "给 ",
+      "bts.msgToSfx": " 发消息…",
+      "bts.send": "发送",
+      "bts.loading": "加载中…",
+      "bts.member": "成员",
+      "bts.kWorking": "正在处理",
+      "bts.kReply": "已回复",
+      "bts.kDone": "完成",
+      "bts.kStopped": "已停止",
+      "bts.kError": "出错",
+      "bts.kNone": "暂无活动",
+      "bts.kWorkingEl": "正在处理…",
+      "bts.kDoneRound": "本轮完成",
+      "bts.roomEmpty": "发第一条消息，成员会依次回应。",
+      "bts.everyone": "所有人",
+      "bts.roomSettings": "群聊设置",
+      "bts.dissolve": "解散群聊",
+      "bts.activity": "活动",
+      "bts.stop": "■ 停止",
+      "bts.roomMsgPfx": "给 ",
+      "bts.roomMsgSfx": " 发消息（@ 成员或 @everyone）…",
+      "bts.editBot": "编辑 Bot",
+      "bts.formBotHint": "一个 Bot = 一份常驻身份：自己的模型、工具与人设，一条永久对话。",
+      "bts.fName": "名称（小写）",
+      "bts.fNamePh": "例如 reviewer",
+      "bts.fTitle": "头衔",
+      "bts.fTitlePh": "例如 代码审查员",
+      "bts.fDesc": "简介",
+      "bts.fDescPh": "一句话说明它负责什么",
+      "bts.fPersona": "人设",
+      "bts.fPersonaPh": "它怎么说话、按什么规则干活…",
+      "bts.fModel": "模型（留空 = 跟随对话）",
+      "bts.cancel": "取消",
+      "bts.save": "保存",
+      "bts.createRoom": "创建群聊",
+      "bts.formRoomHint": "把两个以上的 Bot 拉进一个房间，各自以独立身份发言。",
+      "bts.fRoomName": "群聊名称",
+      "bts.fMembers": "成员（至少 2 个）",
+      "bts.needBot": "还没有 Bot，先去创建一个",
+      "bts.sub": "团队共用的常驻 Bot 与群聊：定义在共享区，聊天各自独立",
+      "bts.loadFail": "读取失败，稍后再试",
+      "bts.colon": "：",
     };
     var LOC_EN = {
       "fv.back": "← Back to chat",
@@ -1231,6 +1292,67 @@ window.__ModuleLoader__.load({
       "sec.notify": "Notifications",
       "sec.ops": "Ops",
       "sec.tasks": "Task board",
+      "bts.saved": "Saved",
+      "bts.confirmDelBotPfx": "Delete bot \"",
+      "bts.confirmDelBotSfx": "\" ? Its chat history stays in its own sessions.",
+      "bts.confirmDelRoomPfx": "Dissolve group \"",
+      "bts.confirmDelRoomSfx": "\"?",
+      "bts.membersSuffix": " members",
+      "bts.newBot": "New bot",
+      "bts.noBotsAdmin": "No bots yet — click + at the top right",
+      "bts.noBots": "No bots yet",
+      "bts.secRooms": "Group chats",
+      "bts.noRooms": "No group chats yet",
+      "bts.pickHint": "Pick a bot on the left to chat, or open a group chat to watch members work.",
+      "bts.newRoom": "New group",
+      "bts.you": "You",
+      "bts.thinking": " is thinking…",
+      "bts.noChats": "No messages yet — say something to start.",
+      "bts.defaultModel": "Default model",
+      "bts.editProfile": "Edit profile",
+      "bts.delete": "Delete",
+      "bts.msgToPfx": "Message ",
+      "bts.msgToSfx": "…",
+      "bts.send": "Send",
+      "bts.loading": "Loading…",
+      "bts.member": "Member",
+      "bts.kWorking": "Working",
+      "bts.kReply": "Replied",
+      "bts.kDone": "Done",
+      "bts.kStopped": "Stopped",
+      "bts.kError": "Error",
+      "bts.kNone": "No activity yet",
+      "bts.kWorkingEl": "Working…",
+      "bts.kDoneRound": "Round complete",
+      "bts.roomEmpty": "Send the first message — members reply in order.",
+      "bts.everyone": "Everyone",
+      "bts.roomSettings": "Group settings",
+      "bts.dissolve": "Dissolve group",
+      "bts.activity": "Activity",
+      "bts.stop": "■ Stop",
+      "bts.roomMsgPfx": "Message ",
+      "bts.roomMsgSfx": "… (@ a member or @everyone)",
+      "bts.editBot": "Edit bot",
+      "bts.formBotHint": "A bot is a standing identity: its own model, tools and persona, one permanent conversation.",
+      "bts.fName": "Name (lowercase)",
+      "bts.fNamePh": "e.g. reviewer",
+      "bts.fTitle": "Title",
+      "bts.fTitlePh": "e.g. Code reviewer",
+      "bts.fDesc": "Description",
+      "bts.fDescPh": "One line on what it handles",
+      "bts.fPersona": "Persona",
+      "bts.fPersonaPh": "How it talks, what rules it follows…",
+      "bts.fModel": "Model (empty = follow the conversation)",
+      "bts.cancel": "Cancel",
+      "bts.save": "Save",
+      "bts.createRoom": "Create group",
+      "bts.formRoomHint": "Put two or more bots in one room; each speaks in its own identity.",
+      "bts.fRoomName": "Group name",
+      "bts.fMembers": "Members (at least 2)",
+      "bts.needBot": "No bots yet — create one first",
+      "bts.sub": "Shared standing bots and group chats: definitions live in the shared area, chats stay per member",
+      "bts.loadFail": "Failed to load — try again later",
+      "bts.colon": ": ",
     };
     var DESK_CTX = null;
     var DESK_T = null;
@@ -1241,6 +1363,7 @@ window.__ModuleLoader__.load({
     function deskLang() {
       try { return (DESK_CTX && DESK_CTX.locale && DESK_CTX.locale.getLocale().active === "en") ? "en" : "zh"; } catch (e) { return "zh"; }
     }
+    function l2(zh, en) { return deskLang() === "en" ? en : zh; }
     /** 语言信号：宿主接管/用户切换语言后 +1；组件用它重取"服务端按语言生成"的文案 */
     function useLocaleSignal() {
       var pair = React.useState(0);
@@ -3346,10 +3469,10 @@ body[data-ds-dark-theme] .ddp .agpill.cur { color:#e0b25c; }
     var AGT_TEMPLATE = [
       "---",
       "name: my-helper",
-      "description: 一句话说明它擅长什么、什么时候该用它",
+      "description: " + l2("一句话说明它擅长什么、什么时候该用它", "One line on what it is good at and when to use it"),
       "---",
       "",
-      "你是一个……（写清楚：职责、工作方式、输出格式）",
+      l2("你是一个……（写清楚：职责、工作方式、输出格式）", "You are a … (state responsibilities, working style, output format)"),
       "",
     ].join("\n");
     /* 子代理控制台 v2：能力分组 / 模型提示 / 快速模板 */
@@ -3362,18 +3485,18 @@ body[data-ds-dark-theme] .ddp .agpill.cur { color:#e0b25c; }
       ["session_search", "agt.abHis", "session_search"]
     ];
     var AGT_MODEL_HINTS = {
-      "deepseek-flash": "快 · 省钱",
-      "deepseek-v4-pro": "最聪明 · 审查/写作/难任务",
-      "deepseek-v4-flash-vision-exp": "能看图",
-      "qwen3-max": "通义旗舰 · 中文强",
-      "qwen-max": "通义旗舰",
-      "qwen-plus": "均衡 · 便宜",
-      "qwen-turbo": "极速 · 简单活"
+      "deepseek-flash": ["快 · 省钱", "Fast · cheap"],
+      "deepseek-v4-pro": ["最聪明 · 审查/写作/难任务", "Smartest · review / writing / hard tasks"],
+      "deepseek-v4-flash-vision-exp": ["能看图", "Vision-capable"],
+      "qwen3-max": ["通义旗舰 · 中文强", "Qwen flagship · strong Chinese"],
+      "qwen-max": ["通义旗舰", "Qwen flagship"],
+      "qwen-plus": ["均衡 · 便宜", "Balanced · affordable"],
+      "qwen-turbo": ["极速 · 简单活", "Fastest · simple tasks"],
     };
     var AGT_TPL = {
-      reviewer: { name: "code-reviewer", description: "代码审查员：查 bug、边界与性能问题，给修改建议（只读不改）", persona: "你是团队的代码审查员。\n- 只读不写：不修改任何文件\n- 结论先行，按严重度排序\n- 每条给出：位置、为什么是问题、建议改法\n- 不确定就标注「待确认」，不编造", toolGroups: [0, 1, 2], model: "deepseek-v4-pro", background: false },
-      researcher: { name: "researcher", description: "资料研究员：做独立调研与资料整理，输出带来源的要点", persona: "你是资料研究员。\n- 只依据可核实来源，关键结论附出处；查不到就明说\n- 结论先行，先给 3-5 条核心发现\n- 中文输出，术语首次出现给一句解释", toolGroups: [0, 4, 3], model: "", background: true },
-      writer: { name: "writer", description: "文案写手：把要点写成清晰有节奏的中文文稿", persona: "你是中文文案写手。\n- 先问清读者与场景，再动笔\n- 结论先行、短句为主，避免 AI 腔\n- 输出两版供选：稳妥版 / 有表达欲版", toolGroups: [0, 3], model: "", background: false },
+      reviewer: { name: "code-reviewer", description: ["代码审查员：查 bug、边界与性能问题，给修改建议（只读不改）", "Code reviewer: finds bugs, edge cases and performance issues; suggests fixes (read-only)"], persona: ["你是团队的代码审查员。\n- 只读不写：不修改任何文件\n- 结论先行，按严重度排序\n- 每条给出：位置、为什么是问题、建议改法\n- 不确定就标注「待确认」，不编造", "You are the team's code reviewer.\n- Read-only: never modify files\n- Lead with conclusions, ordered by severity\n- For each: location, why it matters, suggested fix\n- Flag uncertainty as 'to verify'; never fabricate"], toolGroups: [0, 1, 2], model: "deepseek-v4-pro", background: false },
+      researcher: { name: "researcher", description: ["资料研究员：做独立调研与资料整理，输出带来源的要点", "Researcher: independent research and synthesis with sourced key points"], persona: ["你是资料研究员。\n- 只依据可核实来源，关键结论附出处；查不到就明说\n- 结论先行，先给 3-5 条核心发现\n- 中文输出，术语首次出现给一句解释", "You are a researcher.\n- Use verifiable sources only; cite key claims; say so when you cannot find it\n- Lead with conclusions: 3-5 key findings first\n- Output in English; explain each term on first use"], toolGroups: [0, 4, 3], model: "", background: true },
+      writer: { name: "writer", description: ["文案写手：把要点写成清晰有节奏的中文文稿", "Writer: turns key points into clear, well-paced prose"], persona: ["你是中文文案写手。\n- 先问清读者与场景，再动笔\n- 结论先行、短句为主，避免 AI 腔\n- 输出两版供选：稳妥版 / 有表达欲版", "You are a writer.\n- Clarify audience and context before writing\n- Lead with conclusions, short sentences, no AI-speak\n- Offer two versions: a safe one and an expressive one"], toolGroups: [0, 3], model: "", background: false },
       blank: { name: "", description: "", persona: "", toolGroups: [], model: "", background: false }
     };
 
@@ -3431,7 +3554,7 @@ body[data-ds-dark-theme] .ddp .agpill.cur { color:#e0b25c; }
               var g = v.groups[gi];
               for (var mi = 0; mi < (g.models || []).length; mi++) {
                 var mm = g.models[mi];
-                flat.push({ id: mm.id, provider: g.id, name: mm.name || mm.id, hint: AGT_MODEL_HINTS[mm.id] || mm.description || "" });
+                flat.push({ id: mm.id, provider: g.id, name: mm.name || mm.id, hint: (AGT_MODEL_HINTS[mm.id] ? l2(AGT_MODEL_HINTS[mm.id][0], AGT_MODEL_HINTS[mm.id][1]) : (mm.description || "")) });
               }
             }
             pset({ modelsPhase: "ready", models: flat, mainModel: v["default"] || st.mainModel });
@@ -3596,8 +3719,8 @@ body[data-ds-dark-theme] .ddp .agpill.cur { color:#e0b25c; }
         var T = AGT_TPL[kind] || AGT_TPL.blank;
         var n = blankFields();
         n.name = T.name;
-        n.description = T.description;
-        n.persona = T.persona;
+        n.description = T.description ? l2(T.description[0], T.description[1]) : "";
+        n.persona = T.persona ? l2(T.persona[0], T.persona[1]) : "";
         n.toolGroups = T.toolGroups.slice();
         n.model = T.model;
         n.background = T.background;
@@ -3722,7 +3845,7 @@ body[data-ds-dark-theme] .ddp .agpill.cur { color:#e0b25c; }
       function cmdText(it) {
         var obj = { subagent_type: it.type || it.tool, prompt: it.prompt || "" };
         if (it.label) obj.description = it.label;
-        if (it.model) obj.model = it.model + "  # 来自子代理定义（不写 = 跟随对话）";
+        if (it.model) obj.model = it.model + l2("  # 来自子代理定义（不写 = 跟随对话）", "  # from the agent definition (leave empty = follow the conversation)");
         return JSON.stringify(obj, null, 2);
       }
       function runStateChip(it) {
@@ -4352,12 +4475,12 @@ body[data-ds-dark-theme] .ddp .agpill.cur { color:#e0b25c; }
         }).then(function (r) { return r.json(); }).then(function (d) {
           if (d && d.error) { toast("err", d.error); return; }
           pset({ formBot: null });
-          toast("ok", "已保存");
+          toast("ok", tr("bts.saved"));
           load();
         });
       }
       function removeBot(bot) {
-        if (!window.confirm("删除 Bot「" + (bot.title || bot.name) + "」？它的聊天记录会保留在各自的会话里。")) return;
+        if (!window.confirm(tr("bts.confirmDelBotPfx") + (bot.title || bot.name) + tr("bts.confirmDelBotSfx"))) return;
         fetch("/portal/api/admin/bot-delete", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ name: bot.name }) })
           .then(function (r) { return r.json(); }).then(function (d) {
             if (d && d.error) { toast("err", d.error); return; }
@@ -4389,13 +4512,13 @@ body[data-ds-dark-theme] .ddp .agpill.cur { color:#e0b25c; }
         }).then(function (r) { return r.json(); }).then(function (d) {
           if (d && d.error) { toast("err", d.error); return; }
           pset({ formRoom: null });
-          toast("ok", "已保存");
+          toast("ok", tr("bts.saved"));
           load();
           if (d.room) openRoom(d.room);
         });
       }
       function removeRoom(room) {
-        if (!window.confirm("解散群聊「" + room.name + "」？")) return;
+        if (!window.confirm(tr("bts.confirmDelRoomPfx") + room.name + tr("bts.confirmDelRoomSfx"))) return;
         fetch("/portal/api/admin/room-delete", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ id: room.id }) })
           .then(function (r) { return r.json(); }).then(function (d) {
             if (d && d.error) { toast("err", d.error); return; }
@@ -4410,9 +4533,9 @@ body[data-ds-dark-theme] .ddp .agpill.cur { color:#e0b25c; }
       function lastPreview(room) {
         if (room && room.log && room.log.length) {
           var e = room.log[room.log.length - 1];
-          return e.from.name + "：" + String(e.text || "").replace(/\s+/g, " ").slice(0, 42);
+          return e.from.name + tr("bts.colon") + String(e.text || "").replace(/\s+/g, " ").slice(0, 42);
         }
-        return (room.members || []).length + " 名成员";
+        return (room.members || []).length + tr("bts.membersSuffix");
       }
 
       function mentionQuery() {
@@ -4470,19 +4593,19 @@ body[data-ds-dark-theme] .ddp .agpill.cur { color:#e0b25c; }
           })(st.rooms[j]);
         }
         return h("div", { className: "bts-rail" },
-          h("div", { className: "bts-sec" }, h("span", null, "BOTS"), isAdmin ? h("button", { className: "mini2", title: "新建 Bot", onClick: function () { openBotForm(null); } }, "＋") : null),
-          botRows.length ? botRows : h("div", { className: "p", style: { padding: "4px 8px", fontSize: "11.5px", opacity: .65 } }, isAdmin ? "还没有 Bot，点右上角 ＋ 新建" : "还没有 Bot"),
-          h("div", { className: "bts-sec" }, h("span", null, "群聊"), isAdmin ? h("button", { className: "mini2", title: "新建群聊", onClick: function () { openRoomForm(null); } }, "＋") : null),
-          roomRows.length ? roomRows : h("div", { className: "p", style: { padding: "4px 8px", fontSize: "11.5px", opacity: .65 } }, isAdmin ? "还没有群聊" : "还没有群聊")
+          h("div", { className: "bts-sec" }, h("span", null, "BOTS"), isAdmin ? h("button", { className: "mini2", title: tr("bts.newBot"), onClick: function () { openBotForm(null); } }, "＋") : null),
+          botRows.length ? botRows : h("div", { className: "p", style: { padding: "4px 8px", fontSize: "11.5px", opacity: .65 } }, isAdmin ? tr("bts.noBotsAdmin") : tr("bts.noBots")),
+          h("div", { className: "bts-sec" }, h("span", null, tr("bts.secRooms")), isAdmin ? h("button", { className: "mini2", title: tr("bts.newRoom"), onClick: function () { openRoomForm(null); } }, "＋") : null),
+          roomRows.length ? roomRows : h("div", { className: "p", style: { padding: "4px 8px", fontSize: "11.5px", opacity: .65 } }, tr("bts.noRooms"))
         );
       }
 
       function emptyEl() {
         return h("div", { className: "bts-empty" },
-          h("div", null, "左边选一个 Bot 直接聊，或进群聊看成员协作。"),
+          h("div", null, tr("bts.pickHint")),
           isAdmin ? h("div", { style: { marginTop: "8px", display: "flex", gap: "8px", justifyContent: "center" } },
-            h("button", { className: "btn", onClick: function () { openBotForm(null); } }, "新建 Bot"),
-            h("button", { className: "btn gh", onClick: function () { openRoomForm(null); } }, "新建群聊")
+            h("button", { className: "btn", onClick: function () { openBotForm(null); } }, tr("bts.newBot")),
+            h("button", { className: "btn gh", onClick: function () { openRoomForm(null); } }, tr("bts.newRoom"))
           ) : null
         );
       }
@@ -4496,28 +4619,28 @@ body[data-ds-dark-theme] .ddp .agpill.cur { color:#e0b25c; }
           (function (mm) {
             var you = mm.role === "user";
             logKids.push(h("div", { key: "m" + i, className: "bts-e", style: you ? { alignItems: "flex-end" } : null },
-              h("div", { className: "em" }, h("span", { className: "nm" + (you ? " you" : "") }, you ? "你" : ((b && (b.title || b.name)) || st.botName)), h("span", { className: "tm" }, btsTime(mm.time))),
+              h("div", { className: "em" }, h("span", { className: "nm" + (you ? " you" : "") }, you ? tr("bts.you") : ((b && (b.title || b.name)) || st.botName)), h("span", { className: "tm" }, btsTime(mm.time))),
               h("div", { className: "tx", style: you ? { background: "rgba(127,127,127,.08)", borderRadius: "9px", padding: "6px 9px" } : null }, mm.text)
             ));
           })(msgs[i]);
         }
-        if (st.chatPhase === "waiting") logKids.push(h("div", { key: "wait", className: "bts-work" }, ((b && (b.title || b.name)) || st.botName) + " 正在思考…"));
-        if (!msgs.length && st.chatPhase !== "waiting") logKids.push(h("div", { key: "empty", className: "bts-empty" }, "还没有对话。说点什么开始。"));
+        if (st.chatPhase === "waiting") logKids.push(h("div", { key: "wait", className: "bts-work" }, ((b && (b.title || b.name)) || st.botName) + tr("bts.thinking")));
+        if (!msgs.length && st.chatPhase !== "waiting") logKids.push(h("div", { key: "empty", className: "bts-empty" }, tr("bts.noChats")));
         return h("div", { className: "bts-chat" },
           h("div", { className: "bts-h" },
             (!wide || narrow) ? h("button", { className: "bts-ico", onClick: back }, "←") : null,
             b ? btsAvatar(b, st.botName, 24) : null,
             h("div", { className: "ttl" }, (b && (b.title || b.name)) || st.botName),
-            h("span", { className: "sub" }, b && b.model ? b.model : "默认模型"),
+            h("span", { className: "sub" }, b && b.model ? b.model : tr("bts.defaultModel")),
             h("span", { className: "sp" }),
-            isAdmin && b ? h("button", { className: "bts-ico", title: "编辑资料", onClick: function () { openBotForm(b); } }, "⚙") : null,
-            isAdmin && b ? h("button", { className: "bts-ico dgr", title: "删除", onClick: function () { removeBot(b); } }, "🗑") : null
+            isAdmin && b ? h("button", { className: "bts-ico", title: tr("bts.editProfile"), onClick: function () { openBotForm(b); } }, "⚙") : null,
+            isAdmin && b ? h("button", { className: "bts-ico dgr", title: tr("bts.delete"), onClick: function () { removeBot(b); } }, "🗑") : null
           ),
           h("div", { className: "bts-log" }, logKids),
           h("div", { className: "bts-cmp" },
             h("div", { className: "bts-box" },
-              h("textarea", { ref: taRef, rows: 1, value: st.draft, placeholder: "给 " + ((b && (b.title || b.name)) || st.botName) + " 发消息…", onChange: onDraft, onKeyDown: function (e) { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); sendChat(); } } }),
-              h("button", { className: "bts-send", disabled: !String(st.draft || "").trim() || st.sending, onClick: sendChat }, "发送")
+              h("textarea", { ref: taRef, rows: 1, value: st.draft, placeholder: tr("bts.msgToPfx") + ((b && (b.title || b.name)) || st.botName) + tr("bts.msgToSfx"), onChange: onDraft, onKeyDown: function (e) { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); sendChat(); } } }),
+              h("button", { className: "bts-send", disabled: !String(st.draft || "").trim() || st.sending, onClick: sendChat }, tr("bts.send"))
             )
           )
         );
@@ -4525,7 +4648,7 @@ body[data-ds-dark-theme] .ddp .agpill.cur { color:#e0b25c; }
 
       function roomEl() {
         var room = st.room;
-        if (!room) return h("div", { className: "bts-empty" }, "加载中…");
+        if (!room) return h("div", { className: "bts-empty" }, tr("bts.loading"));
         var act = st.act || { running: false, turn: "", activity: [] };
         var evs = (act.activity || []).slice(-6).reverse();
         var logKids = [];
@@ -4537,21 +4660,21 @@ body[data-ds-dark-theme] .ddp .agpill.cur { color:#e0b25c; }
             var replyLink = null;
             logKids.push(h("div", { key: "e" + idx, className: "bts-e" },
               h("div", { className: "em" },
-                h("span", { className: "nm" + (you ? " you" : "") }, you ? "你" : ((b && (b.title || b.name)) || e2.from.name)),
+                h("span", { className: "nm" + (you ? " you" : "") }, you ? tr("bts.you") : ((b && (b.title || b.name)) || e2.from.name)),
                 h("span", { className: "tm" }, btsTime(e2.at))
               ),
               h("div", { className: "tx" }, e2.text)
             ));
           })(log[i], i);
         }
-        if (act.running) logKids.push(h("div", { key: "run", className: "bts-work" }, (act.turn ? ((botByName(act.turn) || {}).title || act.turn) : "成员") + " 正在思考…"));
-        if (!log.length && !act.running) logKids.push(h("div", { key: "em", className: "bts-empty" }, "发第一条消息，成员会依次回应。"));
+        if (act.running) logKids.push(h("div", { key: "run", className: "bts-work" }, (act.turn ? ((botByName(act.turn) || {}).title || act.turn) : tr("bts.member")) + tr("bts.thinking")));
+        if (!log.length && !act.running) logKids.push(h("div", { key: "em", className: "bts-empty" }, tr("bts.roomEmpty")));
         var latest = (act.activity || []).length ? (act.activity || [])[act.activity.length - 1] : null;
-        var latestText = latest ? ((latest.member ? ((botByName(latest.member) || {}).title || latest.member) + " · " : "") + (latest.kind === "working" ? "正在处理" : latest.kind === "reply" ? "已回复" : latest.kind === "done" ? "完成" : latest.kind === "stopped" ? "已停止" : latest.kind === "error" ? "出错" : latest.kind)) : "暂无活动";
+        var latestText = latest ? ((latest.member ? ((botByName(latest.member) || {}).title || latest.member) + " · " : "") + (latest.kind === "working" ? tr("bts.kWorking") : latest.kind === "reply" ? tr("bts.kReply") : latest.kind === "done" ? tr("bts.kDone") : latest.kind === "stopped" ? tr("bts.kStopped") : latest.kind === "error" ? tr("bts.kError") : latest.kind)) : tr("bts.kNone");
 
         var mentionEl = null;
         if (st.mention) {
-          var mlist = [{ handle: "everyone", label: "所有人" }];
+          var mlist = [{ handle: "everyone", label: tr("bts.everyone") }];
           var mem = room.members || [];
           for (var mi = 0; mi < mem.length; mi++) {
             var mb = botByName(mem[mi]);
@@ -4576,24 +4699,24 @@ body[data-ds-dark-theme] .ddp .agpill.cur { color:#e0b25c; }
             (!wide || narrow) ? h("button", { className: "bts-ico", onClick: back }, "←") : null,
             btsAvatar({ name: room.name, avatar: { shape: "org", color: "#6b7280" } }, room.name, 24),
             h("div", { className: "ttl" }, room.name),
-            h("span", { className: "sub" }, (room.members || []).length + " 名成员"),
+            h("span", { className: "sub" }, (room.members || []).length + tr("bts.membersSuffix")),
             h("span", { className: "sp" }),
-            isAdmin ? h("button", { className: "bts-ico", title: "群聊设置", onClick: function () { openRoomForm(room); } }, "⚙") : null,
-            isAdmin ? h("button", { className: "bts-ico dgr", title: "解散群聊", onClick: function () { removeRoom(room); } }, "🗑") : null
+            isAdmin ? h("button", { className: "bts-ico", title: tr("bts.roomSettings"), onClick: function () { openRoomForm(room); } }, "⚙") : null,
+            isAdmin ? h("button", { className: "bts-ico dgr", title: tr("bts.dissolve"), onClick: function () { removeRoom(room); } }, "🗑") : null
           ),
           h("div", { className: "bts-act" },
             h("div", { className: "bar" },
-              h("button", { className: "tg", onClick: function () { pset({ actOpen: !st.actOpen }); } }, h("span", null, st.actOpen ? "▾" : "›"), h("b", null, "活动"), h("span", { style: { minWidth: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" } }, latestText + (latest ? " · " + btsAgo(latest.at) : ""))),
-              act.running ? h("button", { className: "bts-stop", onClick: stopRoom }, "■ 停止") : null
+              h("button", { className: "tg", onClick: function () { pset({ actOpen: !st.actOpen }); } }, h("span", null, st.actOpen ? "▾" : "›"), h("b", null, tr("bts.activity")), h("span", { style: { minWidth: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" } }, latestText + (latest ? " · " + btsAgo(latest.at) : ""))),
+              act.running ? h("button", { className: "bts-stop", onClick: stopRoom }, tr("bts.stop")) : null
             ),
-            st.actOpen ? h("div", { className: "lst" }, evs.length ? evs.map(function (ev2, k) { return h("div", { key: "ev" + k, className: "ev" }, h("span", null, (ev2.member ? ((botByName(ev2.member) || {}).title || ev2.member) + " · " : "") + (ev2.kind === "working" ? "正在处理…" : ev2.kind === "reply" ? "已回复" : ev2.kind === "done" ? "本轮完成" : ev2.kind === "stopped" ? "已停止" : ev2.kind === "error" ? "出错" : ev2.kind)), h("span", { className: "t" }, btsAgo(ev2.at))) }) : h("div", { className: "ev" }, "暂无活动")) : null
+            st.actOpen ? h("div", { className: "lst" }, evs.length ? evs.map(function (ev2, k) { return h("div", { key: "ev" + k, className: "ev" }, h("span", null, (ev2.member ? ((botByName(ev2.member) || {}).title || ev2.member) + " · " : "") + (ev2.kind === "working" ? tr("bts.kWorkingEl") : ev2.kind === "reply" ? tr("bts.kReply") : ev2.kind === "done" ? tr("bts.kDoneRound") : ev2.kind === "stopped" ? tr("bts.kStopped") : ev2.kind === "error" ? tr("bts.kError") : ev2.kind)), h("span", { className: "t" }, btsAgo(ev2.at))) }) : h("div", { className: "ev" }, tr("bts.kNone"))) : null
           ),
           h("div", { className: "bts-log" }, logKids),
           h("div", { className: "bts-cmp" },
             mentionEl,
             h("div", { className: "bts-box" },
-              h("textarea", { ref: taRef, rows: 1, value: st.draft, placeholder: "给 " + room.name + " 发消息（@ 成员或 @everyone）…", onChange: onDraft, onKeyDown: function (e) { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); sendRoom(); } } }),
-              h("button", { className: "bts-send", disabled: !String(st.draft || "").trim() || st.sending, onClick: sendRoom }, "发送")
+              h("textarea", { ref: taRef, rows: 1, value: st.draft, placeholder: tr("bts.roomMsgPfx") + room.name + tr("bts.roomMsgSfx"), onChange: onDraft, onKeyDown: function (e) { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); sendRoom(); } } }),
+              h("button", { className: "bts-send", disabled: !String(st.draft || "").trim() || st.sending, onClick: sendRoom }, tr("bts.send"))
             )
           )
         );
@@ -4606,21 +4729,21 @@ body[data-ds-dark-theme] .ddp .agpill.cur { color:#e0b25c; }
         var kids;
         if (fb) {
           kids = [
-            h("h3", { key: "t" }, fb.edit ? "编辑 Bot" : "新建 Bot"),
-            h("p", { className: "ps", key: "p" }, "一个 Bot = 一份常驻身份：自己的模型、工具与人设，一条永久对话。"),
-            h("div", { className: "bts-f", key: "n" }, h("label", null, "名称（小写）"), h("input", { value: fb.name, disabled: fb.edit, placeholder: "例如 reviewer", onChange: function (e) { pset({ formBot: { name: e.target.value.toLowerCase().replace(/[^a-z0-9._-]/g, ""), title: fb.title, description: fb.description, persona: fb.persona, model: fb.model, shape: fb.shape, color: fb.color, edit: fb.edit } }); } })),
-            h("div", { className: "bts-f", key: "t2" }, h("label", null, "头衔"), h("input", { value: fb.title, placeholder: "例如 代码审查员", onChange: function (e) { pset({ formBot: { name: fb.name, title: e.target.value, description: fb.description, persona: fb.persona, model: fb.model, shape: fb.shape, color: fb.color, edit: fb.edit } }); } })),
-            h("div", { className: "bts-f", key: "d" }, h("label", null, "简介"), h("input", { value: fb.description, placeholder: "一句话说明它负责什么", onChange: function (e) { pset({ formBot: { name: fb.name, title: fb.title, description: e.target.value, persona: fb.persona, model: fb.model, shape: fb.shape, color: fb.color, edit: fb.edit } }); } })),
-            h("div", { className: "bts-f", key: "pe" }, h("label", null, "人设"), h("textarea", { rows: 4, value: fb.persona, placeholder: "它怎么说话、按什么规则干活…", onChange: function (e) { pset({ formBot: { name: fb.name, title: fb.title, description: fb.description, persona: e.target.value, model: fb.model, shape: fb.shape, color: fb.color, edit: fb.edit } }); } })),
-            h("div", { className: "bts-f", key: "m" }, h("label", null, "模型（留空 = 跟随对话）"), h("input", { value: fb.model, placeholder: "deepseek-flash", onChange: function (e) { pset({ formBot: { name: fb.name, title: fb.title, description: fb.description, persona: fb.persona, model: e.target.value, shape: fb.shape, color: fb.color, edit: fb.edit } }); } })),
+            h("h3", { key: "t" }, fb.edit ? tr("bts.editBot") : tr("bts.newBot")),
+            h("p", { className: "ps", key: "p" }, tr("bts.formBotHint")),
+            h("div", { className: "bts-f", key: "n" }, h("label", null, tr("bts.fName")), h("input", { value: fb.name, disabled: fb.edit, placeholder: tr("bts.fNamePh"), onChange: function (e) { pset({ formBot: { name: e.target.value.toLowerCase().replace(/[^a-z0-9._-]/g, ""), title: fb.title, description: fb.description, persona: fb.persona, model: fb.model, shape: fb.shape, color: fb.color, edit: fb.edit } }); } })),
+            h("div", { className: "bts-f", key: "t2" }, h("label", null, tr("bts.fTitle")), h("input", { value: fb.title, placeholder: tr("bts.fTitlePh"), onChange: function (e) { pset({ formBot: { name: fb.name, title: e.target.value, description: fb.description, persona: fb.persona, model: fb.model, shape: fb.shape, color: fb.color, edit: fb.edit } }); } })),
+            h("div", { className: "bts-f", key: "d" }, h("label", null, tr("bts.fDesc")), h("input", { value: fb.description, placeholder: tr("bts.fDescPh"), onChange: function (e) { pset({ formBot: { name: fb.name, title: fb.title, description: e.target.value, persona: fb.persona, model: fb.model, shape: fb.shape, color: fb.color, edit: fb.edit } }); } })),
+            h("div", { className: "bts-f", key: "pe" }, h("label", null, tr("bts.fPersona")), h("textarea", { rows: 4, value: fb.persona, placeholder: tr("bts.fPersonaPh"), onChange: function (e) { pset({ formBot: { name: fb.name, title: fb.title, description: fb.description, persona: e.target.value, model: fb.model, shape: fb.shape, color: fb.color, edit: fb.edit } }); } })),
+            h("div", { className: "bts-f", key: "m" }, h("label", null, tr("bts.fModel")), h("input", { value: fb.model, placeholder: "deepseek-flash", onChange: function (e) { pset({ formBot: { name: fb.name, title: fb.title, description: fb.description, persona: fb.persona, model: e.target.value, shape: fb.shape, color: fb.color, edit: fb.edit } }); } })),
             h("div", { className: "bts-f", key: "av" }, h("div", { className: "row2" },
               h("select", { value: fb.shape, onChange: function (e) { pset({ formBot: { name: fb.name, title: fb.title, description: fb.description, persona: fb.persona, model: fb.model, shape: e.target.value, color: fb.color, edit: fb.edit } }); } },
                 h("option", { value: "blobatar" }, "blobatar"), h("option", { value: "squircle" }, "squircle"), h("option", { value: "circle" }, "circle")),
               fb.shape !== "blobatar" ? h("input", { type: "color", value: fb.color, style: { width: "56px", padding: "2px" }, onChange: function (e) { pset({ formBot: { name: fb.name, title: fb.title, description: fb.description, persona: fb.persona, model: fb.model, shape: fb.shape, color: e.target.value, edit: fb.edit } }); } }) : null
             )),
             h("div", { className: "bts-foot", key: "f" },
-              h("button", { className: "btn gh", onClick: function () { pset({ formBot: null }); } }, "取消"),
-              h("button", { className: "btn", disabled: !fb.name || !(fb.title || fb.description || fb.persona), onClick: saveBot }, "保存")
+              h("button", { className: "btn gh", onClick: function () { pset({ formBot: null }); } }, tr("bts.cancel")),
+              h("button", { className: "btn", disabled: !fb.name || !(fb.title || fb.description || fb.persona), onClick: saveBot }, tr("bts.save"))
             )
           ];
         } else {
@@ -4637,14 +4760,14 @@ body[data-ds-dark-theme] .ddp .agpill.cur { color:#e0b25c; }
             })(st.bots[i]);
           }
           kids = [
-            h("h3", { key: "t" }, fr.edit ? "群聊设置" : "新建群聊"),
-            h("p", { className: "ps", key: "p" }, "把两个以上的 Bot 拉进一个房间，各自以独立身份发言。"),
-            h("div", { className: "bts-f", key: "n" }, h("label", null, "群聊名称"), h("input", { value: fr.name, placeholder: "例如 Research, Coding, Coach", onChange: function (e) { pset({ formRoom: { id: fr.id, name: e.target.value, members: fr.members, edit: fr.edit } }); } })),
-            h("label", { key: "ml", style: { display: "block", fontSize: "11px", fontWeight: 600, marginBottom: "4px" } }, "成员（至少 2 个）"),
-            h("div", { key: "pl", className: "bts-pick" }, picks.length ? picks : h("div", { className: "pr" }, "还没有 Bot，先去创建一个")),
+            h("h3", { key: "t" }, fr.edit ? tr("bts.roomSettings") : tr("bts.newRoom")),
+            h("p", { className: "ps", key: "p" }, tr("bts.formRoomHint")),
+            h("div", { className: "bts-f", key: "n" }, h("label", null, tr("bts.fRoomName")), h("input", { value: fr.name, placeholder: "例如 Research, Coding, Coach", onChange: function (e) { pset({ formRoom: { id: fr.id, name: e.target.value, members: fr.members, edit: fr.edit } }); } })),
+            h("label", { key: "ml", style: { display: "block", fontSize: "11px", fontWeight: 600, marginBottom: "4px" } }, tr("bts.fMembers")),
+            h("div", { key: "pl", className: "bts-pick" }, picks.length ? picks : h("div", { className: "pr" }, tr("bts.needBot"))),
             h("div", { className: "bts-foot", key: "f" },
-              h("button", { className: "btn gh", onClick: function () { pset({ formRoom: null }); } }, "取消"),
-              h("button", { className: "btn", disabled: !fr.name || (fr.members || []).length < 2, onClick: saveRoom }, fr.edit ? "保存" : "创建群聊")
+              h("button", { className: "btn gh", onClick: function () { pset({ formRoom: null }); } }, tr("bts.cancel")),
+              h("button", { className: "btn", disabled: !fr.name || (fr.members || []).length < 2, onClick: saveRoom }, fr.edit ? tr("bts.save") : tr("bts.createRoom"))
             )
           ];
         }
@@ -4659,8 +4782,8 @@ body[data-ds-dark-theme] .ddp .agpill.cur { color:#e0b25c; }
 
       var bodyKids = [];
       if (st.msg) bodyKids.push(h("div", { key: "toast", className: "bts-toast" + (st.msg.kind === "err" ? " err" : "") }, st.msg.text));
-      if (st.phase === "loading") bodyKids.push(h("div", { key: "ld", className: "bts-empty" }, "加载中…"));
-      else if (st.phase === "error") bodyKids.push(h("div", { key: "er", className: "bts-empty" }, "读取失败，稍后再试"));
+      if (st.phase === "loading") bodyKids.push(h("div", { key: "ld", className: "bts-empty" }, tr("bts.loading")));
+      else if (st.phase === "error") bodyKids.push(h("div", { key: "er", className: "bts-empty" }, tr("bts.loadFail")));
       else {
         bodyKids.push(h("div", { key: "wrap", className: "bts-wrap" + (narrow ? " narrow" : ""), style: { position: "relative" } },
           narrow && st.view !== "roster" ? null : rosterEl(),
@@ -4674,7 +4797,7 @@ body[data-ds-dark-theme] .ddp .agpill.cur { color:#e0b25c; }
           h("span", { className: "ico" }, dicon("bots", 22)),
           h("div", { style: { flex: 1, minWidth: 0 } },
             h("div", { className: "t1" }, "Bots"),
-            h("div", { className: "t2" }, "团队共用的常驻 Bot 与群聊：定义在共享区，聊天各自独立")
+            h("div", { className: "t2" }, tr("bts.sub"))
           ),
           h("button", { className: "x", onClick: function () { setOpen(false); } }, "← " + tr("fv.back"))
         ),
@@ -6059,7 +6182,7 @@ body[data-ds-dark-theme] .ddp .agpill.cur { color:#e0b25c; }
           var isRule = it.type === "rule";
           var a = actionOf(it);
           var rl = isRule ? ruleLabel(it) : "";
-          var desc = isRule ? (rl === it.name ? "" : rl) : a.kind === "agent" ? tr("auto.byAgent") + "：" + (a.prompt || "") : a.text || "";
+          var desc = isRule ? (deskLang() === "en" ? "" : (rl === it.name ? "" : rl)) : a.kind === "agent" ? tr("auto.byAgent") + "：" + (a.prompt || "") : a.text || "";
           var meta = [];
           if (it.type === "timer") {
             meta.push(h("span", { key: "m1", className: "achip2 blue" }, fmtSched(it.schedule)));
@@ -6092,7 +6215,7 @@ body[data-ds-dark-theme] .ddp .agpill.cur { color:#e0b25c; }
             "div",
             { key: "a" + it.id, className: "acard" + (it.enabled ? "" : " off") + (isRule ? " rule" : "") },
             h("span", { className: "atile" }, dicon(isRule ? "zap" : "clock", 16)),
-            h("div", { className: "am" }, h("div", { className: "an" }, it.name), desc ? h("div", { className: "ad" }, desc) : null, h("div", { className: "ameta" }, meta)),
+            h("div", { className: "am" }, h("div", { className: "an" }, isRule ? ruleLabel(it) : it.name), desc ? h("div", { className: "ad" }, desc) : null, h("div", { className: "ameta" }, meta)),
             h(
               "div",
               { className: "ar" },
