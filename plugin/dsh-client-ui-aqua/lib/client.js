@@ -1,6 +1,7 @@
-// dsh-client-ui-aqua@1.4.0 — MIT fork of 1.3.1 (John Wu / WYH66666666).
+// dsh-client-ui-aqua@1.4.1 — MIT fork of 1.3.1 (John Wu / WYH66666666).
 // rc.3: no plugins-section card slot, no invariant companion; glass covers
 // composer dock controls activity and usage (data-composer-stat).
+// defineStore comes from the platform seed @deepseek-ai/dsh-client-store.
 window.__ModuleLoader__.load({
 	id: "dsh-client-ui-aqua",
 	factory: (require) => {
@@ -10,7 +11,7 @@ window.__ModuleLoader__.load({
 		let _deepseek_ai_dsh_client_ui_primitives = require("@deepseek-ai/dsh-client-ui-primitives");
 		let react_jsx_runtime = require("react/jsx-runtime");
 		let react = require("react");
-		let _deepseek_ai_dsh_client_runtime_client = require("@deepseek-ai/dsh-client-runtime/client");
+		let _deepseek_ai_dsh_client_store = require("@deepseek-ai/dsh-client-store");
 		//#region \0dsh-css:D:\Hermes Work\deepseek-harness\packages\client\ui-aqua\src\client\AquaPluginCard.module.css.mjs
 		const css$3 = ".EG3s1W_card{border:1px solid var(--dsw-alias-border-l2);background:var(--dsw-alias-bg-layer-1);border-radius:12px;flex-direction:column;padding:16px;display:flex}.EG3s1W_head{justify-content:space-between;align-items:center;gap:16px;display:flex}.EG3s1W_text{flex-direction:column;gap:2px;min-width:0;display:flex}.EG3s1W_title{color:var(--dsw-alias-label-primary);font-size:14px;font-weight:500;line-height:22px}.EG3s1W_description{color:var(--dsw-alias-label-tertiary);font-size:12px;line-height:18px}.EG3s1W_toggle{border:1px solid var(--dsw-alias-border-l2);height:28px;color:var(--dsw-alias-label-primary);cursor:pointer;background:0 0;border-radius:14px;flex:none;align-items:center;gap:6px;padding:0 10px 0 6px;font-size:12px;line-height:18px;display:inline-flex}.EG3s1W_toggle:hover{background:var(--dsw-alias-interactive-bg-hover)}.EG3s1W_toggle[aria-pressed=true]{background:var(--dsw-alias-state-business-tertiary);color:var(--dsw-alias-state-business-primary);border-color:#0000}.EG3s1W_check{justify-content:center;align-items:center;width:16px;height:16px;display:inline-flex}";
 		const tagId$3 = "dsh-client-ui-aqua/AquaPluginCard.module.css";
@@ -784,7 +785,7 @@ window.__ModuleLoader__.load({
 		* @returns the store handle.
 		*/
 		function createAquaRowStore() {
-			return (0, _deepseek_ai_dsh_client_runtime_client.defineStore)({
+			return (0, _deepseek_ai_dsh_client_store.defineStore)({
 				init: () => ({
 					enabled: true,
 					mode: "mica",
