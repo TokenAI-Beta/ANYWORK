@@ -1,8 +1,11 @@
 {
   "name": "dsh-desk-panel",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "private": true,
-  "description": "DSH-ANYWORK workbench panel: a settings page showing this member's usage, wired to the portal ledger. Client-side dsh plugin — no dsh source changes.",
+  "description": "DSH-ANYWORK workbench panel for dsh 0.2.1-rc.3: settings and sidebar pages wired to the portal. Client-side dsh plugin — no dsh source changes.",
+  "engines": {
+    "dsh": ">=0.2.1-rc.3 <0.3.0"
+  },
   "type": "module",
   "main": "lib/index.js",
   "exports": {

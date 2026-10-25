@@ -31,46 +31,63 @@ if ! grep -q "agent-presets" "$sf" 2>/dev/null; then
   mv "$sf.tmp" "$sf"
 fi
 
-# 3) 插件：优先从既有成员复制 profile（秒级、免网络）；无模板才在线安装
+# 3) 插件：desk-panel + dsh-wx-answerer（dsh 0.2.1-rc.3）。
+#    wx-answerer 是微信编号作答，随 main 保留。模板必须已经有 desk-panel，
+#    且没有 0.1.5 那四个钉，避免把 better-sidebar@0.19.1 / aqua / chat-import / agents-md 复制进新成员。
+#    恢复顺序：better-sidebar / aqua → 微信通知桥 → Bots / rooms → agents-md / chat-import
+DEFERRED_PLUGINS=(dsh-better-sidebar dsh-client-ui-aqua dsh-agents-md dsh-chat-import)
 prof="$h/profiles"
 tpl=""
 for c in $(ls "$home/desk-test" 2>/dev/null || true); do
   [ "$c" = "$u" ] && continue
   cand="$home/desk-test/$c/profiles/web/package.json"
-  if [ -f "$cand" ] && grep -q "dsh-better-sidebar" "$cand"; then
-    tpl="$home/desk-test/$c/profiles/web"
-    break
-  fi
+  [ -f "$cand" ] || continue
+  grep -q "dsh-desk-panel" "$cand" || continue
+  dirty=0
+  for key in "${DEFERRED_PLUGINS[@]}"; do
+    if grep -q "\"$key\"" "$cand"; then dirty=1; break; fi
+  done
+  [ "$dirty" = 0 ] || continue
+  tpl="$home/desk-test/$c/profiles/web"
+  break
 done
 if [ ! -f "$prof/web/package.json" ] && [ -n "$tpl" ]; then
   log "从既有成员复制插件配置：$tpl"
   mkdir -p "$prof"
   cp -r "$tpl" "$prof/web"
 fi
-if [ ! -f "$prof/web/package.json" ]; then
-  log "无可复制模板，改为在线安装插件（需要外网）"
-  DSH_HOME="$h" node "$dsh" plugin --profile web list >/dev/null 2>&1 || true
-  for spec in "file:$repo/plugin/desk-panel" "https://github.com/Zagadka-3906/DSH-Transparent-UI-Plugin-dsh015.git" "dsh-chat-import" "dsh-better-sidebar@0.19.1" "link:$repo/plugin/dsh-wx-answerer"; do
-    DSH_HOME="$h" node "$dsh" plugin --profile web add "$spec" >/dev/null 2>&1 || log "插件安装失败（可重启容器重试）：$spec"
+if [ -f "$prof/web/package.json" ]; then
+  for key in "${DEFERRED_PLUGINS[@]}"; do
+    grep -q "\"$key\"" "$prof/web/package.json" || continue
+    log "卸下 0.2.1-rc.3 暂不挂载的插件：$key"
+    DSH_HOME="$h" node "$dsh" plugin --profile web remove "$key" >/dev/null 2>&1 \
+      || log "插件卸载失败（可重启容器重试）：$key"
   done
-  # node-pty（better-sidebar 0.19.x 的原生依赖）没编出来时：approve 后原地重装
-  if [ -f "$prof/web/package.json" ] && [ ! -e "$prof/web/node_modules/node-pty/build/Release/pty.node" ]; then
-    (cd "$prof/web" && pnpm approve-builds --all >/dev/null 2>&1 && pnpm install >/dev/null 2>&1) || true
-  fi
+fi
+src_manifest="$repo/plugin/desk-panel/package.json"
+dst_manifest="$prof/web/node_modules/dsh-desk-panel/package.json"
+if [ -f "$src_manifest" ] && [ -f "$dst_manifest" ] && ! cmp -s "$src_manifest" "$dst_manifest"; then
+  log "desk-panel 清单与仓库不一致，卸下后重装"
+  DSH_HOME="$h" node "$dsh" plugin --profile web remove dsh-desk-panel >/dev/null 2>&1 || true
+fi
+if ! grep -q "dsh-desk-panel" "$prof/web/package.json" 2>/dev/null; then
+  log "安装 desk-panel"
+  DSH_HOME="$h" node "$dsh" plugin --profile web list >/dev/null 2>&1 || true
+  DSH_HOME="$h" node "$dsh" plugin --profile web add "file:$repo/plugin/desk-panel" >/dev/null 2>&1 \
+    || log "插件安装失败（可重启容器重试）：file:$repo/plugin/desk-panel"
+fi
+if ! grep -q "dsh-wx-answerer" "$prof/web/package.json" 2>/dev/null; then
+  log "安装 dsh-wx-answerer"
+  DSH_HOME="$h" node "$dsh" plugin --profile web list >/dev/null 2>&1 || true
+  DSH_HOME="$h" node "$dsh" plugin --profile web add "link:$repo/plugin/dsh-wx-answerer" >/dev/null 2>&1 \
+    || log "插件安装失败（可重启容器重试）：link:$repo/plugin/dsh-wx-answerer"
 fi
 
-# 4) aqua key 补丁（幂等；复制来的通常已打）
-python3 - <<'AQUA_PATCH' || log "警告：aqua key 补丁未执行"
-import glob, os
-old = '\t\t\t\tname: "settings.plugin.item",\n\t\t\t\tid: "aqua",\n\t\t\t\torder: 5,'
-new = '\t\t\t\tname: "settings.plugin.item",\n\t\t\t\tid: "aqua",\n\t\t\t\tkey: "ui-aqua",\n\t\t\t\torder: 5,'
-for f in glob.glob(os.path.join(os.environ.get("HOME", "/data"), "desk-test", "*", "profiles/web/node_modules/dsh-client-ui-aqua/lib/client.js")):
-    s = open(f, encoding="utf-8").read()
-    if 'key: "ui-aqua"' in s:
-        continue
-    if s.count(old) == 1:
-        open(f, "w", encoding="utf-8").write(s.replace(old, new))
-        print("[provision] aqua key 补丁:", f)
-AQUA_PATCH
+# desk-panel 前端副本（与 bootstrap 5c 相同：file: 不会因清单以外的改动自动更新）
+DESK_SRC="$repo/plugin/desk-panel/lib/client.js"
+DESK_DST="$prof/web/node_modules/dsh-desk-panel/lib/client.js"
+if [ -f "$DESK_SRC" ] && [ -f "$DESK_DST" ] && ! cmp -s "$DESK_SRC" "$DESK_DST"; then
+  cat "$DESK_SRC" > "$DESK_DST" && log "刷新 desk-panel 副本"
+fi
 
 log "配置完成"

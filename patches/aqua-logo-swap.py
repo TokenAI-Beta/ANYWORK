@@ -2,6 +2,10 @@
 # -*- coding: utf-8 -*-
 """aqua（玻璃主题 fork）装饰换标：小鱼与粒子鲸鱼 → TOKEN AI 标记。
 
+只在实例里已经装了 dsh-client-ui-aqua 时有意义。本地 Docker 的 dsh 0.2.1-rc.3
+暂不安装 aqua（settings.plugin.item 已删除，0.1.5 的 peer 范围也装不上）。
+见 docs/0.2-plugin-api-breakpoints.md。
+
 - FISH_PATH：critters 的 fish / fish-left 剪影（viewBox 0 0 23.16 17.04）；
 - WHALE_SVG：粒子鲸鱼的亮度采样源（viewBox 0 0 24 18，fill #FFFFFF）。
 - 两条路径由 VI 稿矢量化（potrace，IoU 0.99）并按各自视框等比居中预变换；
