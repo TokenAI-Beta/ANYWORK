@@ -110,7 +110,7 @@ done < "$home/.desk/run/instances.tsv"
 # ── 5) 各实例插件 ──
 # 本地 Docker 引擎是 dsh-v0.2.1-rc.3。安装 desk-panel、dsh-wx-answerer，
 # 钉死的 npm 包 dsh-better-sidebar@0.28.0（不要 0.19.1），
-# 以及仓内 file:plugin/dsh-client-ui-aqua（dsh-client-ui-aqua@1.4.1，不要 npm 1.3.1）。
+# 以及仓内 file:plugin/dsh-client-ui-aqua（dsh-client-ui-aqua@1.4.2，不要 npm 1.3.1）。
 # dsh-wx-answerer 是 main 上的微信编号作答（PR #1），继续安装，不在暂缓名单里。
 # better-sidebar 与 aqua 同样不在暂缓名单里：整容器重启要把它们留在卷上。
 # 下面两个仍不装：agents-md 在宿主侧会炸，chat-import 的 peer 盖不住 rc.3。
@@ -170,8 +170,8 @@ reinstall_sidebar_unless_pinned() { # $1=成员
   DSH_HOME="$home/desk-test/$u" node "$dsh" plugin --profile web remove dsh-better-sidebar >/dev/null 2>&1 || true
 }
 
-# install_plugin 只看包名。已是 1.4.1 则留下；别的版本（npm 1.3.1、1.4.0）先卸，
-# 否则 add 会报 already-installed，钉不上 file: 这份 1.4.1。不要装 npm 1.3.1。
+# install_plugin 只看包名。已是 1.4.2 则留下；别的版本（npm 1.3.1、1.4.0、1.4.1）先卸，
+# 否则 add 会报 already-installed，钉不上 file: 这份 1.4.2。不要装 npm 1.3.1。
 reinstall_aqua_unless_pinned() { # $1=成员
   local u="$1"
   local profile="$home/desk-test/$u/profiles/web"
@@ -179,13 +179,13 @@ reinstall_aqua_unless_pinned() { # $1=成员
   local installed="$profile/node_modules/dsh-client-ui-aqua/package.json"
   [ -f "$pkg" ] || return 0
   grep -q '"dsh-client-ui-aqua"' "$pkg" || return 0
-  if grep -Eq '"dsh-client-ui-aqua"[[:space:]]*:[[:space:]]*"[^"]*1\.4\.1"' "$pkg"; then
+  if grep -Eq '"dsh-client-ui-aqua"[[:space:]]*:[[:space:]]*"[^"]*1\.4\.2"' "$pkg"; then
     return 0
   fi
-  if [ -f "$installed" ] && grep -Eq '"version"[[:space:]]*:[[:space:]]*"1\.4\.1"' "$installed"; then
+  if [ -f "$installed" ] && grep -Eq '"version"[[:space:]]*:[[:space:]]*"1\.4\.2"' "$installed"; then
     return 0
   fi
-  log "aqua 不是 1.4.1，卸下后按钉重装（$u）"
+  log "aqua 不是 1.4.2，卸下后按钉重装（$u）"
   DSH_HOME="$home/desk-test/$u" node "$dsh" plugin --profile web remove dsh-client-ui-aqua >/dev/null 2>&1 || true
 }
 
@@ -233,7 +233,7 @@ while IFS=$'\t' read -r _u _p _h; do
 done < "$home/.desk/run/instances.tsv"
 
 # aqua 的 settings.plugin.item key 补丁不在 0.2.1-rc.3 上跑：该槽已删除。
-# 本脚本改钉 file:$repo/plugin/dsh-client-ui-aqua（1.4.1）。WSL 0.1.5 仍可用 patches/aqua-plugin-card-key.py。
+# 本脚本改钉 file:$repo/plugin/dsh-client-ui-aqua（1.4.2）。WSL 0.1.5 仍可用 patches/aqua-plugin-card-key.py。
 
 # ── 6) 团队 Soul / 工作区 README（此时各实例已有 profiles 目录） ──
 bash scripts/apply-soul.sh >/dev/null && log "团队 Soul / 工作区 README 已铺"
