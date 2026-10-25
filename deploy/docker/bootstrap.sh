@@ -109,14 +109,15 @@ done < "$home/.desk/run/instances.tsv"
 
 # ── 5) 各实例插件 ──
 # 本地 Docker 引擎是 dsh-v0.2.1-rc.3。安装 desk-panel、dsh-wx-answerer，
-# 以及钉死的 npm 包 dsh-better-sidebar@0.28.0（不要 0.19.1）。
+# 钉死的 npm 包 dsh-better-sidebar@0.28.0（不要 0.19.1），
+# 以及仓内 file:plugin/dsh-client-ui-aqua（dsh-client-ui-aqua@1.4.1，不要 npm 1.3.1）。
 # dsh-wx-answerer 是 main 上的微信编号作答（PR #1），继续安装，不在暂缓名单里。
-# better-sidebar 同样不在暂缓名单里：整容器重启要把它留在卷上。
-# 下面三个仍是 0.1.5-rc.2 的钉，在 0.2.1-rc.3 上要么 peer 被拒，要么（agents-md）
-# 没有 engines.dsh / peer、会装上然后在宿主侧炸掉。已有卷里若还在，启动时卸掉。
+# better-sidebar 与 aqua 同样不在暂缓名单里：整容器重启要把它们留在卷上。
+# 下面两个仍不装：agents-md 在宿主侧会炸，chat-import 的 peer 盖不住 rc.3。
+# 已有卷里若还在，启动时卸掉。
 # 恢复顺序见 docs/0.2-plugin-api-breakpoints.md：
-#   aqua → 微信通知桥 → Bots / rooms → agents-md / chat-import
-DEFERRED_PLUGINS=(dsh-client-ui-aqua dsh-agents-md dsh-chat-import)
+#   微信通知桥 → Bots / rooms → agents-md / chat-import
+DEFERRED_PLUGINS=(dsh-agents-md dsh-chat-import)
 
 install_plugin() { # $1=成员 $2=安装 spec $3=检测键（依赖名） $4=可选完整性探针（文件存在才算就绪）
   local u="$1" spec="$2" key="$3" probe="${4:-}"
@@ -169,6 +170,25 @@ reinstall_sidebar_unless_pinned() { # $1=成员
   DSH_HOME="$home/desk-test/$u" node "$dsh" plugin --profile web remove dsh-better-sidebar >/dev/null 2>&1 || true
 }
 
+# install_plugin 只看包名。已是 1.4.1 则留下；别的版本（npm 1.3.1、1.4.0）先卸，
+# 否则 add 会报 already-installed，钉不上 file: 这份 1.4.1。不要装 npm 1.3.1。
+reinstall_aqua_unless_pinned() { # $1=成员
+  local u="$1"
+  local profile="$home/desk-test/$u/profiles/web"
+  local pkg="$profile/package.json"
+  local installed="$profile/node_modules/dsh-client-ui-aqua/package.json"
+  [ -f "$pkg" ] || return 0
+  grep -q '"dsh-client-ui-aqua"' "$pkg" || return 0
+  if grep -Eq '"dsh-client-ui-aqua"[[:space:]]*:[[:space:]]*"[^"]*1\.4\.1"' "$pkg"; then
+    return 0
+  fi
+  if [ -f "$installed" ] && grep -Eq '"version"[[:space:]]*:[[:space:]]*"1\.4\.1"' "$installed"; then
+    return 0
+  fi
+  log "aqua 不是 1.4.1，卸下后按钉重装（$u）"
+  DSH_HOME="$home/desk-test/$u" node "$dsh" plugin --profile web remove dsh-client-ui-aqua >/dev/null 2>&1 || true
+}
+
 # file: 装过一次后，清单变更不会自动进 profile。engines.dsh 变了就卸掉再装。
 reinstall_desk_panel_if_manifest_drifted() { # $1=成员
   local u="$1"
@@ -185,9 +205,11 @@ while IFS=$'\t' read -r u p h; do
   drop_deferred_plugins "$u"
   reinstall_desk_panel_if_manifest_drifted "$u"
   reinstall_sidebar_unless_pinned "$u"
+  reinstall_aqua_unless_pinned "$u"
   install_plugin "$u" "file:$repo/plugin/desk-panel" "dsh-desk-panel" || true
   install_plugin "$u" "link:$repo/plugin/dsh-wx-answerer" "dsh-wx-answerer" || true
   install_plugin "$u" "dsh-better-sidebar@0.28.0" "dsh-better-sidebar" || true
+  install_plugin "$u" "file:$repo/plugin/dsh-client-ui-aqua" "dsh-client-ui-aqua" || true
 done < "$home/.desk/run/instances.tsv"
 
 # ── 5c) desk-panel 前端副本强制同步（幂等，原地写保 inode）──
@@ -210,8 +232,8 @@ while IFS=$'\t' read -r _u _p _h; do
   [ -n "${_u:-}" ] && touch "$home/.desk/run/$_u.prov"
 done < "$home/.desk/run/instances.tsv"
 
-# aqua 的 settings.plugin.item key 补丁不在 0.2.1-rc.3 上跑：该槽已删除，
-# 且本脚本不再安装 dsh-client-ui-aqua。WSL 0.1.5 仍可用 patches/aqua-plugin-card-key.py。
+# aqua 的 settings.plugin.item key 补丁不在 0.2.1-rc.3 上跑：该槽已删除。
+# 本脚本改钉 file:$repo/plugin/dsh-client-ui-aqua（1.4.1）。WSL 0.1.5 仍可用 patches/aqua-plugin-card-key.py。
 
 # ── 6) 团队 Soul / 工作区 README（此时各实例已有 profiles 目录） ──
 bash scripts/apply-soul.sh >/dev/null && log "团队 Soul / 工作区 README 已铺"

@@ -18,7 +18,7 @@ dsh plugin --profile web add file:<仓库根>/plugin/dsh-client-ui-aqua
 - npm `dsh-client-ui-aqua@1.3.0` / `@1.3.1`
 - `github:Zagadka-3906/DSH-Transparent-UI-Plugin-dsh015`（`1.3.1-dsh015.2`）
 
-本目录尚未写入 `DEFERRED_PLUGINS`、`bootstrap.sh`、`member-provision.sh`（那是 AC3）。也没有在本机 Docker 上热装。
+`deploy/docker/bootstrap.sh` 与 `member-provision.sh` 已钉这份 `file:plugin/dsh-client-ui-aqua`（1.4.1）。`DEFERRED_PLUGINS` 不再包含它。已是 1.4.1 的 profile 启动时留下；其它版本先卸再装。本说明不代表已经在容器里重启验收。
 
 ## 相对 1.3.1 的改动
 
