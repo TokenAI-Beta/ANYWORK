@@ -7,7 +7,10 @@
 # ---------- 阶段 1：编译 dsh 引擎（钉版本 + 打品牌补丁） ----------
 FROM node:24-bookworm AS dsbuild
 ARG DSH_REPO=https://github.com/deepseek-ai/deepseek-harness.git
-ARG DSH_REF=dsh-v0.1.5-rc.2
+# 本地 Docker 引擎钉 dsh-v0.2.1-rc.3（不要钉 rc.2）。
+# 东京云镜像与 Windows/WSL 裸机 ~/deepseek-harness 不由本 ARG 切换；
+# 打 v* 标签才会进 GHCR，在插件恢复清单完成前不要发版。见 docs/0.2-plugin-api-breakpoints.md。
+ARG DSH_REF=dsh-v0.2.1-rc.3
 # —— 可选：网络源覆盖（中国大陆构建建议传入；不传 = 保持官方源）——
 ARG DEBIAN_MIRROR=
 ARG NPM_REGISTRY=

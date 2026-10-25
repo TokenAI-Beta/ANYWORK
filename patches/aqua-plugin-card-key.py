@@ -1,6 +1,10 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
-"""aqua（玻璃主题 fork）在 dsh 0.1.5+ 的启动报错修复。
+"""aqua（玻璃主题 fork）在 dsh 0.1.5 的启动报错修复。
+
+0.2.1-rc.3 已删除 settings.plugin.item（插件页改为 settings.plugins.tab）。
+本脚本只服务仍停在 0.1.5 的 WSL 裸机；本地 Docker 0.2 不安装 aqua，也不再调用它。
+见 docs/0.2-plugin-api-breakpoints.md。
 
 症状：浏览器 console 报
     Uncaught Error: keyed slot "settings.plugin.item" requires options.key
