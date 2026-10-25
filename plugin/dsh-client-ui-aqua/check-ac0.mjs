@@ -1,4 +1,4 @@
-// Static SoT gates for dsh-client-ui-aqua@1.4.0 against dsh-v0.2.1-rc.3.
+// Static SoT gates for dsh-client-ui-aqua@1.4.1 against dsh-v0.2.1-rc.3.
 // Does not install the plugin and does not talk to Docker.
 import { readFileSync, readdirSync } from 'node:fs'
 import { dirname, join } from 'node:path'
@@ -15,7 +15,7 @@ const failures = []
 const fail = (message) => { failures.push(message) }
 
 if (pkg.name !== 'dsh-client-ui-aqua') fail(`name is ${pkg.name}`)
-if (pkg.version !== '1.4.0') fail(`version is ${pkg.version}`)
+if (pkg.version !== '1.4.1') fail(`version is ${pkg.version}`)
 if (typeof pkg.engines?.dsh !== 'string') fail('engines.dsh is not a string')
 if (pkg.engines?.dsh !== '>=0.2.1-rc.3 <0.3.0') fail(`engines.dsh is ${pkg.engines?.dsh}`)
 if (pkg.peerDependencies && Object.hasOwn(pkg.peerDependencies, '@deepseek-ai/dsh-invariants')) {
@@ -53,4 +53,33 @@ if (failures.length > 0) {
   process.exit(1)
 }
 
-console.log('ac0 ok dsh-client-ui-aqua@1.4.0 engines.dsh=' + pkg.engines.dsh)
+// rc.3 shell seed keys (dsh-client-web PLATFORM_MODULES). require() must hit
+// these exact strings. A trailing /client is NOT folded onto a seed.
+const PLATFORM_MODULES = new Set([
+  'react',
+  'react/jsx-runtime',
+  'react-dom',
+  'react-dom/client',
+  '@deepseek-ai/cordis',
+  'zod',
+  '@tanstack/react-virtual',
+  '@deepseek-ai/dsh-client-store',
+  '@deepseek-ai/dsh-client-ui-slots',
+  '@deepseek-ai/dsh-client-ui-primitives',
+  '@deepseek-ai/dsh-client-ui-dockkit',
+])
+const requires = [...client.matchAll(/require\((["'])([^"']+)\1\)/g)].map((match) => match[2])
+if (requires.length === 0) fail('client bundle has no require() calls')
+for (const spec of requires) {
+  if (!PLATFORM_MODULES.has(spec)) fail(`require("${spec}") is not an rc.3 platform seed`)
+}
+if (requires.includes('@deepseek-ai/dsh-client-runtime/client')) {
+  fail('still requires @deepseek-ai/dsh-client-runtime/client')
+}
+if (!requires.includes('@deepseek-ai/dsh-client-store')) fail('defineStore seed @deepseek-ai/dsh-client-store is not required')
+if (client.includes('@deepseek-ai/dsh-client-runtime')) fail('client still names dsh-client-runtime')
+const inject = pkg.dsh?.client?.inject
+if (!Array.isArray(inject) || inject.length !== 0) fail(`dsh.client.inject should be [] like desk-panel, got ${JSON.stringify(inject)}`)
+if (pkg.dsh?.client?.external !== undefined) fail('seed requires must not be listed in dsh.client.external')
+
+console.log('ac0 ok dsh-client-ui-aqua@1.4.1 engines.dsh=' + pkg.engines.dsh + ' requires=' + requires.join(','))
