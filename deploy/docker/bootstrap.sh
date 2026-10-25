@@ -108,13 +108,15 @@ while IFS=$'\t' read -r u p h; do
 done < "$home/.desk/run/instances.tsv"
 
 # ── 5) 各实例插件 ──
-# 本地 Docker 引擎是 dsh-v0.2.1-rc.3。0.1.5 那一组只留 desk-panel。
+# 本地 Docker 引擎是 dsh-v0.2.1-rc.3。安装 desk-panel、dsh-wx-answerer，
+# 以及钉死的 npm 包 dsh-better-sidebar@0.28.0（不要 0.19.1）。
 # dsh-wx-answerer 是 main 上的微信编号作答（PR #1），继续安装，不在暂缓名单里。
-# 下面四个是 0.1.5-rc.2 的钉，在 0.2.1-rc.3 上要么 peer 被拒，要么（agents-md）
+# better-sidebar 同样不在暂缓名单里：整容器重启要把它留在卷上。
+# 下面三个仍是 0.1.5-rc.2 的钉，在 0.2.1-rc.3 上要么 peer 被拒，要么（agents-md）
 # 没有 engines.dsh / peer、会装上然后在宿主侧炸掉。已有卷里若还在，启动时卸掉。
 # 恢复顺序见 docs/0.2-plugin-api-breakpoints.md：
-#   better-sidebar / aqua → 微信通知桥 → Bots / rooms → agents-md / chat-import
-DEFERRED_PLUGINS=(dsh-better-sidebar dsh-client-ui-aqua dsh-agents-md dsh-chat-import)
+#   aqua → 微信通知桥 → Bots / rooms → agents-md / chat-import
+DEFERRED_PLUGINS=(dsh-client-ui-aqua dsh-agents-md dsh-chat-import)
 
 install_plugin() { # $1=成员 $2=安装 spec $3=检测键（依赖名） $4=可选完整性探针（文件存在才算就绪）
   local u="$1" spec="$2" key="$3" probe="${4:-}"
@@ -126,7 +128,8 @@ install_plugin() { # $1=成员 $2=安装 spec $3=检测键（依赖名） $4=可
   # --profile 必须在子命令之前（0.2.1 起写在后面会失败）
   DSH_HOME="$dsh_home" node "$dsh" plugin --profile web list >/dev/null 2>&1 || true
   DSH_HOME="$dsh_home" node "$dsh" plugin --profile web add "$spec" >/dev/null 2>&1 || true
-  # 原生模块没编出来时：approve 后原地重装（desk-panel 不用；恢复 better-sidebar 时再启用探针）
+  # 原生模块没编出来时：approve 后原地重装。当前安装的 desk-panel、wx-answerer、
+  # better-sidebar@0.28.0 都不传探针（0.21+ 已不依赖 node-pty；旧 pty.node 探针会反复重装）。
   if [ -n "$probe" ] && [ ! -e "$probe" ] && [ -f "$profile/package.json" ]; then
     (cd "$profile" && pnpm approve-builds --all >/dev/null 2>&1) || true
     (cd "$profile" && pnpm install >/dev/null 2>&1) || true
@@ -147,6 +150,25 @@ drop_deferred_plugins() { # $1=成员。未安装则跳过；失败不阻塞启�
   done
 }
 
+# install_plugin 只看包名。已是 0.28.0 则留下；别的版本（如 0.1.5 卷上的 0.19.1）先卸，
+# 否则 add 会报 already-installed，钉不上 0.28.0。
+reinstall_sidebar_unless_pinned() { # $1=成员
+  local u="$1"
+  local profile="$home/desk-test/$u/profiles/web"
+  local pkg="$profile/package.json"
+  local installed="$profile/node_modules/dsh-better-sidebar/package.json"
+  [ -f "$pkg" ] || return 0
+  grep -q '"dsh-better-sidebar"' "$pkg" || return 0
+  if grep -Eq '"dsh-better-sidebar"[[:space:]]*:[[:space:]]*"[^"]*0\.28\.0"' "$pkg"; then
+    return 0
+  fi
+  if [ -f "$installed" ] && grep -Eq '"version"[[:space:]]*:[[:space:]]*"0\.28\.0"' "$installed"; then
+    return 0
+  fi
+  log "better-sidebar 不是 0.28.0，卸下后按钉重装（$u）"
+  DSH_HOME="$home/desk-test/$u" node "$dsh" plugin --profile web remove dsh-better-sidebar >/dev/null 2>&1 || true
+}
+
 # file: 装过一次后，清单变更不会自动进 profile。engines.dsh 变了就卸掉再装。
 reinstall_desk_panel_if_manifest_drifted() { # $1=成员
   local u="$1"
@@ -162,8 +184,10 @@ while IFS=$'\t' read -r u p h; do
   [ -n "${u:-}" ] || continue
   drop_deferred_plugins "$u"
   reinstall_desk_panel_if_manifest_drifted "$u"
+  reinstall_sidebar_unless_pinned "$u"
   install_plugin "$u" "file:$repo/plugin/desk-panel" "dsh-desk-panel" || true
   install_plugin "$u" "link:$repo/plugin/dsh-wx-answerer" "dsh-wx-answerer" || true
+  install_plugin "$u" "dsh-better-sidebar@0.28.0" "dsh-better-sidebar" || true
 done < "$home/.desk/run/instances.tsv"
 
 # ── 5c) desk-panel 前端副本强制同步（幂等，原地写保 inode）──
