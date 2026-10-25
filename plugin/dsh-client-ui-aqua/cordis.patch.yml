@@ -1,0 +1,7 @@
+# Profile bundle row for dsh-client-ui-aqua@1.4.0.
+# Install (not wired by bootstrap yet — AC3):
+#   dsh plugin --profile <name> add file:<repo>/plugin/dsh-client-ui-aqua
+# `--profile` goes before the subcommand on 0.2.1.
+- insert:
+    - id: ui-aqua
+      name: 'dsh-client-ui-aqua'
