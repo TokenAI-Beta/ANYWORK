@@ -1,0 +1,4 @@
+# 微信选择题应答器：挂进 host，监听 user-questions/request（prepend，先于网页应答器）。
+- insert:
+    - id: dsh-wx-answerer
+      name: 'dsh-wx-answerer'

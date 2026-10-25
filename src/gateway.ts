@@ -31,17 +31,74 @@ interface Usage {
 /** 很粗的兜底估算：约 2 字符 ≈ 1 token */
 const estimateTokens = (s: string) => Math.ceil(s.length / 2)
 
-function authenticate(db: DatabaseSync, req: IncomingMessage): AuthUser | undefined {
-  const m = /^Bearer\s+(.+)$/i.exec(req.headers['authorization'] ?? '')
-  if (!m) return undefined
+/** 对话只认 Bearer。检索还认 x-api-key：web-search-deepseek 两个头都会带虚拟钥匙。 */
+function presentedToken(req: IncomingMessage, allowApiKeyHeader: boolean): string | undefined {
+  const auth = req.headers['authorization']
+  const m = /^Bearer\s+(.+)$/i.exec(typeof auth === 'string' ? auth : '')
+  if (m?.[1]?.trim()) return m[1].trim()
+  if (!allowApiKeyHeader) return undefined
+  const x = req.headers['x-api-key']
+  if (typeof x === 'string' && x.trim()) return x.trim()
+  return undefined
+}
+
+function authenticate(db: DatabaseSync, req: IncomingMessage, allowApiKeyHeader = false): AuthUser | undefined {
+  const token = presentedToken(req, allowApiKeyHeader)
+  if (!token) return undefined
   const row = db
     .prepare(
       `SELECT u.id AS id, u.username AS username
        FROM api_keys k JOIN users u ON u.id = k.user_id
        WHERE k.token_hash = ? AND k.revoked_at IS NULL AND u.status = 'active'`,
     )
-    .get(hashToken(m[1].trim())) as AuthUser | undefined
+    .get(hashToken(token)) as AuthUser | undefined
   return row ?? undefined
+}
+
+/**
+ * 工作台 web_search 走 Anthropic Messages（`{base}/messages`），默认官方
+ * `https://api.deepseek.com/anthropic/v1`，且不继承聊天的 DEEPSEEK_BASE_URL。
+ * 成员手里只有虚拟钥匙，直连官方就是裸 401。网关在这条路径上换成真 key 再转发。
+ */
+export const SEARCH_NOT_CONFIGURED =
+  '上游检索未配置。网关没有可用的 DeepSeek 检索密钥或检索地址，因此不会返回裸 HTTP 401。请管理员在服务器配置 DEEPSEEK_API_KEY；若要关闭检索，设置 DESK_SEARCH_UPSTREAM=off。'
+
+export const SEARCH_UPSTREAM_REJECTED =
+  '上游检索拒绝了网关持有的密钥（上游 HTTP 401）。请管理员检查服务器上的 DEEPSEEK_API_KEY 是否为有效的 DeepSeek 密钥。'
+
+export const SEARCH_MISSING_KEY =
+  '检索请求没有带上有效的工作台虚拟钥匙。请从已登录的工作台发起搜索。'
+
+const SEARCH_PATHS = new Set(['/anthropic/v1/messages', '/v1/messages', '/messages'])
+
+export function isSearchMessagesPath(pathname: string): boolean {
+  return SEARCH_PATHS.has(pathname)
+}
+
+/** 检索上游。未配置（无真 key，或 DESK_SEARCH_UPSTREAM=off）时不发请求。 */
+export function resolveSearchUpstream(
+  chatUpstream: string,
+  searchBaseEnv: string | undefined,
+  realKey: string,
+): { url: string } | { error: string } {
+  const flag = (searchBaseEnv ?? '').trim()
+  if (flag === 'off' || flag === 'disabled' || flag === '0') return { error: SEARCH_NOT_CONFIGURED }
+  if (!realKey.trim()) return { error: SEARCH_NOT_CONFIGURED }
+  let base: string
+  if (flag) {
+    base = flag.replace(/\/+$/, '').replace(/\/messages$/, '')
+  } else {
+    const root = chatUpstream.trim().replace(/\/+$/, '').replace(/\/v1$/, '')
+    if (!root) return { error: SEARCH_NOT_CONFIGURED }
+    base = `${root}/anthropic/v1`
+  }
+  try {
+    const url = new URL(`${base}/messages`)
+    if (url.protocol !== 'http:' && url.protocol !== 'https:') return { error: SEARCH_NOT_CONFIGURED }
+    return { url: url.toString() }
+  } catch {
+    return { error: SEARCH_NOT_CONFIGURED }
+  }
 }
 
 function monthSpend(db: DatabaseSync, userId: number): number {
@@ -279,6 +336,53 @@ export function startGateway(opts: GatewayOptions) {
         return
       }
 
+      // 工作台 web_search：POST {gateway}/anthropic/v1/messages（虚拟钥匙）→ 上游 /anthropic/v1/messages（真 key）
+      if (req.method === 'POST' && isSearchMessagesPath(url.pathname)) {
+        const configured = resolveSearchUpstream(opts.upstream, process.env.DESK_SEARCH_UPSTREAM, opts.realKey)
+        if ('error' in configured) {
+          return json(res, 503, { error: { message: configured.error, type: 'search_not_configured' } })
+        }
+        const user = authenticate(opts.db, req, true)
+        if (!user) {
+          return json(res, 403, { error: { message: SEARCH_MISSING_KEY, type: 'auth_error' } })
+        }
+        const budgetRow = opts.db
+          .prepare(`SELECT monthly_budget_cny AS budget FROM users WHERE id = ?`)
+          .get(user.id) as { budget: number | null } | undefined
+        if (budgetRow?.budget != null) {
+          const spent = monthSpend(opts.db, user.id)
+          if (spent >= budgetRow.budget && process.env.DESK_BUDGET_WARN_ONLY !== '1') {
+            const message = `monthly budget exceeded (spent ¥${spent.toFixed(4)} >= budget ¥${budgetRow.budget})`
+            return json(res, 429, { error: { message, type: 'budget_exceeded' } })
+          }
+        }
+        let body = ''
+        for await (const chunk of req) body += chunk
+        let upstreamRes: Response
+        try {
+          const headers: Record<string, string> = {
+            'content-type': 'application/json',
+            authorization: `Bearer ${opts.realKey.trim()}`,
+            'x-api-key': opts.realKey.trim(),
+          }
+          const ver = req.headers['anthropic-version']
+          if (typeof ver === 'string' && ver.trim()) headers['anthropic-version'] = ver.trim()
+          upstreamRes = await fetch(configured.url, { method: 'POST', headers, body })
+        } catch (err) {
+          console.log(`[gw] user=${user.username} search upstream-error: ${String(err)}`)
+          return json(res, 502, { error: { message: '上游检索不可达', type: 'upstream_error' } })
+        }
+        const text = await upstreamRes.text()
+        if (upstreamRes.status === 401) {
+          console.log(`[gw] user=${user.username} search upstream rejected the real key`)
+          return json(res, 502, { error: { message: SEARCH_UPSTREAM_REJECTED, type: 'search_upstream_rejected' } })
+        }
+        console.log(`[gw] user=${user.username} search status=${upstreamRes.status}`)
+        const ctype = upstreamRes.headers.get('content-type') ?? 'application/json'
+        res.writeHead(upstreamRes.status, { 'content-type': ctype })
+        return res.end(text)
+      }
+
       return json(res, 404, { error: { message: 'not found' } })
     } catch (err) {
       console.log(`[gw] unhandled: ${String(err)}`)
@@ -289,7 +393,10 @@ export function startGateway(opts: GatewayOptions) {
       }
     }
   })
-  server.listen(opts.port, '127.0.0.1')
-  console.log(`[gw] listening on http://127.0.0.1:${opts.port} -> ${opts.upstream}`)
+  server.listen(opts.port, '127.0.0.1', () => {
+    const addr = server.address()
+    const bound = addr && typeof addr === 'object' ? addr.port : opts.port
+    console.log(`[gw] listening on http://127.0.0.1:${bound} -> ${opts.upstream}`)
+  })
   return server
 }

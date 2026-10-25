@@ -132,6 +132,7 @@ while IFS=$'\t' read -r u p h; do
   install_plugin "$u" "file:$repo/plugin/desk-panel" "dsh-desk-panel"
   install_plugin "$u" "https://github.com/Zagadka-3906/DSH-Transparent-UI-Plugin-dsh015.git" "dsh-client-ui-aqua"
   install_plugin "$u" "link:$repo/plugin/dsh-agents-md" "dsh-agents-md"
+  install_plugin "$u" "link:$repo/plugin/dsh-wx-answerer" "dsh-wx-answerer"
   install_plugin "$u" "dsh-chat-import" "dsh-chat-import"
   # 版本锁定：dsh-better-sidebar 0.21.x 面向 dsh 0.1.7-rc 构建，装在本引擎 0.1.5-rc.2 上
   # 会让「文件」等标签页 React #130 崩溃（2026-09-27 云/本机双端实测）；0.19.1 = peerDeps ^0.1.5-rc.1 的适配版。

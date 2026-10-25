@@ -437,11 +437,69 @@ async function chatTurn(
   }
 }
 
+/** 纯编号回复（1 / 1 3 / 1,3）。其它文字仍当普通对话。 */
+export function isChoiceText(text: string): boolean {
+  return /^\d+(?:[,，、\s]+\d+)*[.。]?$/.test(text.trim())
+}
+
+interface AnswererEndpoint {
+  port: number
+  token: string
+}
+
+function readAnswerer(home: string): AnswererEndpoint | undefined {
+  try {
+    const raw = JSON.parse(readFileSync(join(home, 'wx-answerer.json'), 'utf8')) as { port?: unknown; token?: unknown }
+    const port = Number(raw.port)
+    if (!Number.isInteger(port) || port < 1 || typeof raw.token !== 'string' || !raw.token) return undefined
+    return { port, token: raw.token }
+  } catch {
+    return undefined
+  }
+}
+
+/**
+ * 把编号交给实例里的应答器。应答器把选项 label 写进同一会话的 ask_user_question，
+ * 网页工作台读到的是同一条工具结果。
+ */
+export async function forwardChoice(
+  home: string,
+  sessionId: string,
+  text: string,
+): Promise<{ ok: true; summary: string } | { ok: false; code: string; info: string }> {
+  const ep = readAnswerer(home)
+  if (!ep) return { ok: false, code: 'down', info: '工作台应答器还没就绪，这条编号没有写进会话。请到网页里点选，或等实例重启后再回复编号。' }
+  const ctrl = new AbortController()
+  const t = setTimeout(() => ctrl.abort(), 4000)
+  try {
+    const r = await fetch(`http://127.0.0.1:${ep.port}/answer`, {
+      method: 'POST',
+      headers: { 'content-type': 'application/json', authorization: 'Bearer ' + ep.token },
+      body: JSON.stringify({ sessionId, text }),
+      signal: ctrl.signal,
+    })
+    const raw = await r.text()
+    let body: { ok?: boolean; summary?: string; error?: string; code?: string } = {}
+    try {
+      body = JSON.parse(raw) as typeof body
+    } catch {
+      body = {}
+    }
+    if (r.ok && body.ok && body.summary) return { ok: true, summary: body.summary }
+    const code = body.code || (r.status === 409 ? 'no-pending' : 'bad-choice')
+    return { ok: false, code, info: body.error || '编号没有写进会话' }
+  } catch {
+    return { ok: false, code: 'down', info: '工作台应答器没有应答，这条编号没有写进会话。请到网页里点选。' }
+  } finally {
+    clearTimeout(t)
+  }
+}
+
 /** 把「助理卡在选择题」格式化给微信（题目 + 选项 + 指引） */
 function composeAskNotice(partial: string, ask: PendingAsk): string {
   const lines: string[] = []
   if (partial) lines.push(partial, '')
-  lines.push('✋ 助理卡在一道选择题上了——它在等工作台里的你挑一个（微信这头没法直接选）：', '')
+  lines.push('✋ 助理卡在一道选择题上了。直接回复选项编号即可（网页里也能点选）：', '')
   lines.push((ask.header ? '「' + ask.header + '」' : '') + ask.question)
   if (ask.options.length) {
     lines.push('')
@@ -450,8 +508,8 @@ function composeAskNotice(partial: string, ask: PendingAsk): string {
     })
   }
   lines.push('')
-  if (ask.multiSelect) lines.push('（可多选）', '')
-  lines.push('👉 去工作台网页里点选（题目挂着等你）；选完助理会继续，后续回复我接着发到这里。')
+  if (ask.multiSelect) lines.push('（可多选：回复编号，用空格或逗号隔开，例如 1 3）', '')
+  lines.push('👉 回复编号（例如 1）。选完会写进同一个会话，网页工作台也能看到，助理接着做，后续回复我再发到这里。')
   return lines.join('\n')
 }
 
@@ -499,24 +557,65 @@ function scheduleContinuation(db: DatabaseSync, chatId: number, sid: string, sen
   setTimeout(() => { void tick() }, 20_000)
 }
 
-async function respond(db: DatabaseSync, id: number, text: string): Promise<void> {
-  const row = getRow(db, id)
-  if (!row) return
-  const r = await chatTurn(db, row, text)
-  const outText = r.ok && r.reply ? r.reply : '（助理暂时没有响应，请稍后再试）'
+async function sendOut(db: DatabaseSync, id: number, row: WxChatRow, outText: string, info: string): Promise<boolean> {
   let ok = true
-  let info = ''
+  let detail = ''
   const chunks = chunkText(outText, CHUNK_MAX)
   for (const c of chunks) {
     const raw = getRow(db, id)
     const res = await sendWeixinIlink(raw?.base_url || row.base_url, row.token, row.openid, c, raw?.last_ctx || undefined)
     ok = ok && res.ok
-    info = res.info
+    detail = res.info
     if (!res.ok) break
     if (chunks.length > 1) await sleep(400)
   }
-  logMsg(db, id, 'out', outText, ok, r.info === 'ok' ? info : r.info + ':' + info)
+  logMsg(db, id, 'out', outText, ok, info === 'ok' ? detail : info + ':' + detail)
   db.prepare(`UPDATE wx_chat SET last_reply_ts = ? WHERE id = ?`).run(nowSec(), id)
+  return ok
+}
+
+/**
+ * 挂着选择题时，纯编号不进普通 prompt（那只会排在卡住的回合后面）。
+ * 交给应答器写回同一会话；网页若已经点过，则不再拦截。
+ */
+async function tryChoiceReply(
+  db: DatabaseSync,
+  row: WxChatRow,
+  text: string,
+): Promise<{ handled: false } | { handled: true; ok: boolean; info: string; sid?: string }> {
+  const sid = row.session_id
+  if (!sid || !isChoiceText(text)) return { handled: false }
+  const home = userHome(row.account)
+  const st = decodeSessionState(home, sid)
+  if (!st?.pendingAsk) return { handled: false }
+  const r = await forwardChoice(home, sid, text)
+  if (r.ok) return { handled: true, ok: true, info: r.summary, sid }
+  if (r.code === 'no-pending') {
+    const again = decodeSessionState(home, sid)
+    if (!again?.pendingAsk) return { handled: false }
+    return { handled: true, ok: false, info: '这道题还挂在网页上，编号没有写进会话。请到工作台里点选，或等应答器就绪后重发编号。', sid }
+  }
+  return { handled: true, ok: false, info: r.info, sid }
+}
+
+async function respond(db: DatabaseSync, id: number, text: string): Promise<void> {
+  const row = getRow(db, id)
+  if (!row) return
+  const choice = await tryChoiceReply(db, row, text)
+  if (choice.handled) {
+    const outText = choice.ok
+      ? `已按编号作答：${choice.info}\n同一会话会继续；网页工作台里也能看到这个选择。`
+      : choice.info
+    const ok = await sendOut(db, id, row, outText, choice.ok ? 'choice' : 'choice-rejected')
+    if (ok && choice.ok && choice.sid) {
+      const st = decodeSessionState(userHome(row.account), choice.sid)
+      scheduleContinuation(db, id, choice.sid, st?.text ?? '')
+    }
+    return
+  }
+  const r = await chatTurn(db, row, text)
+  const outText = r.ok && r.reply ? r.reply : '（助理暂时没有响应，请稍后再试）'
+  const ok = await sendOut(db, id, row, outText, r.info)
   if (ok && r.ok && (r.info === 'question' || r.info === 'partial') && r.sid) {
     scheduleContinuation(db, id, r.sid, r.partial || '')
   }
