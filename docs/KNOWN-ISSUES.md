@@ -32,7 +32,7 @@
 
 - **现象**：右侧面板点「文件」（或打开文档标签）→ `dsh-better-sidebar: Minified React error #130` + 重试按钮。
 - **根因**：镜像/bootstrap 曾用 `dsh-better-sidebar@latest` 安装，装到 0.21.x（面向 dsh 0.1.7-rc 构建；peerDeps ^0.1.7-rc.1），而本引擎为 0.1.5-rc.2。
-- **处置（仅 0.1.5-rc.2）**：锁定 `dsh-better-sidebar@0.19.1`（peerDeps ^0.1.5-rc.1）。这条钉不能用在本地 Docker 的 `dsh-v0.2.1-rc.3` 上：该 peer 会被拒绝安装。0.2 启动脚本不再安装 better-sidebar，恢复时另选版本，见 [`0.2-plugin-api-breakpoints.md`](0.2-plugin-api-breakpoints.md)。仍停在 0.1.5 的实例若要降级：
+- **处置（仅 0.1.5-rc.2）**：锁定 `dsh-better-sidebar@0.19.1`（peerDeps ^0.1.5-rc.1）。这条钉不能用在本地 Docker 的 `dsh-v0.2.1-rc.3` 上：该 peer 会被拒绝安装。0.2 启动脚本钉的是 `dsh-better-sidebar@0.28.0`（`deploy/docker/bootstrap.sh` 与 `member-provision.sh`），见 [`0.2-plugin-api-breakpoints.md`](0.2-plugin-api-breakpoints.md)。仍停在 0.1.5 的实例若要降级：
   ```sh
   docker compose exec -T -e npm_config_registry=https://registry.npmmirror.com anywork sh -c \
     'DSH_HOME=/data/desk-test/<成员> node /data/deepseek-harness/apps/cli/lib/bin.js plugin --profile web add dsh-better-sidebar@0.19.1'

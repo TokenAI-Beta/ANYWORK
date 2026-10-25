@@ -31,11 +31,12 @@ if ! grep -q "agent-presets" "$sf" 2>/dev/null; then
   mv "$sf.tmp" "$sf"
 fi
 
-# 3) 插件：desk-panel + dsh-wx-answerer（dsh 0.2.1-rc.3）。
-#    wx-answerer 是微信编号作答，随 main 保留。模板必须已经有 desk-panel，
-#    且没有 0.1.5 那四个钉，避免把 better-sidebar@0.19.1 / aqua / chat-import / agents-md 复制进新成员。
-#    恢复顺序：better-sidebar / aqua → 微信通知桥 → Bots / rooms → agents-md / chat-import
-DEFERRED_PLUGINS=(dsh-better-sidebar dsh-client-ui-aqua dsh-agents-md dsh-chat-import)
+# 3) 插件：desk-panel + dsh-wx-answerer + dsh-better-sidebar@0.28.0（dsh 0.2.1-rc.3）。
+#    wx-answerer 是微信编号作答，随 main 保留。better-sidebar 钉 npm 包 0.28.0，不回到 0.19.1。
+#    模板必须已经有 desk-panel，且没有仍暂缓的三个插件（aqua / agents-md / chat-import），
+#    避免把它们复制进新成员。
+#    恢复顺序：aqua → 微信通知桥 → Bots / rooms → agents-md / chat-import
+DEFERRED_PLUGINS=(dsh-client-ui-aqua dsh-agents-md dsh-chat-import)
 prof="$h/profiles"
 tpl=""
 for c in $(ls "$home/desk-test" 2>/dev/null || true); do
@@ -81,6 +82,29 @@ if ! grep -q "dsh-wx-answerer" "$prof/web/package.json" 2>/dev/null; then
   DSH_HOME="$h" node "$dsh" plugin --profile web list >/dev/null 2>&1 || true
   DSH_HOME="$h" node "$dsh" plugin --profile web add "link:$repo/plugin/dsh-wx-answerer" >/dev/null 2>&1 \
     || log "插件安装失败（可重启容器重试）：link:$repo/plugin/dsh-wx-answerer"
+fi
+# 已是 0.28.0 则跳过。别的版本先卸：add 对已装包名不会换版本。
+sidebar_pkg="$prof/web/package.json"
+sidebar_installed="$prof/web/node_modules/dsh-better-sidebar/package.json"
+if [ -f "$sidebar_pkg" ] && grep -q '"dsh-better-sidebar"' "$sidebar_pkg"; then
+  sidebar_pinned=0
+  if grep -Eq '"dsh-better-sidebar"[[:space:]]*:[[:space:]]*"[^"]*0\.28\.0"' "$sidebar_pkg"; then
+    sidebar_pinned=1
+  fi
+  if [ -f "$sidebar_installed" ] && grep -Eq '"version"[[:space:]]*:[[:space:]]*"0\.28\.0"' "$sidebar_installed"; then
+    sidebar_pinned=1
+  fi
+  if [ "$sidebar_pinned" = 0 ]; then
+    log "better-sidebar 不是 0.28.0，卸下后按钉重装"
+    DSH_HOME="$h" node "$dsh" plugin --profile web remove dsh-better-sidebar >/dev/null 2>&1 \
+      || log "插件卸载失败（可重启容器重试）：dsh-better-sidebar"
+  fi
+fi
+if ! grep -q "dsh-better-sidebar" "$prof/web/package.json" 2>/dev/null; then
+  log "安装 dsh-better-sidebar@0.28.0"
+  DSH_HOME="$h" node "$dsh" plugin --profile web list >/dev/null 2>&1 || true
+  DSH_HOME="$h" node "$dsh" plugin --profile web add "dsh-better-sidebar@0.28.0" >/dev/null 2>&1 \
+    || log "插件安装失败（可重启容器重试）：dsh-better-sidebar@0.28.0"
 fi
 
 # desk-panel 前端副本（与 bootstrap 5c 相同：file: 不会因清单以外的改动自动更新）
