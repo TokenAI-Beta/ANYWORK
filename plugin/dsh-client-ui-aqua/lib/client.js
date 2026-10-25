@@ -1,7 +1,10 @@
-// dsh-client-ui-aqua@1.4.1 — MIT fork of 1.3.1 (John Wu / WYH66666666).
+// dsh-client-ui-aqua@1.4.2 — MIT fork of 1.3.1 (John Wu / WYH66666666).
 // rc.3: no plugins-section card slot, no invariant companion; glass covers
 // composer dock controls activity and usage (data-composer-stat).
 // defineStore comes from the platform seed @deepseek-ai/dsh-client-store.
+// Check marks use IconCheckOutlineRegular (size 16). rc.3 primitives dropped
+// IconCheckOutline16; rendering that missing export throws once glass is on,
+// and the slot boundary then drops the General rows.
 window.__ModuleLoader__.load({
 	id: "dsh-client-ui-aqua",
 	factory: (require) => {
@@ -69,7 +72,7 @@ window.__ModuleLoader__.load({
 						},
 						children: [/* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", {
 							className: AquaPluginCard_module_css_default.check,
-							children: enabled && /* @__PURE__ */ (0, react_jsx_runtime.jsx)(_deepseek_ai_dsh_client_ui_primitives.IconCheckOutline16, {})
+							children: enabled && /* @__PURE__ */ (0, react_jsx_runtime.jsx)(_deepseek_ai_dsh_client_ui_primitives.IconCheckOutlineRegular, { size: 16 })
 						}), enabled ? t("aqua.enable") : t("aqua.disable")]
 					})]
 				})
@@ -683,7 +686,7 @@ window.__ModuleLoader__.load({
 										},
 										children: [/* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", {
 											className: AquaAppearanceRow_module_css_default.check,
-											children: whale && /* @__PURE__ */ (0, react_jsx_runtime.jsx)(_deepseek_ai_dsh_client_ui_primitives.IconCheckOutline16, {})
+											children: whale && /* @__PURE__ */ (0, react_jsx_runtime.jsx)(_deepseek_ai_dsh_client_ui_primitives.IconCheckOutlineRegular, { size: 16 })
 										}), whale ? t("aqua.enable") : t("aqua.disable")]
 									})]
 								}),
@@ -701,7 +704,7 @@ window.__ModuleLoader__.load({
 										},
 										children: [/* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", {
 											className: AquaAppearanceRow_module_css_default.check,
-											children: critters && /* @__PURE__ */ (0, react_jsx_runtime.jsx)(_deepseek_ai_dsh_client_ui_primitives.IconCheckOutline16, {})
+											children: critters && /* @__PURE__ */ (0, react_jsx_runtime.jsx)(_deepseek_ai_dsh_client_ui_primitives.IconCheckOutlineRegular, { size: 16 })
 										}), critters ? t("aqua.enable") : t("aqua.disable")]
 									})]
 								}),
@@ -719,7 +722,7 @@ window.__ModuleLoader__.load({
 										},
 										children: [/* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", {
 											className: AquaAppearanceRow_module_css_default.check,
-											children: mesh && /* @__PURE__ */ (0, react_jsx_runtime.jsx)(_deepseek_ai_dsh_client_ui_primitives.IconCheckOutline16, {})
+											children: mesh && /* @__PURE__ */ (0, react_jsx_runtime.jsx)(_deepseek_ai_dsh_client_ui_primitives.IconCheckOutlineRegular, { size: 16 })
 										}), mesh ? t("aqua.enable") : t("aqua.disable")]
 									})]
 								})
@@ -747,7 +750,7 @@ window.__ModuleLoader__.load({
 									},
 									children: [/* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", {
 										className: AquaAppearanceRow_module_css_default.check,
-										children: spotlight && /* @__PURE__ */ (0, react_jsx_runtime.jsx)(_deepseek_ai_dsh_client_ui_primitives.IconCheckOutline16, {})
+										children: spotlight && /* @__PURE__ */ (0, react_jsx_runtime.jsx)(_deepseek_ai_dsh_client_ui_primitives.IconCheckOutlineRegular, { size: 16 })
 									}), spotlight ? t("aqua.enable") : t("aqua.disable")]
 								})]
 							}), /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("div", {
@@ -764,7 +767,7 @@ window.__ModuleLoader__.load({
 									},
 									children: [/* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", {
 										className: AquaAppearanceRow_module_css_default.check,
-										children: press && /* @__PURE__ */ (0, react_jsx_runtime.jsx)(_deepseek_ai_dsh_client_ui_primitives.IconCheckOutline16, {})
+										children: press && /* @__PURE__ */ (0, react_jsx_runtime.jsx)(_deepseek_ai_dsh_client_ui_primitives.IconCheckOutlineRegular, { size: 16 })
 									}), press ? t("aqua.enable") : t("aqua.disable")]
 								})]
 							})]

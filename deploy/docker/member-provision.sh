@@ -32,7 +32,7 @@ if ! grep -q "agent-presets" "$sf" 2>/dev/null; then
 fi
 
 # 3) 插件：desk-panel + dsh-wx-answerer + dsh-better-sidebar@0.28.0
-#    + file:plugin/dsh-client-ui-aqua（dsh-client-ui-aqua@1.4.1，不要 npm 1.3.1）。
+#    + file:plugin/dsh-client-ui-aqua（dsh-client-ui-aqua@1.4.2，不要 npm 1.3.1）。
 #    wx-answerer 是微信编号作答，随 main 保留。better-sidebar 钉 npm 包 0.28.0，不回到 0.19.1。
 #    aqua 与 sidebar 都不在暂缓名单里。模板必须已经有 desk-panel，且没有仍暂缓的
 #    两个插件（agents-md / chat-import），避免把它们复制进新成员。
@@ -107,25 +107,25 @@ if ! grep -q "dsh-better-sidebar" "$prof/web/package.json" 2>/dev/null; then
   DSH_HOME="$h" node "$dsh" plugin --profile web add "dsh-better-sidebar@0.28.0" >/dev/null 2>&1 \
     || log "插件安装失败（可重启容器重试）：dsh-better-sidebar@0.28.0"
 fi
-# 已是 1.4.1 则跳过。别的版本先卸：add 对已装包名不会换版本。不要装 npm 1.3.1。
+# 已是 1.4.2 则跳过。别的版本（含 1.4.1）先卸：add 对已装包名不会换版本。不要装 npm 1.3.1。
 aqua_pkg="$prof/web/package.json"
 aqua_installed="$prof/web/node_modules/dsh-client-ui-aqua/package.json"
 if [ -f "$aqua_pkg" ] && grep -q '"dsh-client-ui-aqua"' "$aqua_pkg"; then
   aqua_pinned=0
-  if grep -Eq '"dsh-client-ui-aqua"[[:space:]]*:[[:space:]]*"[^"]*1\.4\.1"' "$aqua_pkg"; then
+  if grep -Eq '"dsh-client-ui-aqua"[[:space:]]*:[[:space:]]*"[^"]*1\.4\.2"' "$aqua_pkg"; then
     aqua_pinned=1
   fi
-  if [ -f "$aqua_installed" ] && grep -Eq '"version"[[:space:]]*:[[:space:]]*"1\.4\.1"' "$aqua_installed"; then
+  if [ -f "$aqua_installed" ] && grep -Eq '"version"[[:space:]]*:[[:space:]]*"1\.4\.2"' "$aqua_installed"; then
     aqua_pinned=1
   fi
   if [ "$aqua_pinned" = 0 ]; then
-    log "aqua 不是 1.4.1，卸下后按钉重装"
+    log "aqua 不是 1.4.2，卸下后按钉重装"
     DSH_HOME="$h" node "$dsh" plugin --profile web remove dsh-client-ui-aqua >/dev/null 2>&1 \
       || log "插件卸载失败（可重启容器重试）：dsh-client-ui-aqua"
   fi
 fi
 if ! grep -q "dsh-client-ui-aqua" "$prof/web/package.json" 2>/dev/null; then
-  log "安装 file:$repo/plugin/dsh-client-ui-aqua（1.4.1）"
+  log "安装 file:$repo/plugin/dsh-client-ui-aqua（1.4.2）"
   DSH_HOME="$h" node "$dsh" plugin --profile web list >/dev/null 2>&1 || true
   DSH_HOME="$h" node "$dsh" plugin --profile web add "file:$repo/plugin/dsh-client-ui-aqua" >/dev/null 2>&1 \
     || log "插件安装失败（可重启容器重试）：file:$repo/plugin/dsh-client-ui-aqua"

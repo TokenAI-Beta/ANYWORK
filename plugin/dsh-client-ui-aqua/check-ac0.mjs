@@ -1,4 +1,4 @@
-// Static SoT gates for dsh-client-ui-aqua@1.4.1 against dsh-v0.2.1-rc.3.
+// Static SoT gates for dsh-client-ui-aqua@1.4.2 against dsh-v0.2.1-rc.3.
 // Does not install the plugin and does not talk to Docker.
 import { readFileSync, readdirSync } from 'node:fs'
 import { dirname, join } from 'node:path'
@@ -15,7 +15,7 @@ const failures = []
 const fail = (message) => { failures.push(message) }
 
 if (pkg.name !== 'dsh-client-ui-aqua') fail(`name is ${pkg.name}`)
-if (pkg.version !== '1.4.1') fail(`version is ${pkg.version}`)
+if (pkg.version !== '1.4.2') fail(`version is ${pkg.version}`)
 if (typeof pkg.engines?.dsh !== 'string') fail('engines.dsh is not a string')
 if (pkg.engines?.dsh !== '>=0.2.1-rc.3 <0.3.0') fail(`engines.dsh is ${pkg.engines?.dsh}`)
 if (pkg.peerDependencies && Object.hasOwn(pkg.peerDependencies, '@deepseek-ai/dsh-invariants')) {
@@ -36,6 +36,8 @@ if (client.includes('settings.plugin.item') || patch.includes('settings.plugin.i
 }
 if (!client.includes('name: "settings.general.item"')) fail('master/knobs row is not on settings.general.item')
 if (!client.includes('id: "aqua-toggle"')) fail('master switch id aqua-toggle missing')
+if (client.includes('.IconCheckOutline16')) fail('IconCheckOutline16 is not an rc.3 primitive; enabled rows throw and the slot drops them')
+if (!client.includes('IconCheckOutlineRegular')) fail('enabled check mark must use IconCheckOutlineRegular')
 
 const activity = 'data-composer-stat=\\"activity\\"'
 const usage = 'data-composer-stat=\\"usage\\"'
@@ -82,4 +84,4 @@ const inject = pkg.dsh?.client?.inject
 if (!Array.isArray(inject) || inject.length !== 0) fail(`dsh.client.inject should be [] like desk-panel, got ${JSON.stringify(inject)}`)
 if (pkg.dsh?.client?.external !== undefined) fail('seed requires must not be listed in dsh.client.external')
 
-console.log('ac0 ok dsh-client-ui-aqua@1.4.1 engines.dsh=' + pkg.engines.dsh + ' requires=' + requires.join(','))
+console.log('ac0 ok dsh-client-ui-aqua@1.4.2 engines.dsh=' + pkg.engines.dsh + ' requires=' + requires.join(','))

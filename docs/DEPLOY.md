@@ -14,7 +14,7 @@ docker compose up -d --build
 - 打开 `http://<ANYWORK_HOST>/`，用 `.env` 里的管理员账号登录；密码留空则首次启动自动生成并打印一次（也可在卷内 `.desk/admin-password` 查看）。
 - **组成**：单容器 = 门户(:8080) + 模型网关(:8100，仅容器内) + 每个成员一个 dsh 实例；数据全部在卷 `anywork_anywork-data`。
 - **记账**：成员的模型请求都经容器内网关转发入账（真实 key 只留在容器内，成员拿不到）；用量在「设置 → 用量」按人查看。
-- **首次启动**：自动建管理员号、发虚拟钥匙、配实例，并装 `desk-panel`、`dsh-wx-answerer`（微信编号作答）、钉死的 `dsh-better-sidebar@0.28.0`（需外网；装失败重启容器会重试）与仓内 `dsh-client-ui-aqua@1.4.1`（`file:plugin/dsh-client-ui-aqua`，不要 npm 1.3.1）。微信通知桥验收、Bots/房间、agents-md、chat-import 按 [`0.2-plugin-api-breakpoints.md`](0.2-plugin-api-breakpoints.md) 的顺序另开恢复，不在这次启动里安装。
+- **首次启动**：自动建管理员号、发虚拟钥匙、配实例，并装 `desk-panel`、`dsh-wx-answerer`（微信编号作答）、钉死的 `dsh-better-sidebar@0.28.0`（需外网；装失败重启容器会重试）与仓内 `dsh-client-ui-aqua@1.4.2`（`file:plugin/dsh-client-ui-aqua`，不要 npm 1.3.1）。微信通知桥验收、Bots/房间、agents-md、chat-import 按 [`0.2-plugin-api-breakpoints.md`](0.2-plugin-api-breakpoints.md) 的顺序另开恢复，不在这次启动里安装。
 - **加成员**：`.env` 里改 `ANYWORK_MEMBERS=alice,bob` 后 `docker compose up -d`（自动建号；初始密码在卷内 `.desk/accounts.txt`，转告本人后建议删除）；也可用 设置 →「成员管理」在线建。
 - **升级**：`git pull && docker compose up -d --build`；换 dsh 版本改 `deploy/docker/Dockerfile` 里的 `DSH_REF`。当前本地构建钉的是 `dsh-v0.2.1-rc.3`（不是 rc.2）。东京云上已在跑的镜像、以及方式二的 WSL 裸机 `~/deepseek-harness`，都不要改到这个版本；GHCR 只在打 `v*` 标签时构建，插件恢复完成前不要发这个标签。
 - **备份**：`docker run --rm -v anywork_anywork-data:/data -v "$PWD":/out alpine tar czf /out/anywork-backup-$(date +%F).tar.gz -C /data .`
