@@ -1,7 +1,9 @@
 # AC0 — aqua pin（Cut 2026-10-25 Decision A）
 
-钉版：`dsh-client-ui-aqua@1.4.0`  
+钉版：`dsh-client-ui-aqua@1.4.1`  
 安装规格：`file:plugin/dsh-client-ui-aqua`
+
+`1.4.0` 在 rc.3 上加载失败：`require("@deepseek-ai/dsh-client-runtime/client")` 不在模块表。`1.4.1` 改为平台种子 `@deepseek-ai/dsh-client-store`（`defineStore`），`dsh.client.inject` 为 `[]`。热装过 `1.4.0` 的实例要先 `dsh plugin --profile web remove dsh-client-ui-aqua`，再 `add file:<仓库根>/plugin/dsh-client-ui-aqua`。
 
 这是 npm `1.3.1` 的仓内 MIT fork（见 `plugin/dsh-client-ui-aqua/NOTICE`）。静态四门由 `node plugin/dsh-client-ui-aqua/check-ac0.mjs` 核对。本说明不代表已经热装，也不改 `DEFERRED_PLUGINS` / `bootstrap.sh` / `member-provision.sh`。
 
