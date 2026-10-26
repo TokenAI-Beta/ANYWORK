@@ -46,6 +46,14 @@ RUN DSH_SRC=/src/deepseek-harness python3 /tmp/dsh-sidebar-entry-chrome.py
 # 必须排在 entry-chrome 之后、pnpm build 之前。脚本要求 DSH_SRC。不打 Windows 检出。
 COPY deploy/docker/dsh-sidebar-groups.py /tmp/dsh-sidebar-groups.py
 RUN DSH_SRC=/src/deepseek-harness python3 /tmp/dsh-sidebar-groups.py
+# 工作卡收纳「机器人」(desk-bots) 与「资料库」(desk-hub)，并去掉左下角账号菜单
+# （未登录文案 t('more') 「更多」）里的「意见反馈」。必须排在 groups 之后、
+# pnpm build 之前：改的是已分组的 SidebarRoot 与 AccountMenu。
+# groups 的成功检查仍认旧 except 名单，不能在本步之后重跑。
+# 不改 PanelMoreMenu 的条目，不卸设置/登录/退出，不改登录 URL，不改 DSH_REF。
+# 脚本要求 DSH_SRC。不打 Windows 检出。
+COPY deploy/docker/dsh-sidebar-work-group-bots-vault.py /tmp/dsh-sidebar-work-group-bots-vault.py
+RUN DSH_SRC=/src/deepseek-harness python3 /tmp/dsh-sidebar-work-group-bots-vault.py
 WORKDIR /src/deepseek-harness
 RUN pnpm install
 RUN pnpm build
@@ -87,10 +95,15 @@ RUN ANYWORK_SRC=/opt/anywork python3 /opt/anywork/deploy/docker/dsh-sidebar-auto
 # 外栏留下 desk-bots，显示名改为「机器人」；不再注册 desk-agents。
 # 点开后子代理控制台在正文开头作导语（介绍句 + 工作动态/定义管理），Bot 与群聊仍在同一面板。
 # 必须排在 automation-merge 之后：那个脚本的成功检查仍要求 desk-agents 还在。
-# 不改三卡 only/except（#16 分组补丁在 dsbuild、pnpm build 之前）：desk-bots 不在 only 名单，
-# 仍走卡片下的 except 出口。不打 DSH_SRC，不改 DSH_REF，不改登录 URL。
+# 本步不改三卡 only/except（分组补丁在 dsbuild）。下一条才把 desk-bots 与 desk-hub
+# 收进工作卡。不打 DSH_SRC，不改 DSH_REF，不改登录 URL。
 # 脚本要求 ANYWORK_SRC，没有家目录默认路径。仓内未打补丁的插件源留给 Windows 检出。
 RUN ANYWORK_SRC=/opt/anywork python3 /opt/anywork/deploy/docker/dsh-sidebar-bots-subagents-merge.py
+# 外栏「团队资料」改为「资料库」（desk-hub 的 th.tab）。同一 TeamHub 面板。
+# 必须排在 bots-subagents-merge 之后，打在 /opt/anywork 副本上。
+# 分组已在 dsbuild、pnpm build 之前打进 SidebarRoot，这里不改 harness，不改 DSH_REF。
+# 脚本要求 ANYWORK_SRC。仓内未打补丁的 client.js 仍是「团队资料」，Windows 检出不会跑到。
+RUN ANYWORK_SRC=/opt/anywork python3 /opt/anywork/deploy/docker/dsh-sidebar-work-group-bots-vault.py
 
 COPY --from=dsbuild /src/deepseek-harness /opt/deepseek-harness
 
