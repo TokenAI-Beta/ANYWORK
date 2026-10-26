@@ -27,6 +27,10 @@ COPY patches/ /src/patches/
 RUN DSH_SRC=/src/deepseek-harness python3 /src/patches/dsh-branding-anywork-tokenai.py
 # 非 loopback（门户访问）也启用 host 设置持久化：语言/外观等设置才会落盘
 RUN DSH_SRC=/src/deepseek-harness python3 /src/patches/dsh-settings-lan-persistence.py || echo "WARN: settings persistence patch skipped"
+# 侧栏账号菜单「登录」改为打开中转站账密页。只改本镜像里克隆的 dsh 源码，随后 pnpm build 打进客户端包。
+# DSH_REF 不动。脚本要求 DSH_SRC，没有家目录默认路径。
+COPY deploy/docker/dsh-sidebar-relay-login.py /tmp/dsh-sidebar-relay-login.py
+RUN DSH_SRC=/src/deepseek-harness python3 /tmp/dsh-sidebar-relay-login.py
 WORKDIR /src/deepseek-harness
 RUN pnpm install
 RUN pnpm build
