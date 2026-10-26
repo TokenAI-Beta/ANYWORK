@@ -40,6 +40,12 @@ RUN DSH_SRC=/src/deepseek-harness python3 /tmp/dsh-sidebar-nav-reorder.py
 # 脚本要求 DSH_SRC。不打 Windows 检出，也不靠热装 desk-panel 单独改这层壳。
 COPY deploy/docker/dsh-sidebar-entry-chrome.py /tmp/dsh-sidebar-entry-chrome.py
 RUN DSH_SRC=/src/deepseek-harness python3 /tmp/dsh-sidebar-entry-chrome.py
+# 侧栏三组卡片（乙·重）：工作（新会话 / 功能与连接 / 自动化任务）、
+# 扩展（插件 / 导入会话）、账户（用量 / 面板「更多」）。
+# 其余 sidebar.footer.action 仍各渲染一次。不改登录 URL，不卸 desk-auto，不改 DSH_REF。
+# 必须排在 entry-chrome 之后、pnpm build 之前。脚本要求 DSH_SRC。不打 Windows 检出。
+COPY deploy/docker/dsh-sidebar-groups.py /tmp/dsh-sidebar-groups.py
+RUN DSH_SRC=/src/deepseek-harness python3 /tmp/dsh-sidebar-groups.py
 WORKDIR /src/deepseek-harness
 RUN pnpm install
 RUN pnpm build
