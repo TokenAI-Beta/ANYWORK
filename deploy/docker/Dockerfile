@@ -31,6 +31,10 @@ RUN DSH_SRC=/src/deepseek-harness python3 /src/patches/dsh-settings-lan-persiste
 # DSH_REF 不动。脚本要求 DSH_SRC，没有家目录默认路径。
 COPY deploy/docker/dsh-sidebar-relay-login.py /tmp/dsh-sidebar-relay-login.py
 RUN DSH_SRC=/src/deepseek-harness python3 /tmp/dsh-sidebar-relay-login.py
+# 侧栏九项主入口（sidebar.footer.action）挪到「插件」面板列表之上、新会话之下。
+# 底栏只留设置（「更多」）。不改 AccountMenu，不改 DSH_REF。脚本要求 DSH_SRC。
+COPY deploy/docker/dsh-sidebar-nav-reorder.py /tmp/dsh-sidebar-nav-reorder.py
+RUN DSH_SRC=/src/deepseek-harness python3 /tmp/dsh-sidebar-nav-reorder.py
 WORKDIR /src/deepseek-harness
 RUN pnpm install
 RUN pnpm build
