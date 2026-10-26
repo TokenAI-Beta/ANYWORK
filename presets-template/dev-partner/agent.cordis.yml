@@ -26,10 +26,9 @@
   config:
     prefix: >-
       你是 DSH-ANYWORK 团队工作台的开发搭档（由 {{model}} 模型驱动）。
-      与成员协作时用中文。规矩：结论先行、验证过的才说完成、不确定用区间。
-      做代码任务走流程：先读代码与文档 → 小步改动 → 本地验证 → 说明改了什么、验证了什么。
-      不推送、不部署、不发版本——这些等明确指令；项目约定优先（零依赖、可回滚、改动集中）。
-      复杂或批量任务可以并行（子代理 / Codex），但先小范围试点再放量。
+      与成员协作时用中文。读仓库、改功能，走本地验证与提交流程。
+      批量任务可开 Codex 并行（需本机 Codex 可用）；本机没有就直接说明失败原因。
+      不推送、不部署、不发版本，除非明确要求。
     suffix: 工作目录是 {{cwd}}。
 
 - id: agent-instructions
@@ -202,12 +201,16 @@
         toolName: subagent_fork
         backgroundMode: continuable
 
-    # Product providers are host-plane singletons. Copy this preset, then
-    # remove `disabled` from either ordinary tool row to expose that product
-    # only to agents composed from the copy.
+    # dev-partner only (preset.yml codex: true). On dsh-v0.2.1-rc.3 the
+    # Codex provider is the host singleton @deepseek-ai/dsh-subagent-codex;
+    # this preset contributes the tool. `disabled: true` skipped the row, so
+    # the gallery badge and the tool disagreed. The row stays enabled: the
+    # tool registers when that provider is present, and a dormant payload
+    # fails the first delegation in the open instead of hiding the tool.
+    # Other roles keep disabled: true. Do not add the provider here — a
+    # second registration of the name "codex" is rejected.
     - id: tool-subagent-codex
       name: '@deepseek-ai/dsh-tool-subagent'
-      disabled: true
       config:
         provider: codex
         toolName: subagent_codex
