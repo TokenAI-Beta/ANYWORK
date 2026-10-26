@@ -35,6 +35,11 @@ RUN DSH_SRC=/src/deepseek-harness python3 /tmp/dsh-sidebar-relay-login.py
 # 底栏只留设置（「更多」）。不改 AccountMenu，不改 DSH_REF。脚本要求 DSH_SRC。
 COPY deploy/docker/dsh-sidebar-nav-reorder.py /tmp/dsh-sidebar-nav-reorder.py
 RUN DSH_SRC=/src/deepseek-harness python3 /tmp/dsh-sidebar-nav-reorder.py
+# 侧栏条目 chrome：panelList（插件 / 自动化任务）与同列 sidebar.footer.action
+# 共用标题字号与 leading icon。不改槽注册、不改登录 URL、不卸 desk-auto。
+# 脚本要求 DSH_SRC。不打 Windows 检出，也不靠热装 desk-panel 单独改这层壳。
+COPY deploy/docker/dsh-sidebar-entry-chrome.py /tmp/dsh-sidebar-entry-chrome.py
+RUN DSH_SRC=/src/deepseek-harness python3 /tmp/dsh-sidebar-entry-chrome.py
 WORKDIR /src/deepseek-harness
 RUN pnpm install
 RUN pnpm build
