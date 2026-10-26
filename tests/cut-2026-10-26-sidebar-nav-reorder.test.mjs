@@ -15,7 +15,7 @@ const dockerfile = join(root, 'deploy/docker/Dockerfile')
 const relayScript = join(root, 'deploy/docker/dsh-sidebar-relay-login.py')
 const REL = 'packages/client/ui-sidebar/src/client/SidebarRoot.tsx'
 const ACCOUNT = 'packages/client/ui-settings-account/src/client/AccountMenu.tsx'
-const RELAY = 'https://app.cntokenai.top/login'
+const RELAY = 'https://api.cntokenai.top/login'
 const MARKER = 'cut 2026-10-26 sidebar-nav-reorder'
 
 function triple(source, name) {
@@ -137,7 +137,7 @@ test('reorder patch does not change the relay login URL', () => {
   assert.equal(scriptSource.includes('AccountMenu'), true)
   assert.equal(scriptSource.includes('beginSignIn'), false)
   const relay = readFileSync(relayScript, 'utf8')
-  assert.match(relay, /https:\/\/app\.cntokenai\.top\/login/)
+  assert.match(relay, /https:\/\/api\.cntokenai\.top\/login/)
   assert.match(relay, /beginSignIn/)
 })
 

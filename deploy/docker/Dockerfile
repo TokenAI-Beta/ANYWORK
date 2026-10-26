@@ -61,6 +61,11 @@ RUN corepack enable
 WORKDIR /opt/anywork
 COPY . /opt/anywork
 RUN rm -rf /opt/anywork/.git
+# 侧栏「助理」与「技能·连接器」合并为一项「功能与连接」（Decision A）。
+# 两项都是 desk-panel 的 sidebar.footer.action，不在 dsh 编译产物里。
+# 因此打在镜像内 /opt/anywork 副本上（bootstrap 从这里装插件），不打 DSH_SRC，不改 DSH_REF。
+# 脚本要求 ANYWORK_SRC，没有家目录默认路径。仓内未打补丁的插件源留给 Windows 检出。
+RUN ANYWORK_SRC=/opt/anywork python3 /opt/anywork/deploy/docker/dsh-sidebar-assistant-skills-merge.py
 
 COPY --from=dsbuild /src/deepseek-harness /opt/deepseek-harness
 
