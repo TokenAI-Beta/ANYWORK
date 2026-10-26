@@ -83,6 +83,14 @@ RUN ANYWORK_SRC=/opt/anywork python3 /opt/anywork/deploy/docker/dsh-sidebar-assi
 # 打在 /opt/anywork 副本上，不打 DSH_SRC，不改 DSH_REF。脚本要求 ANYWORK_SRC，
 # 没有家目录默认路径。仓内未打补丁的插件源留给 Windows 检出。
 RUN ANYWORK_SRC=/opt/anywork python3 /opt/anywork/deploy/docker/dsh-sidebar-automation-merge.py
+# 侧栏「Bots」与「子代理」合并为一项「机器人」（Decision A）。
+# 外栏留下 desk-bots，显示名改为「机器人」；不再注册 desk-agents。
+# 点开后子代理控制台在正文开头作导语（介绍句 + 工作动态/定义管理），Bot 与群聊仍在同一面板。
+# 必须排在 automation-merge 之后：那个脚本的成功检查仍要求 desk-agents 还在。
+# 不改三卡 only/except（#16 分组补丁在 dsbuild、pnpm build 之前）：desk-bots 不在 only 名单，
+# 仍走卡片下的 except 出口。不打 DSH_SRC，不改 DSH_REF，不改登录 URL。
+# 脚本要求 ANYWORK_SRC，没有家目录默认路径。仓内未打补丁的插件源留给 Windows 检出。
+RUN ANYWORK_SRC=/opt/anywork python3 /opt/anywork/deploy/docker/dsh-sidebar-bots-subagents-merge.py
 
 COPY --from=dsbuild /src/deepseek-harness /opt/deepseek-harness
 
