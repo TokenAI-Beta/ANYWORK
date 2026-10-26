@@ -60,7 +60,7 @@ test('image copy adds session, default, skill summary, and Codex copy', () => {
   assert.match(patched, /"asst\.setDefault": "设为默认"/)
   assert.match(patched, /"asst\.newSession": "New session with this role"/)
   assert.match(patched, /"asst\.setDefault": "Set as default"/)
-  assert.match(patched, /remote\.settings\.update\("agent-preset-registry", \{ selectedDefault: id \}\)/)
+  assert.match(patched, /remote\.settings\.update\("agent-preset-registry", \{ selectedDefault: id \}, undefined\)/)
   assert.match(patched, /ns: "agent-preset-registry", patch: \{ selectedDefault: id \}/)
   assert.match(patched, /method: "settings\/update"/)
   assert.match(patched, /method: "agentPresets\/list"/)

@@ -75,6 +75,14 @@ RUN DSH_SRC=/src/deepseek-harness python3 /tmp/dsh-sidebar-more-to-plugins.py
 # 之后、pnpm build 之前。脚本要求 DSH_SRC。不打 Windows 检出。
 COPY deploy/docker/dsh-agent-preset-mode-hint.py /tmp/dsh-agent-preset-mode-hint.py
 RUN DSH_SRC=/src/deepseek-harness python3 /tmp/dsh-agent-preset-mode-hint.py
+# AC1：rc.3 的 agent-preset 注册表不扫 .agent-presets。把六个门户角色 id
+# 登记成 @deepseek-ai/dsh-agent-preset 行（插件清单抄 standard，人格用角色自己的），
+# 这样「用此角色新建会话」和「设为默认」写的 id 引擎认。模式胶囊仍只列四个内置预设。
+# 必须排在 mode-hint 之后、pnpm build 之前。不改四模式文案，不改 DSH_REF。
+# 脚本要求 DSH_SRC 与 PRESETS_SRC。不打 Windows 检出。
+COPY presets-template /tmp/anywork-presets-template
+COPY deploy/docker/dsh-features-connect-ac1.py /tmp/dsh-features-connect-ac1.py
+RUN DSH_SRC=/src/deepseek-harness PRESETS_SRC=/tmp/anywork-presets-template python3 /tmp/dsh-features-connect-ac1.py
 WORKDIR /src/deepseek-harness
 RUN pnpm install
 RUN pnpm build

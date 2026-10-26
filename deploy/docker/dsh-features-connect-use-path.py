@@ -9,10 +9,12 @@ harness, the four engine modes, or 「设置 → Agent 预设」.
 APIs (verified on dsh-v0.2.1-rc.3, not assumed from defaultHint):
 
 - defaultHint in preset.yml is a static badge. The live default is the
-  settings field the Agent presets section writes:
-  remote.settings.update("agent-preset-registry", { selectedDefault }).
-  See packages/client/ui-agent-preset/src/client/settings-store.ts on
-  that tag (writeDefaultPreset). The desk panel already posts
+  settings field the Agent presets section writes. On this tag
+  writeDefaultPreset calls
+  remote.settings.update("agent-preset-registry", { selectedDefault }, expectedRevision).
+  The client proxy requires that third argument (playtest: "settings/update
+  expected 3 argument(s), got 2"). undefined omits the revision fence; the
+  host then accepts the write. The desk panel already posts
   /api/settings/mutate with one args object; /api/settings/update uses
   the same envelope when the remote service is not on ctx yet.
 - Which id is default comes from remote.agentPresets.list()
@@ -321,7 +323,9 @@ NEW_TIP = """      nodes.push(h("div", { key: "fn-tip", className: "ft" },
 HELPERS = r"""    // ANYWORK Docker image (cut 2026-10-27 features-connect-use-path):
     // defaultHint is the static preset.yml badge. The live default is
     // settings namespace agent-preset-registry / selectedDefault, the write
-    // Settings → Agent presets uses on dsh-v0.2.1-rc.3. New sessions pass
+    // Settings → Agent presets uses on dsh-v0.2.1-rc.3. The client proxy
+    // counts three arguments; the third is the optional revision fence and
+    // is passed undefined so it is left off the wire. New sessions pass
     // agentPreset through uiWorkspace.startSession, same as the workspace.
     function skillTitle(sh) {
       if (!sh) return "";
@@ -424,7 +428,7 @@ HELPERS = r"""    // ANYWORK Docker image (cut 2026-10-27 features-connect-use-p
       var remote = DESK_REMOTE;
       if (remote && remote.settings && typeof remote.settings.update === "function") {
         write = Promise.resolve()
-          .then(function () { return remote.settings.update("agent-preset-registry", { selectedDefault: id }); })
+          .then(function () { return remote.settings.update("agent-preset-registry", { selectedDefault: id }, undefined); })
           .then(function (res) {
             if (res && res.ok === false) throw new Error((res.error && res.error.message) || tr("asst.defaultFail"));
           });
@@ -511,7 +515,7 @@ def use_ok(text):
         return False
     if "function skillTitle(" not in text or "function skillWhen(" not in text:
         return False
-    if 'remote.settings.update("agent-preset-registry", { selectedDefault: id })' not in text:
+    if 'remote.settings.update("agent-preset-registry", { selectedDefault: id }, undefined)' not in text:
         return False
     if 'ns: "agent-preset-registry", patch: { selectedDefault: id }' not in text:
         return False
