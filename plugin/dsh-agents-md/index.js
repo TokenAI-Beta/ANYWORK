@@ -4,13 +4,14 @@
  * · 扫描若干目录下的 Markdown 定义（YAML frontmatter + 正文 = 子代理 persona）；
  * · 注册一个面向模型的委派工具（默认名 `agent`）：按 `subagent_type` 把任务交给
  *   定义好的子代理（独立上下文、只回最终结果）；
- * · 支持 per-def 的 model / effort / tools(白名单) / disallowed-tools(黑名单) /
- *   provider(spawn|fork) / background 默认 / max-depth / color；
+ * · 支持 per-def 的 model / effort / max-depth / color；正文与工具名单写进
+ *   交给子代理的 prompt（rc.3 的 startActivation 请求不再带 persona / toolFilter）；
  * · 定义目录内容变化时，在下一次调用前自动重登记（描述里的目录随之更新）。
  *
- * 零依赖：不 import 任何 npm 包。引擎助手（defineTool / settleRun）从“正在运行
- * 的 dsh 安装”动态加载（由 process.argv[1] 推导，config.dshRoot 可覆盖）；
- * 其余一切经由 ctx 服务（tools / subagents / jobs）完成。
+ * 零依赖：不 import 任何 npm 包。引擎助手 defineTool 从“正在运行的 dsh 安装”
+ * 动态加载（由 process.argv[1] 推导，config.dshRoot 可覆盖）。
+ * 结算走 ctx.subagents.startActivation（delivery: 'parent'）：工具立刻返回
+ * child id，完成通知由 subagent 运行时投递给父会话。
  */
 import { readFileSync } from 'node:fs'
 import { homedir } from 'node:os'
@@ -40,7 +41,6 @@ function normalizeConfig(config) {
     maxDepth: cfg.maxDepth === 'provider-managed'
       ? 'provider-managed'
       : (Number.isSafeInteger(cfg.maxDepth) && cfg.maxDepth >= 0 ? cfg.maxDepth : 3),
-    background: cfg.background !== false,
     dshRoot: typeof cfg.dshRoot === 'string' ? cfg.dshRoot : '',
     notify: cfg.notify === false ? null : {
       url: typeof cfg.notify?.url === 'string' && cfg.notify.url ? cfg.notify.url : 'http://127.0.0.1:8080/portal/api/notify',
@@ -87,11 +87,9 @@ async function loadHelpers(cfg) {
   for (const root of roots) {
     try {
       const toolsUrl = pathToFileURL(path.join(root, 'packages', 'core', 'tools', 'lib', 'index.js')).href
-      const subUrl = pathToFileURL(path.join(root, 'packages', 'subagent', 'subagent', 'lib', 'index.js')).href
-      const [toolsMod, subMod] = await Promise.all([import(toolsUrl), import(subUrl)])
+      const toolsMod = await import(toolsUrl)
       if (typeof toolsMod.defineTool !== 'function') throw new Error('dsh-tools 导出缺 defineTool')
-      if (typeof subMod.settleRun !== 'function') throw new Error('dsh-subagent 导出缺 settleRun')
-      return { defineTool: toolsMod.defineTool, settleRun: subMod.settleRun, root }
+      return { defineTool: toolsMod.defineTool, root }
     } catch (e) {
       lastError = e
     }
@@ -99,73 +97,24 @@ async function loadHelpers(cfg) {
   throw new Error(`无法从任何候选安装根加载 dsh 助手（试过：${roots.join('、')}）。最后一个错误：${lastError?.message ?? lastError}`)
 }
 
-// ── 结果结算（镜像 tool-subagent 的前台语义） ───────────────────────────────
-
-function outputValueText(values) {
-  if (!Array.isArray(values)) return ''
-  return values
-    .filter((v) => v && typeof v === 'object' && v.type === 'text' && typeof v.text === 'string')
-    .map((v) => v.text)
-    .join('')
-}
-
-/** 非 completed 终止原因 = 子代理没有干净跑完。 */
-function stopReasonError(result) {
-  switch (result.stopReason) {
-    case 'completed':
-      return undefined
-    case 'aborted':
-      return 'subagent run was cancelled'
-    case 'error':
-      return 'subagent run failed'
-    case 'max-tokens':
-      return 'subagent run hit its token limit before finishing'
-    case 'refusal':
-      return 'subagent declined the task'
-    default:
-      return `subagent run ended abnormally (${String(result.stopReason)})`
+/**
+ * rc.3 的 activation 请求没有 persona / toolFilter 字段（这两项改由 agent preset
+ * 组合拥有）。定义正文和工具名单因此放进交给子代理的 prompt，随 startActivation
+ * 的 request.prompt 送出。工具名单在这里是指令，不是 tools.restrict。
+ */
+function childPrompt(def, promptText) {
+  const chunks = []
+  if (def.persona) chunks.push(def.persona)
+  const limits = []
+  if (Array.isArray(def.tools) && def.tools.length > 0) {
+    limits.push(`Only use these tools: ${def.tools.join(', ')}.`)
   }
-}
-
-function withDiagnosticAndPartialText(error, result) {
-  const diagnostic = result.diagnostic === undefined ? '' : `\nDiagnostic: ${result.diagnostic}`
-  const text = outputValueText(result.output)
-  const partial = text.length === 0 ? '' : `\nPartial output before the run ended:\n${text}`
-  return `${error}${diagnostic}${partial}`
-}
-
-/** 收集并释放一个前台 run；dispose 与结果失败各自独立保留。 */
-async function settleForeground(run) {
-  const [execution] = await Promise.allSettled([
-    run.result.then((result) => {
-      const error = stopReasonError(result)
-      if (error !== undefined) throw new Error(withDiagnosticAndPartialText(error, result))
-      return { kind: 'foreground', runId: run.id, output: result.output }
-    }),
-  ])
-  const [disposal] = await Promise.allSettled([Promise.resolve().then(() => run.dispose())])
-  if (execution.status === 'rejected') {
-    if (disposal.status === 'rejected') {
-      throw new AggregateError(
-        [execution.reason, disposal.reason],
-        `subagent run failed: ${String(execution.reason)}; dispose failed: ${String(disposal.reason)}`,
-      )
-    }
-    throw execution.reason
+  if (Array.isArray(def.disallowedTools) && def.disallowedTools.length > 0) {
+    limits.push(`Do not use these tools: ${def.disallowedTools.join(', ')}.`)
   }
-  if (disposal.status === 'rejected') throw disposal.reason
-  return execution.value
-}
-
-/** 后台任务的启动结算：取消不得把失败的清理变成干净的 killed。 */
-async function settleStart(start, signal, settleRun) {
-  try {
-    return await settleRun(await start)
-  } catch (error) {
-    return signal.aborted && !(error instanceof AggregateError)
-      ? { status: 'killed' }
-      : { status: 'failed', detail: String(error) }
-  }
+  if (limits.length > 0) chunks.push(limits.join('\n'))
+  chunks.push(promptText)
+  return chunks.join('\n\n')
 }
 
 // ── 工具描述（目录写进描述，供模型选择） ────────────────────────────────────
@@ -195,11 +144,11 @@ function buildToolDescription(cfg, scan) {
     'Route by name: when the user points at a subagent in plain language (「让 code-reviewer 审一下 demo/app.py」「交给 researcher 查…」「@probe-lite 看下」), call this tool with subagent_type set to exactly that name — never a near guess.',
     'Give a complete, standalone prompt: by default the subagent does NOT see this conversation (fork definitions inherit it).',
     'Example: subagent_type="code-reviewer", prompt="审查 demo/order_stats.py：读出文件，找出 bug 与安全隐患，按严重度排序并给出修改建议".',
-    cfg.background ? 'For long-running tasks set run_in_background: true; collect the outcome with job_output and stop it with job_kill.' : '',
+    'The call starts a managed activation and returns the child id immediately. This conversation receives a completion notice when that activation settles.',
     '',
     'Available agents:',
     catalog,
-  ].filter((x) => x !== '').join('\n')
+  ].join('\n')
 }
 
 // ── 结算通知（子代理跑完 → 通知桥） ─────────────────────────────────────────
@@ -239,12 +188,16 @@ async function sendSettleNotify(cfg, info, meta) {
 
 export function apply(ctx, config) {
   const cfg = normalizeConfig(config)
+  if (typeof ctx.subagents?.startActivation !== 'function') {
+    throw new Error('dsh-agents-md requires ctx.subagents.startActivation')
+  }
   const state = {
     helpers: null,
     scan: null,
     signature: '',
     disposeTool: null,
     labelByRun: new Map(),
+    toolLimitNoted: new Set(),
   }
 
   const logInfo = (msg) => { console.log(`[dsh-agents-md] ${msg}`) }
@@ -261,7 +214,7 @@ export function apply(ctx, config) {
         '1. Call `agent` with `subagent_type` set to EXACTLY that catalog name (never an approximate one).',
         '2. Write a complete, standalone `prompt` — paths, scope, expected output; the subagent cannot see this conversation unless its definition is a fork type.',
         '3. If the requested name is missing from the catalog or the intent is ambiguous, ask ONE short clarifying question — never guess and never silently substitute the built-in `subagent` tool.',
-        '4. After it returns, say which agent handled it and relay the result.',
+        '4. The tool returns a child id immediately. When the completion notice arrives, name the agent and relay the result.',
       ].join('\n'),
     })
   } catch (err) {
@@ -296,40 +249,19 @@ export function apply(ctx, config) {
           required: true,
           description: "The complete, standalone task for the subagent. It does not share this conversation's context (fork-type definitions excepted), so include everything it needs.",
         },
-        ...(cfg.background ? {
-          run_in_background: {
-            type: 'boolean',
-            description: "Run as a background job and return its id immediately. Defaults to the agent definition's setting (false unless the definition sets background: true). Collect with job_output / stop with job_kill.",
-          },
-        } : {}),
       },
       output: {
         schema: {
-          oneOf: [
-            {
-              type: 'object',
-              additionalProperties: false,
-              properties: {
-                kind: { type: 'string', required: true, const: 'background' },
-                jobId: { type: 'string', required: true },
-              },
-            },
-            {
-              type: 'object',
-              additionalProperties: false,
-              properties: {
-                kind: { type: 'string', required: true, const: 'foreground' },
-                runId: { type: 'string', required: true },
-                output: { type: 'array', required: true, items: { type: 'json' } },
-              },
-            },
-          ],
+          type: 'object',
+          additionalProperties: false,
+          properties: {
+            kind: { type: 'string', required: true, const: 'activation' },
+            subagentId: { type: 'string', required: true },
+          },
         },
         render: (_args, value) => [{
           type: 'text',
-          text: value.kind === 'background'
-            ? `started background agent job ${value.jobId}`
-            : outputValueText(value.output),
+          text: `started subagent ${value.subagentId}`,
         }],
       },
       isConcurrencySafe: () => true,
@@ -362,17 +294,9 @@ export function apply(ctx, config) {
         if (hasAgentOptions && !provider.capabilities?.agentOptions) {
           throw new Error(`provider "${providerName}" does not support child model/effort overrides (agentOptions capability missing)`)
         }
-        const toolFilter = (def.tools || def.disallowedTools)
-          ? {
-              ...(def.tools ? { allow: def.tools } : {}),
-              ...(def.disallowedTools ? { deny: def.disallowedTools } : {}),
-            }
-          : undefined
-        if (toolFilter && !provider.capabilities?.toolFilter) {
-          throw new Error(`provider "${providerName}" does not support child tool filtering (toolFilter capability missing)`)
-        }
-        if (def.persona && !provider.capabilities?.persona) {
-          throw new Error(`provider "${providerName}" does not support per-child persona (persona capability missing)`)
+        if ((def.tools || def.disallowedTools) && !state.toolLimitNoted.has(typeName)) {
+          state.toolLimitNoted.add(typeName)
+          logInfo(`agent "${typeName}": startActivation does not apply a tool filter; tools/disallowed-tools are instructions inside the child prompt`)
         }
         const maxDepth = def.maxDepth ?? cfg.maxDepth
         if (typeof maxDepth === 'number' && !provider.capabilities?.depthLimit) {
@@ -384,47 +308,23 @@ export function apply(ctx, config) {
         const label = String(args.description ?? '').trim()
           || `${typeName}: ${promptText.replace(/\s+/g, ' ').slice(0, 48)}`
         const request = {
-          label,
-          prompt: [{ type: 'text', text: promptText }],
+          prompt: [{ type: 'text', text: childPrompt(def, promptText) }],
           parent,
           ...(hasAgentOptions ? { agentOptions } : {}),
-          ...(toolFilter ? { toolFilter } : {}),
-          ...(def.persona ? { persona: def.persona } : {}),
           ...(typeof maxDepth === 'number' ? { maxDepth } : {}),
         }
 
-        if (args.run_in_background === true && !cfg.background) {
-          throw new Error('run_in_background is disabled for this tool instance (config.background: false)')
-        }
-        const wantsBackground = args.run_in_background === undefined
-          ? def.background === true
-          : args.run_in_background === true
-
-        if (wantsBackground) {
-          const jobs = ctx.get('jobs')
-          if (!jobs) throw new Error('background jobs are unavailable (jobs service missing)')
-          const jobId = jobs.start({
-            kind: 'subagent',
-            label,
-            owner: parent,
-            run: () => {
-              const controller = new AbortController()
-              const start = ctx.subagents.start(providerName, { ...request, signal: controller.signal })
-              start.then((run) => {
-                state.labelByRun.set(run.id, { type: typeName, label, mode: 'background' })
-              }).catch(() => { /* 启动失败由 done 结算 */ })
-              return {
-                cancel: (reason) => controller.abort(reason ?? 'background agent task killed'),
-                done: settleStart(start, controller.signal, state.helpers.settleRun),
-              }
-            },
-          })
-          return { kind: 'background', jobId }
-        }
-
-        const run = await ctx.subagents.start(providerName, { ...request, signal: exec.signal })
-        state.labelByRun.set(run.id, { type: typeName, label, mode: 'foreground' })
-        return settleForeground(run)
+        const started = await ctx.subagents.startActivation({
+          provider: providerName,
+          label,
+          request,
+          signal: exec.signal,
+          delivery: 'parent',
+        })
+        const subagentId = String(started?.childId ?? '')
+        if (!subagentId) throw new Error('startActivation returned no childId')
+        state.labelByRun.set(subagentId, { type: typeName, label, mode: 'activation' })
+        return { kind: 'activation', subagentId }
       },
     })
   }
@@ -454,17 +354,17 @@ export function apply(ctx, config) {
     logInfo(`registered tool "${cfg.toolName}": ${scan.defs.size} agent definition(s) usable${broken > 0 ? `, ${broken} broken/shadowed` : ''} — dirs: ${scan.dirs.join(', ')}`)
   }
 
-  // —— 结算通知：子代理结束 → 通知桥（默认只推后台任务、按成员路由）——
+  // —— 结算通知：子代理结束 → 通知桥（按成员路由；默认推我们启动的 activation）——
   if (cfg.notify) {
     ctx.on('subagent/end', (info) => {
       try {
-        // 注意：事件里 runId 是每次观测新建的不透明 uuid；子会话 id 在 info.id，
-        // 与 start 结算后的 run.id 一致——按 info.id 匹配我们自己的记录。
+        // 事件里 runId 是每次观测新建的不透明 uuid；子会话 id 在 info.id，
+        // 与 startActivation 返回的 childId 一致。
         const rid = String(info?.id ?? '')
         const meta = state.labelByRun.get(rid)
         if (!meta) return
         state.labelByRun.delete(rid)
-        if (cfg.notify.events === 'background' && meta.mode !== 'background') return
+        if (cfg.notify.events !== 'all' && meta.mode !== 'activation') return
         void sendSettleNotify(cfg, info, meta).catch((err) => logError(`settle notify failed: ${err?.message ?? err}`))
       } catch (err) {
         logError(`notify hook error: ${err}`)
@@ -489,4 +389,4 @@ export function apply(ctx, config) {
 }
 
 // 测试辅助：允许单测直接引用（不被引擎消费）
-export const __internals = { normalizeConfig, resolveDirs, outputValueText, stopReasonError }
+export const __internals = { normalizeConfig, resolveDirs, childPrompt }
