@@ -8,7 +8,7 @@ On dsh-v0.2.1-rc.3 that item calls beginSignIn() → start() →
 remote.account.startSignIn, which is the DeepSeek account browser login.
 
 This patch keeps the same menu item and drops that call. The click opens
-https://app.cntokenai.top/login in a new tab. The relay /console is the
+https://api.cntokenai.top/login in a new tab. The relay /console is the
 success state; this session does not wait for a return.
 
 Invoked only from deploy/docker/Dockerfile with
@@ -20,7 +20,7 @@ import io
 import os
 import sys
 
-MARKER = "https://app.cntokenai.top/login"
+MARKER = "https://api.cntokenai.top/login"
 REL = "packages/client/ui-settings-account/src/client/AccountMenu.tsx"
 OLD = (
     "  // The plugin's start publishes `loginFailed` before it rejects, so the dialog owns the report.\n"
@@ -32,7 +32,7 @@ NEW = (
     "  // Success is the relay /console; this session does not wait for a return.\n"
     "  const beginSignIn = (): void => {\n"
     "    setOpen(false)\n"
-    "    window.open('https://app.cntokenai.top/login', '_blank', 'noopener,noreferrer')\n"
+    "    window.open('https://api.cntokenai.top/login', '_blank', 'noopener,noreferrer')\n"
     "  }"
 )
 SIGNIN_SELECT = "else if (id === 'signin') beginSignIn()"
