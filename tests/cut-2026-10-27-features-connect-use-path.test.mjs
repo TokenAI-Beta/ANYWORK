@@ -16,7 +16,7 @@ const mergeScript = join(root, 'deploy/docker/dsh-sidebar-assistant-skills-merge
 const dockerfile = join(root, 'deploy/docker/Dockerfile')
 const modeHint = join(root, 'deploy/docker/dsh-agent-preset-mode-hint.py')
 const sourceClient = join(root, 'plugin/desk-panel/lib/client.js')
-const devPartner = join(root, 'presets-template/dev-partner/preset.yml')
+const engCodex = join(root, 'presets-template/eng-codex/preset.yml')
 const REL = 'plugin/desk-panel/lib/client.js'
 const MARKER = 'cut 2026-10-27 features-connect-use-path'
 const MERGE = 'cut 2026-10-26 assistant-skills-merge'
@@ -24,7 +24,7 @@ const MERGE = 'cut 2026-10-26 assistant-skills-merge'
 const scriptSource = readFileSync(script, 'utf8')
 const sourceText = readFileSync(sourceClient, 'utf8')
 const modeHintText = readFileSync(modeHint, 'utf8')
-const devPartnerText = readFileSync(devPartner, 'utf8')
+const engCodexText = readFileSync(engCodex, 'utf8')
 
 function run(file, dir) {
   return spawnSync('python3', [file], {
@@ -68,7 +68,7 @@ test('image copy adds session, default, skill summary, and Codex copy', () => {
   assert.match(patched, /method: "session\/create"/)
   assert.match(patched, /payload: \{ args: \{ request: \{ agentPreset: id \} \} \}/)
   assert.match(patched, /"asst\.codex": "Codex 并行"/)
-  assert.match(patched, /"asst\.codexHelpTitle": "开发搭档用法"/)
+  assert.match(patched, /"asst\.codexHelpTitle": "工程 Codex 用法"/)
   assert.match(patched, /"skl\.codexWorktree": "Codex 并行（worktree）"/)
   assert.match(patched, /"skl\.codexWorktreeWhen":/)
   assert.match(patched, /"skl\.teamReport": "团队报告写作规范"/)
@@ -147,8 +147,8 @@ test('image build wires the patch after the merge and leaves the engine alone', 
   assert.match(modeHintText, /presetMinimalName: '极简模式'/)
   assert.match(modeHintText, /presetCordisName: '创造模式'/)
   assert.match(modeHintText, /团队角色在「设置 → Agent 预设」/)
-  assert.match(devPartnerText, /codex: true/)
-  assert.match(devPartnerText, /开发搭档/)
+  assert.match(engCodexText, /codex: true/)
+  assert.match(engCodexText, /工程 Codex/)
   assert.equal(scriptSource.includes('presetStandardName'), false)
 })
 

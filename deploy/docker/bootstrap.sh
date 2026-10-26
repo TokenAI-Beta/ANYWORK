@@ -17,8 +17,8 @@ cp -rn "$repo/kb-template/." "$home/desk-data/kb/" 2>/dev/null || true
 cp -rn "$repo/drive-template/." "$home/desk-data/drive/" 2>/dev/null || true
 cp -rn "$repo/skills-template/." "$home/desk-data/skills/" 2>/dev/null || true
 cp -rn "$repo/presets-template/." "$home/desk-data/presets/" 2>/dev/null || true
-# cp -rn 不覆盖已有卷。本刀钉死六角色文案 / persona，并让开发搭档的 Codex 行真正启用。
-# 戳记不一致时只覆盖这六个 id 的 preset.yml 与 agent.cordis.yml。
+# cp -rn 不覆盖已有卷。戳记不一致时覆盖四张模板，删掉旧的六个 id，并把
+# settings 里的旧默认改写成 collab-default / 别名目标。
 bash "$repo/deploy/docker/refresh-shipped-presets.sh" "$repo" "$home"
 cp -rn "$repo/agents-template/." "$home/desk-data/agents/" 2>/dev/null || true
 for s in desk-notify desk-remind desk-kb; do
@@ -102,9 +102,9 @@ while IFS=$'\t' read -r u p h; do
       { cat "$sf" 2>/dev/null || true; printf 'llm-deepseek:\n  baseURL: http://127.0.0.1:8100\n'; } > "$sf.tmp"
       mv "$sf.tmp" "$sf"
     fi
-    # 新会话默认角色 = 团队助理（成员不选也落在团队规范上）
+    # 新会话默认角色 = 协作默认（成员不选也落在团队规范上）
     if ! grep -q "agent-presets" "$sf" 2>/dev/null; then
-      { cat "$sf" 2>/dev/null || true; printf 'agent-presets:\n  default: team-assistant\n'; } > "$sf.tmp"
+      { cat "$sf" 2>/dev/null || true; printf 'agent-presets:\n  default: collab-default\n'; } > "$sf.tmp"
       mv "$sf.tmp" "$sf"
     fi
   fi
@@ -116,6 +116,8 @@ done < "$home/.desk/run/instances.tsv"
 # 仓内 file:plugin/dsh-client-ui-aqua（dsh-client-ui-aqua@1.4.2，不要 npm 1.3.1），
 # 仓内 file:plugin/dsh-agents-md（dsh-agents-md@0.4.0），
 # 以及 npm 包 dsh-chat-import@0.26.2（不要 0.19.3：dsh-tools peer ^0.1.0-rc.6 盖不住 rc.3）。
+# 四张团队预设由镜像编译期 dsh-features-connect-ac1.py 登记。这里不再安装
+# dsh-team-presets，避免同一 id 登记两次被注册表拒绝。
 # dsh-wx-answerer 是 main 上的微信编号作答（PR #1），继续安装，不在暂缓名单里。
 # better-sidebar、aqua、agents-md、chat-import 都不在暂缓名单里：整容器重启要把它们留在卷上。
 # 恢复顺序见 docs/0.2-plugin-api-breakpoints.md：

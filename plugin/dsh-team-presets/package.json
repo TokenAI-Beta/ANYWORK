@@ -1,0 +1,27 @@
+{
+  "name": "dsh-team-presets",
+  "version": "0.1.0",
+  "private": true,
+  "description": "四张团队预设（协作默认 / 调研报告 / 正式文书 / 工程 Codex）。cordis.patch.yml 向 dsh-v0.2.1-rc.3 注册表插入具名预设；本模块不另挂运行时。",
+  "type": "module",
+  "main": "index.js",
+  "exports": {
+    ".": "./index.js",
+    "./cordis.patch.yml": "./cordis.patch.yml",
+    "./package.json": "./package.json"
+  },
+  "files": [
+    "index.js",
+    "cordis.patch.yml"
+  ],
+  "dsh": {
+    "bundle": {
+      "patch": "./cordis.patch.yml"
+    }
+  },
+  "engines": {
+    "node": ">=20",
+    "dsh": ">=0.2.1-rc.3 <0.3.0"
+  },
+  "license": "MIT"
+}

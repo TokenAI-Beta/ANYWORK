@@ -1,4 +1,0 @@
-name: 开发搭档
-description: 读仓库、改功能、走本地验证与提交流程；批量任务可开 Codex 并行（需本机 Codex 可用）。
-order: 50
-codex: true

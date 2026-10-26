@@ -1,33 +1,30 @@
-# 团队 Agent 预设（角色模板）
+# 团队 Agent 预设（四张模板）
 
-dsh 的「Agent 预设」= 一个目录（`preset.yml` + `agent.cordis.yml`），决定某个会话用什么工具、什么提示词、什么身份。本目录是团队预设模板，部署时复制到 `~/desk-data/presets/`。
+dsh 0.2.1-rc.3 的「Agent 预设」是注册表里的一条声明，不是扫目录。本目录仍给 **功能与连接** 提供四张卡片（`preset.yml`），并给 Docker 镜像里的 `plugin/dsh-team-presets` 提供同一份工具表（`agent.cordis.yml`）。
 
-## 已包含
+引擎四模式（标准 / PTC / 极简 / 创造）不在这里。
 
-- `team-assistant/`（**团队助理**，默认）：`standard` 模式 + 团队版 persona
-- `research-assistant/`（**研究助理**）：一手信源优先、来源带链接、影响分层
-- `doc-writer/`（**文档写手**）：公文口吻、数字逐项核对、中英对照
-- `data-organizer/`（**数据整理**）：表格清洗、口径核对、报表排版
-- `dev-partner/`（**开发搭档**）：代码流程 + Codex 并行（`codex: true`，`tool-subagent-codex` 不带 `disabled`）
-- `meeting-secretary/`（**会议秘书**）：纪要（决议 + 待办 + 责任人 + 时间）；周报用「一句话 + 要点清单」
+## 四张卡片
 
-## 怎么生效
+| order | id | 名称 | 默认 | Codex |
+|------:|----|------|------|-------|
+| 10 | `collab-default` | 协作默认 | 是 | 关 |
+| 20 | `research-report` | 调研报告 | | 关 |
+| 30 | `formal-docs` | 正式文书 | | 关 |
+| 40 | `eng-codex` | 工程 Codex | | 开 |
 
-- 每个成员实例通过 `DSH_HOME/.agent-presets` 软链到这里（与技能库同机制）
-- 成员在工作台 **设置 → Agent 预设** 里选它（可设为"对此后新建的会话生效"）
-- 输入框旁的胶囊是引擎运行模式（标准 / PTC / 极简 / 创造），与这六个角色不是同一层
-- 新建会话时也可指定：`session.create` 带 `agentPreset: "team-assistant"`
+旧 id 在 Docker 镜像里按 `alias-map.yml` 读时改写（`team-assistant` / 空 → `collab-default`）。面板只列这四张。显式选择的 `standard` 不改写。
 
-## 加新预设 / 升级后维护
+## 怎么生效（仅 Docker 镜像）
 
-1. 复制 dsh 自带模式做底：
-   `cp -r ~/deepseek-harness/apps/cli/config/agent-presets/standard ~/desk-data/presets/<新id>`
-2. 改 `preset.yml` 的 `name` / `description` / `order`
-3. 改 `agent.cordis.yml`：persona 可一键换成团队版——`node scripts/apply-team-persona.mjs <该目录>/agent.cordis.yml`；其余行按需增删
-4. 放进去即被实例发现（刷新页面即可见）
-5. **dsh 升级后**：按 1–3 重抄一遍（见下）
+- 镜像编译期 `dsh-features-connect-ac1.py` 按本目录登记四张卡（`settings.update` 仍是三参数，写在 use-path 补丁里）
+- 镜像编译前 `dsh-preset-alias.py` 给注册表加上旧 id 别名
+- 不再另装 `plugin/dsh-team-presets`，避免同一 id 登记两次
+- `scripts/setup.sh` 不打这些补丁（东京 / 本机路径不动）
 
-## 边界（v1）
+## 能力差
 
-- 预设是"拷贝"而非"继承"：dsh 升级后内置模式若有变化，团队预设不会自动跟随（按上面步骤重抄即可）
-- 权限档位（沙箱 / 审批）不在预设里，在实例本身的权限设置中
+- 四张都保留 `tool-fs` 与 `tool-fs-search`
+- 协作默认：全量轻约束，只关掉 `tool-subagent-codex`
+- 调研报告、正式文书：关掉 workflow（rc.3 的行 id 是 `workflow-ptc`，即原先的 `workflow-worker-thread`）、`tool-workflow`、`tool-subagent-codex`；`tool-ralph` 不写入组合（web profile 未安装该包，写一条解析失败的 disabled 行会把整张预设标成损坏）
+- 工程 Codex：同一全量，并启用 `tool-subagent-codex`。Codex provider 仍是宿主单例，预设里不再注册一次

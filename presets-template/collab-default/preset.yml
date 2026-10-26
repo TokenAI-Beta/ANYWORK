@@ -1,0 +1,6 @@
+name: 协作默认
+description: 日常协作默认：中文优先，跟团队写作与数据规范；开场、杂事、跨角色协调用它。
+order: 10
+defaultHint: true
+codex: false
+whenToUse: team-report-style；日常协作、开场、协调
