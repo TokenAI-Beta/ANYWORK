@@ -106,6 +106,11 @@ RUN rm -rf /opt/anywork/.git
 # 因此打在镜像内 /opt/anywork 副本上（bootstrap 从这里装插件），不打 DSH_SRC，不改 DSH_REF。
 # 脚本要求 ANYWORK_SRC，没有家目录默认路径。仓内未打补丁的插件源留给 Windows 检出。
 RUN ANYWORK_SRC=/opt/anywork python3 /opt/anywork/deploy/docker/dsh-sidebar-assistant-skills-merge.py
+# 功能与连接：角色卡「用此角色新建会话 / 设为默认」、技能短路径、Codex 双入口说明。
+# Cut 2026-10-27 features-connect-use-path Decision A。必须排在 assistant-skills-merge
+# 之后（assistantsLead 由那个脚本注入）。不改引擎四模式，不卸「设置 → Agent 预设」，
+# 不打 DSH_SRC，不改 DSH_REF。脚本要求 ANYWORK_SRC。仓内未打补丁的 client.js 留给 Windows 检出。
+RUN ANYWORK_SRC=/opt/anywork python3 /opt/anywork/deploy/docker/dsh-features-connect-use-path.py
 # 侧栏并列「自动化」(desk-auto) 卸掉。外栏「自动化任务」仍是 ui-schedule 的
 # sidebar.panellist id schedules，本脚本不改那个注册、不改文案、不重做面板。
 # 必须排在 assistant-skills-merge 之后：那个脚本的成功检查仍要求 desk-auto 还在。
