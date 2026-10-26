@@ -12,7 +12,7 @@ const root = join(dirname(fileURLToPath(import.meta.url)), '..')
 const script = join(root, 'deploy/docker/dsh-sidebar-relay-login.py')
 const dockerfile = join(root, 'deploy/docker/Dockerfile')
 const REL = 'packages/client/ui-settings-account/src/client/AccountMenu.tsx'
-const RELAY = 'https://app.cntokenai.top/login'
+const RELAY = 'https://api.cntokenai.top/login'
 
 const UPSTREAM = `
   // The plugin's start publishes \`loginFailed\` before it rejects, so the dialog owns the report.
@@ -48,7 +48,7 @@ test('sidebar sign-in opens the relay and does not call DeepSeek start()', () =>
   const first = run(dir)
   assert.equal(first.status, 0, first.stderr)
   const patched = readFileSync(path, 'utf8')
-  assert.match(patched, /window\.open\('https:\/\/app\.cntokenai\.top\/login', '_blank', 'noopener,noreferrer'\)/)
+  assert.match(patched, /window\.open\('https:\/\/api\.cntokenai\.top\/login', '_blank', 'noopener,noreferrer'\)/)
   assert.match(patched, /else if \(id === 'signin'\) beginSignIn\(\)/)
   const begin = patched.indexOf('const beginSignIn')
   const ret = patched.indexOf('return <div', begin)
