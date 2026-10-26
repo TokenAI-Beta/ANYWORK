@@ -1,0 +1,6 @@
+name: 正式文书
+description: 合同、函件、纪要、周报：公文口吻、数字逐项核对、待办带责任人——正式出稿用它。
+order: 30
+defaultHint: false
+codex: false
+whenToUse: 文书/纪要模板；合同、函件、会议纪要、周报

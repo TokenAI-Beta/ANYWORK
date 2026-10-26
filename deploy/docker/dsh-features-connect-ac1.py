@@ -1,24 +1,29 @@
 # -*- coding: utf-8 -*-
-"""Docker image only: make the six role ids real agent presets.
+"""Docker image only: register the portal role directories as agent presets.
 
 Cut 2026-10-27 features-connect-use-path AC1 fix. Playtest on #22
-(tip 5b826575) showed two failures:
+showed two failures:
 
-- 用此角色新建会话 sent the portal id (dev-partner) and the engine
-  answered agent-preset/not-found. On dsh-v0.2.1-rc.3 the registry does
-  not scan DSH_HOME/.agent-presets. A preset exists only as a
+- 用此角色新建会话 sent the portal id and the engine answered
+  agent-preset/not-found. On dsh-v0.2.1-rc.3 the registry does not scan
+  DSH_HOME/.agent-presets. A preset exists only as a
   @deepseek-ai/dsh-agent-preset row, and config.id is the id sessions
   store. The shipped rows are standard / ptc / minimal / cordis.
 - 设为默认 called settings.update with two arguments. The client proxy
-  requires three (the revision fence). That call is fixed in
-  dsh-features-connect-use-path.py. This script registers the ids that
-  write and the new session both name.
+  requires three (the revision fence). That call stays in
+  dsh-features-connect-use-path.py. This script registers the ids the
+  portal cards and the new session both name.
 
-Each role is the shipped standard composition (presets/standard.patch.yml)
-with that role's name, description, order, and persona prefix. 开发搭档
-also gets the Codex tool row the badge describes. The four engine rows
-are not edited. The mode chip keeps only shipped presets (isBuiltInPreset),
-so the six roles do not become extra items in 标准 / PTC / 极简 / 创造.
+Roles are every directory under PRESETS_SRC that has preset.yml and
+agent.cordis.yml (the four cards the panel lists). Each row is the
+shipped standard composition plus that card's name, description, order,
+and persona. preset.yml codex: true enables the Codex tool row; other
+cards get the same row with disabled: true. research-report and
+formal-docs also disable workflow-ptc (the rc.3 id of
+workflow-worker-thread) and tool-workflow. tool-ralph is not added.
+The four engine rows are not edited. The mode chip keeps only shipped
+presets (isBuiltInPreset). Old stored ids are rewritten by
+dsh-preset-alias.py, which does not register a second copy of these ids.
 
 Runs after dsh-agent-preset-mode-hint.py and before pnpm build, so the
 chip filter is in the client bundle. DSH_SRC and PRESETS_SRC are
@@ -30,14 +35,7 @@ import os
 import sys
 
 MARKER = "cut 2026-10-27 features-connect-use-path ac1"
-ROLES = (
-    "team-assistant",
-    "research-assistant",
-    "doc-writer",
-    "data-organizer",
-    "dev-partner",
-    "meeting-secretary",
-)
+DENY_HEAVY = frozenset(("research-report", "formal-docs"))
 STANDARD = "packages/bundle/web-app/presets/standard.patch.yml"
 PKG = "packages/bundle/web-app/package.json"
 SEAT = "packages/client/ui-agent-preset/src/client/AgentPresetSeat.tsx"
@@ -64,6 +62,42 @@ CODEX_ROW = (
     "                  provider: codex\n"
     "                  toolName: subagent_codex\n"
     "              - id: workflow-ptc\n"
+)
+CODEX_OFF = (
+    "              - id: tool-subagent-fork\n"
+    "                name: '@deepseek-ai/dsh-tool-subagent'\n"
+    "                config:\n"
+    "                  provider: fork\n"
+    "                  toolName: subagent_fork\n"
+    "              - id: tool-subagent-codex\n"
+    "                name: '@deepseek-ai/dsh-tool-subagent'\n"
+    "                disabled: true\n"
+    "                config:\n"
+    "                  provider: codex\n"
+    "                  toolName: subagent_codex\n"
+    "              - id: workflow-ptc\n"
+)
+WORKFLOW_PTC = (
+    "              - id: workflow-ptc\n"
+    "                name: '@deepseek-ai/dsh-workflow-ptc'\n"
+    "                config:\n"
+    "                  provider: spawn\n"
+)
+WORKFLOW_PTC_OFF = (
+    "              - id: workflow-ptc\n"
+    "                name: '@deepseek-ai/dsh-workflow-ptc'\n"
+    "                disabled: true\n"
+    "                config:\n"
+    "                  provider: spawn\n"
+)
+TOOL_WORKFLOW = (
+    "              - id: tool-workflow\n"
+    "                name: '@deepseek-ai/dsh-tool-workflow'\n"
+)
+TOOL_WORKFLOW_OFF = (
+    "              - id: tool-workflow\n"
+    "                name: '@deepseek-ai/dsh-tool-workflow'\n"
+    "                disabled: true\n"
 )
 SEAT_IMPORT_OLD = "import { presetDisplayText } from './locales.ts'\n"
 SEAT_IMPORT_NEW = "import { isBuiltInPreset, presetDisplayText } from './locales.ts'\n"
@@ -112,6 +146,29 @@ def flat_yaml(src):
     return out
 
 
+def discover_roles(presets):
+    found = []
+    for name in os.listdir(presets):
+        base = os.path.join(presets, name)
+        if not os.path.isdir(base):
+            continue
+        preset = os.path.join(base, "preset.yml")
+        agent = os.path.join(base, "agent.cordis.yml")
+        if not (os.path.isfile(preset) and os.path.isfile(agent)):
+            continue
+        meta = flat_yaml(read(preset))
+        for key in ("name", "description", "order"):
+            if key not in meta or not meta[key]:
+                sys.exit("%s preset.yml missing %s" % (name, key))
+        if not str(meta["order"]).isdigit():
+            sys.exit("%s order is not an integer" % name)
+        found.append((int(meta["order"]), name))
+    if not found:
+        sys.exit("no role directories under %s" % presets)
+    found.sort()
+    return [name for _order, name in found]
+
+
 def persona_prefix(src):
     lines = src.splitlines()
     start = None
@@ -151,20 +208,28 @@ def role_patch(standard, role_id, meta, prefix, codex):
     ) % (role_id, json.dumps(meta["name"], ensure_ascii=False), json.dumps(meta["description"], ensure_ascii=False), meta["order"])
     text = once(text, ID_BLOCK, "preset id").replace(ID_BLOCK, block, 1)
     text = once(text, PREFIX_LINE, "persona prefix").replace(PREFIX_LINE, yaml_prefix(prefix), 1)
-    if codex:
-        text = once(text, CODEX_ANCHOR, "codex anchor").replace(CODEX_ANCHOR, CODEX_ROW, 1)
+    codex_row = CODEX_ROW if codex else CODEX_OFF
+    text = once(text, CODEX_ANCHOR, "codex anchor").replace(CODEX_ANCHOR, codex_row, 1)
+    note = ""
+    if role_id in DENY_HEAVY:
+        text = once(text, WORKFLOW_PTC, "workflow-ptc").replace(WORKFLOW_PTC, WORKFLOW_PTC_OFF, 1)
+        text = once(text, TOOL_WORKFLOW, "tool-workflow").replace(TOOL_WORKFLOW, TOOL_WORKFLOW_OFF, 1)
+        note = (
+            "# Deny tool-ralph: row omitted. Deny workflow-worker-thread via workflow-ptc disabled.\n"
+        )
     header = (
         "# %s\n"
         "# Portal role %s, registered because rc.3 does not scan .agent-presets.\n"
         "# Same plugin list as preset-standard; persona is this role.\n"
-    ) % (MARKER, role_id)
+        "%s"
+    ) % (MARKER, role_id, note)
     return header + text
 
 
-def package_lists(pkg):
-    patch_lines = ['        "./presets/%s.patch.yml"' % role for role in ROLES]
+def package_lists(pkg, roles):
+    patch_lines = ['        "./presets/%s.patch.yml"' % role for role in roles]
     extra_patch = ",\n".join(patch_lines) + "\n"
-    extra_files = "".join('    "presets/%s.patch.yml",\n' % role for role in ROLES)
+    extra_files = "".join('    "presets/%s.patch.yml",\n' % role for role in roles)
     patch_old = '        "./presets/cordis.patch.yml"\n      ]'
     files_old = '    "presets/cordis.patch.yml",\n'
     pkg = once(pkg, patch_old, "bundle patch list").replace(
@@ -182,6 +247,23 @@ def seat_text(seat):
     return seat
 
 
+def row_text(body, row_id):
+    token = "              - id: %s\n" % row_id
+    start = body.find(token)
+    if start < 0:
+        token = "          - id: %s\n" % row_id
+        start = body.find(token)
+    if start < 0:
+        return ""
+    rest = body[start + len(token):]
+    cut = len(rest)
+    for candidate in ("\n              - id: ", "\n          - id: ", "\n        - id: "):
+        at = rest.find(candidate)
+        if at >= 0 and at < cut:
+            cut = at
+    return token + rest[:cut]
+
+
 def ok(root, standard_before):
     pkg = read(os.path.join(root, PKG))
     seat = read(os.path.join(root, SEAT))
@@ -192,7 +274,8 @@ def ok(root, standard_before):
         return False
     if 'import { isBuiltInPreset, presetDisplayText }' not in seat:
         return False
-    for role in ROLES:
+    roles = discover_roles(os.environ["PRESETS_SRC"])
+    for role in roles:
         if role in seat:
             return False
         rel = "presets/%s.patch.yml" % role
@@ -213,9 +296,27 @@ def ok(root, standard_before):
         prefix = persona_prefix(read(os.path.join(os.environ["PRESETS_SRC"], role, "agent.cordis.yml")))
         if prefix.split("\n", 1)[0] not in body:
             return False
-        has_codex = "toolName: subagent_codex" in body
-        if has_codex != (role == "dev-partner"):
+        if "\n          - id: tool-fs\n" in standard_before and "\n          - id: tool-fs\n" not in body:
             return False
+        codex = row_text(body, "tool-subagent-codex")
+        wants_codex = meta.get("codex") == "true"
+        if wants_codex:
+            if "toolName: subagent_codex" not in codex or "disabled:" in codex:
+                return False
+        elif "disabled: true" not in codex:
+            return False
+        if role in DENY_HEAVY:
+            if "disabled: true" not in row_text(body, "workflow-ptc"):
+                return False
+            if "disabled: true" not in row_text(body, "tool-workflow"):
+                return False
+            if "- id: tool-ralph" in body:
+                return False
+        else:
+            if "disabled:" in row_text(body, "workflow-ptc"):
+                return False
+            if "disabled:" in row_text(body, "tool-workflow"):
+                return False
     for mode in ("presetStandardName", "presetPtcName", "presetMinimalName", "presetCordisName"):
         if mode in seat:
             return False
@@ -242,17 +343,13 @@ def main():
             sys.exit("marker present but role registry is wrong")
         print("skip（已打）:", PKG)
         return
-    for role in ROLES:
+    roles = discover_roles(presets)
+    for role in roles:
         meta = flat_yaml(read(os.path.join(presets, role, "preset.yml")))
-        for key in ("name", "description", "order"):
-            if key not in meta or not meta[key]:
-                sys.exit("%s preset.yml missing %s" % (role, key))
-        if not meta["order"].isdigit():
-            sys.exit("%s order is not an integer" % role)
         prefix = persona_prefix(read(os.path.join(presets, role, "agent.cordis.yml")))
-        body = role_patch(standard, role, meta, prefix, role == "dev-partner")
+        body = role_patch(standard, role, meta, prefix, meta.get("codex") == "true")
         write(os.path.join(root, "packages/bundle/web-app/presets", role + ".patch.yml"), body)
-    write(pkg_path, package_lists(pkg))
+    write(pkg_path, package_lists(pkg, roles))
     write(seat_path, seat_text(seat))
     if not ok(root, standard):
         sys.exit("role registry failed its own check")

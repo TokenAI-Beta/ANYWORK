@@ -1,0 +1,9 @@
+# read-old → write-new. The panel lists only the four targets.
+# Blank and team-assistant become collab-default when that preset is registered.
+# An explicit standard choice is not rewritten.
+team-assistant: collab-default
+research-assistant: research-report
+doc-writer: formal-docs
+meeting-secretary: formal-docs
+data-organizer: eng-codex
+dev-partner: eng-codex

@@ -1,0 +1,6 @@
+name: 工程 Codex
+description: 读仓改功能、本地验证与提交流程；表格/CSV 清洗与口径核对也走这里；批量可开 Codex 并行。
+order: 40
+defaultHint: false
+codex: true
+whenToUse: codex-parallel-worktrees；改代码、PR、本地验证、CSV/报表/口径

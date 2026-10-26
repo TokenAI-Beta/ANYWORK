@@ -25,9 +25,9 @@ if ! grep -q "llm-deepseek" "$sf" 2>/dev/null; then
   { cat "$sf" 2>/dev/null || true; printf 'llm-deepseek:\n  baseURL: http://127.0.0.1:8100\n'; } > "$sf.tmp"
   mv "$sf.tmp" "$sf"
 fi
-# 新会话默认角色 = 团队助理
+# 新会话默认角色 = 协作默认
 if ! grep -q "agent-presets" "$sf" 2>/dev/null; then
-  { cat "$sf" 2>/dev/null || true; printf 'agent-presets:\n  default: team-assistant\n'; } > "$sf.tmp"
+  { cat "$sf" 2>/dev/null || true; printf 'agent-presets:\n  default: collab-default\n'; } > "$sf.tmp"
   mv "$sf.tmp" "$sf"
 fi
 
@@ -35,6 +35,7 @@ fi
 #    + file:plugin/dsh-client-ui-aqua（dsh-client-ui-aqua@1.4.2，不要 npm 1.3.1）
 #    + file:plugin/dsh-agents-md（dsh-agents-md@0.4.0）
 #    + dsh-chat-import@0.26.2（不要 0.19.3）。
+#    四张团队预设由镜像里的 dsh-features-connect-ac1.py 登记，这里不装 dsh-team-presets。
 #    wx-answerer 是微信编号作答，随 main 保留。better-sidebar 钉 npm 包 0.28.0，不回到 0.19.1。
 #    aqua、sidebar、agents-md、chat-import 都不在暂缓名单里。模板必须已经有 desk-panel，
 #    且没有仍暂缓的插件。不是 0.26.2 的 chat-import 先卸再按钉重装。

@@ -15,12 +15,10 @@ const usePath = join(root, 'deploy/docker/dsh-features-connect-use-path.py')
 const dockerfile = join(root, 'deploy/docker/Dockerfile')
 const presets = join(root, 'presets-template')
 const ROLES = [
-  'team-assistant',
-  'research-assistant',
-  'doc-writer',
-  'data-organizer',
-  'dev-partner',
-  'meeting-secretary',
+  'collab-default',
+  'research-report',
+  'formal-docs',
+  'eng-codex',
 ]
 
 const STANDARD = `# Agent preset standard
@@ -42,6 +40,10 @@ const STANDARD = `# Agent preset standard
                   toolName: subagent_fork
               - id: workflow-ptc
                 name: '@deepseek-ai/dsh-workflow-ptc'
+                config:
+                  provider: spawn
+              - id: tool-workflow
+                name: '@deepseek-ai/dsh-tool-workflow'
 `
 
 const PKG = `{
@@ -96,7 +98,7 @@ function run(dir, extra = {}) {
   })
 }
 
-test('registers the six portal ids and leaves the four engine rows alone', () => {
+test('registers the four portal ids and leaves the four engine rows alone', () => {
   const dir = mkdtempSync(join(tmpdir(), 'ac1-'))
   layout(dir)
   const standardPath = join(dir, 'packages/bundle/web-app/presets/standard.patch.yml')
@@ -117,13 +119,24 @@ test('registers the six portal ids and leaves the four engine rows alone', () =>
     assert.equal(body.includes('id: preset-standard'), false)
     assert.match(body, /prefix: \|/)
   }
-  const dev = readFileSync(join(dir, 'packages/bundle/web-app/presets/dev-partner.patch.yml'), 'utf8')
-  assert.match(dev, /"开发搭档"/)
-  assert.match(dev, /你是 DSH-ANYWORK 团队工作台的开发搭档/)
-  assert.match(dev, /toolName: subagent_codex/)
-  const team = readFileSync(join(dir, 'packages/bundle/web-app/presets/team-assistant.patch.yml'), 'utf8')
-  assert.match(team, /"团队助理"/)
-  assert.equal(team.includes('subagent_codex'), false)
+  const eng = readFileSync(join(dir, 'packages/bundle/web-app/presets/eng-codex.patch.yml'), 'utf8')
+  assert.match(eng, /"工程 Codex"/)
+  assert.match(eng, /工程搭档：读仓改功能、本地验证、PR/)
+  assert.match(eng, /toolName: subagent_codex/)
+  assert.equal(eng.includes('disabled: true'), false)
+  const collab = readFileSync(join(dir, 'packages/bundle/web-app/presets/collab-default.patch.yml'), 'utf8')
+  assert.match(collab, /"协作默认"/)
+  assert.match(collab, /团队默认协作助手；先问清目标再动手；遵循团队写作与数据规范。/)
+  assert.match(collab, /id: tool-subagent-codex\n {16}name: '@deepseek-ai\/dsh-tool-subagent'\n {16}disabled: true/)
+  const research = readFileSync(join(dir, 'packages/bundle/web-app/presets/research-report.patch.yml'), 'utf8')
+  const formal = readFileSync(join(dir, 'packages/bundle/web-app/presets/formal-docs.patch.yml'), 'utf8')
+  for (const body of [research, formal]) {
+    assert.match(body, /id: workflow-ptc\n {16}name: '@deepseek-ai\/dsh-workflow-ptc'\n {16}disabled: true/)
+    assert.match(body, /id: tool-workflow\n {16}name: '@deepseek-ai\/dsh-tool-workflow'\n {16}disabled: true/)
+    assert.match(body, /id: tool-subagent-codex[\s\S]*?disabled: true/)
+    assert.equal(body.includes('- id: tool-ralph'), false)
+    assert.match(body, /workflow-worker-thread/)
+  }
   const seat = readFileSync(join(dir, 'packages/client/ui-agent-preset/src/client/AgentPresetSeat.tsx'), 'utf8')
   assert.match(seat, /isBuiltInPreset\(option\)/)
   assert.match(seat, /import \{ isBuiltInPreset, presetDisplayText \}/)
@@ -174,11 +187,12 @@ test('image build registers roles before the client bundle and keeps the third s
 })
 
 test('presets-template role files are still the source of the persona text', () => {
-  const dev = readFileSync(join(presets, 'dev-partner/preset.yml'), 'utf8')
-  const agent = readFileSync(join(presets, 'dev-partner/agent.cordis.yml'), 'utf8')
-  assert.match(dev, /^name: 开发搭档$/m)
-  assert.match(dev, /^codex: true$/m)
+  const eng = readFileSync(join(presets, 'eng-codex/preset.yml'), 'utf8')
+  const agent = readFileSync(join(presets, 'eng-codex/agent.cordis.yml'), 'utf8')
+  assert.match(eng, /^name: 工程 Codex$/m)
+  assert.match(eng, /^codex: true$/m)
   assert.match(agent, /prefix: >-/)
-  assert.match(agent, /开发搭档/)
+  assert.match(agent, /工程搭档：读仓改功能、本地验证、PR/)
   assert.equal(readFileSync(script, 'utf8').includes('cp -r'), false)
+  assert.equal(readFileSync(script, 'utf8').includes('team-assistant'), false)
 })

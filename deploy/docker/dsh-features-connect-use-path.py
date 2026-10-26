@@ -74,8 +74,8 @@ NEW_ZH_NOTE = """      "asst.note": "团队角色是人格与工具组合，和�
       "asst.sessionFail": "新建会话失败",
       "asst.defaultSaved": "已设为默认，之后新建的会话使用这个角色",
       "asst.defaultFail": "设为默认失败",
-      "asst.codexHelpTitle": "开发搭档用法",
-      "asst.codexHelp": "选用开发搭档后，会话里可以派 Codex 子代理。徽章「Codex 并行」表示这个能力。技能「Codex 并行（worktree）」是 git worktree 并行流程，不是这个徽章。",
+      "asst.codexHelpTitle": "工程 Codex 用法",
+      "asst.codexHelp": "选用工程 Codex 后，会话里可以派 Codex 子代理。徽章「Codex 并行」表示这个能力。技能「Codex 并行（worktree）」是 git worktree 并行流程，不是这个徽章。",
       "asst.openSettings": "设置 → Agent 预设","""
 
 OLD_EN_NOTE = '      "asst.note": "An assistant = a preset persona + tool set. Default choice: Settings → Agent presets; add or remove directories under presets/ in the shared area — applies to new sessions.",'
@@ -94,7 +94,7 @@ NEW_EN_NOTE = """      "asst.note": "Team roles are a persona plus a tool set, a
 OLD_ZH_HINT = '      "skl.hint": "点击任意技能查看全文；新增 = 往共享区 skills/ 放一个文件夹，各实例自动分发。",'
 NEW_ZH_HINT = """      "skl.hint": "默认只显示标题和一句何时用；点开才看全文。新增 = 往共享区 skills/ 放一个文件夹，各实例自动分发。",
       "skl.codexWorktree": "Codex 并行（worktree）",
-      "skl.codexWorktreeWhen": "这是 worktree 并行流程。会话里的「Codex 并行」徽章是开发搭档的子代理，不是本技能。",
+      "skl.codexWorktreeWhen": "这是 worktree 并行流程。会话里的「Codex 并行」徽章是工程 Codex 的子代理，不是本技能。",
       "skl.teamReport": "团队报告写作规范",
       "skl.missing": "缺依赖：","""
 
@@ -551,7 +551,7 @@ def use_ok(text):
         return False
     if text.count('"skl.codexWorktree": "Codex 并行（worktree）"') != 1:
         return False
-    if text.count('"asst.codexHelpTitle": "开发搭档用法"') != 1:
+    if text.count('"asst.codexHelpTitle": "工程 Codex 用法"') != 1:
         return False
     if text.count('"asst.codex": "Codex 并行"') != 1:
         return False

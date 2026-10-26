@@ -4863,6 +4863,8 @@ body[data-ds-dark-theme] .ddp .agpill.cur { color:#e0b25c; }
     var ROLE_ICON = {
       "team-assistant": "assist", "research-assistant": "search", "doc-writer": "pen",
       "data-organizer": "table", "dev-partner": "code", "meeting-secretary": "clipboard",
+      "collab-default": "assist", "research-report": "search", "formal-docs": "pen",
+      "eng-codex": "code",
       standard: "package", minimal: "terminal", ptc: "braces", cordis: "sparkle",
     };
     function roleIcon(id) { return ROLE_ICON[id] || "assist"; }
