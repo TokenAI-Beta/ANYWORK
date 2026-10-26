@@ -62,6 +62,14 @@ RUN DSH_SRC=/src/deepseek-harness python3 /tmp/dsh-sidebar-work-group-bots-vault
 # 脚本要求 DSH_SRC。不打 Windows 检出。
 COPY deploy/docker/dsh-sidebar-chat-import-open.py /tmp/dsh-sidebar-chat-import-open.py
 RUN DSH_SRC=/src/deepseek-harness python3 /tmp/dsh-sidebar-chat-import-open.py
+# 账户卡卸掉面板「更多」（panels.more）。左侧栏与右侧栏不再出现「浏览更多插件」。
+# 「创建你的插件」挂到扩展卡「插件」面板的工具条上，仍走原来的 Creator 草稿
+# （cordis 预设、左侧栏提示语、不发送）。底栏账号菜单（设置 / 登录）不动。
+# 必须排在 chat-import-open 之后、pnpm build 之前。不改三卡归属，不改登录 URL，
+# 不改 DSH_REF，不卸 desk-auto。脚本要求 DSH_SRC。不打 Windows 检出。
+# chat-import-open 的成功检查仍要求账户卡上有 PanelMoreMenu，本步之后不能重跑它。
+COPY deploy/docker/dsh-sidebar-more-to-plugins.py /tmp/dsh-sidebar-more-to-plugins.py
+RUN DSH_SRC=/src/deepseek-harness python3 /tmp/dsh-sidebar-more-to-plugins.py
 WORKDIR /src/deepseek-harness
 RUN pnpm install
 RUN pnpm build
