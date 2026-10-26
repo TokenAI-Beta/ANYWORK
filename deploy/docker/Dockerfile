@@ -70,6 +70,11 @@ RUN DSH_SRC=/src/deepseek-harness python3 /tmp/dsh-sidebar-chat-import-open.py
 # chat-import-open 的成功检查仍要求账户卡上有 PanelMoreMenu，本步之后不能重跑它。
 COPY deploy/docker/dsh-sidebar-more-to-plugins.py /tmp/dsh-sidebar-more-to-plugins.py
 RUN DSH_SRC=/src/deepseek-harness python3 /tmp/dsh-sidebar-more-to-plugins.py
+# 新会话模式胶囊（标准 / PTC / 极简 / 创造）旁加一句：团队角色在设置 → Agent 预设。
+# 不把六个角色塞进这个下拉，不改四模式文案，不改侧栏三卡。必须排在 more-to-plugins
+# 之后、pnpm build 之前。脚本要求 DSH_SRC。不打 Windows 检出。
+COPY deploy/docker/dsh-agent-preset-mode-hint.py /tmp/dsh-agent-preset-mode-hint.py
+RUN DSH_SRC=/src/deepseek-harness python3 /tmp/dsh-agent-preset-mode-hint.py
 WORKDIR /src/deepseek-harness
 RUN pnpm install
 RUN pnpm build

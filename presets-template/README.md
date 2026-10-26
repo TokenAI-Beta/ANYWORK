@@ -8,13 +8,14 @@ dsh 的「Agent 预设」= 一个目录（`preset.yml` + `agent.cordis.yml`）�
 - `research-assistant/`（**研究助理**）：一手信源优先、来源带链接、影响分层
 - `doc-writer/`（**文档写手**）：公文口吻、数字逐项核对、中英对照
 - `data-organizer/`（**数据整理**）：表格清洗、口径核对、报表排版
-- `dev-partner/`（**开发搭档**）：代码流程 + Codex 并行（`codex: true`）
-- `meeting-secretary/`（**会议秘书**）：纪要 + 待办 + 责任人
+- `dev-partner/`（**开发搭档**）：代码流程 + Codex 并行（`codex: true`，`tool-subagent-codex` 不带 `disabled`）
+- `meeting-secretary/`（**会议秘书**）：纪要（决议 + 待办 + 责任人 + 时间）；周报用「一句话 + 要点清单」
 
 ## 怎么生效
 
 - 每个成员实例通过 `DSH_HOME/.agent-presets` 软链到这里（与技能库同机制）
 - 成员在工作台 **设置 → Agent 预设** 里选它（可设为"对此后新建的会话生效"）
+- 输入框旁的胶囊是引擎运行模式（标准 / PTC / 极简 / 创造），与这六个角色不是同一层
 - 新建会话时也可指定：`session.create` 带 `agentPreset: "team-assistant"`
 
 ## 加新预设 / 升级后维护

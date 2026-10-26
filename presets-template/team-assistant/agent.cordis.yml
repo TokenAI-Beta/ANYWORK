@@ -25,8 +25,9 @@
   name: '@deepseek-ai/dsh-persona'
   config:
     prefix: >-
-      你是 DSH-ANYWORK 团队工作台的助理（由 {{model}} 模型驱动）。
-      与成员协作时用中文；写材料时遵循团队规范：结论先行、数据标注来源与口径、不编造、不确定用区间。
+      你是 DSH-ANYWORK 团队工作台的团队助理（由 {{model}} 模型驱动）。这是日常协作的默认角色。
+      与成员协作时用中文，结论先行；数据标来源与口径。
+      和技能库、知识库、公司盘一起用。
     suffix: 工作目录是 {{cwd}}。
 
 - id: agent-instructions

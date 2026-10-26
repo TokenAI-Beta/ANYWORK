@@ -17,6 +17,9 @@ cp -rn "$repo/kb-template/." "$home/desk-data/kb/" 2>/dev/null || true
 cp -rn "$repo/drive-template/." "$home/desk-data/drive/" 2>/dev/null || true
 cp -rn "$repo/skills-template/." "$home/desk-data/skills/" 2>/dev/null || true
 cp -rn "$repo/presets-template/." "$home/desk-data/presets/" 2>/dev/null || true
+# cp -rn 不覆盖已有卷。本刀钉死六角色文案 / persona，并让开发搭档的 Codex 行真正启用。
+# 戳记不一致时只覆盖这六个 id 的 preset.yml 与 agent.cordis.yml。
+bash "$repo/deploy/docker/refresh-shipped-presets.sh" "$repo" "$home"
 cp -rn "$repo/agents-template/." "$home/desk-data/agents/" 2>/dev/null || true
 for s in desk-notify desk-remind desk-kb; do
   if [ -f "$repo/scripts/$s" ]; then install -m 755 "$repo/scripts/$s" "$home/desk-data/bin/$s"; fi
