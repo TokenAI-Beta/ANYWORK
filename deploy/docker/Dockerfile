@@ -54,6 +54,14 @@ RUN DSH_SRC=/src/deepseek-harness python3 /tmp/dsh-sidebar-groups.py
 # 脚本要求 DSH_SRC。不打 Windows 检出。
 COPY deploy/docker/dsh-sidebar-work-group-bots-vault.py /tmp/dsh-sidebar-work-group-bots-vault.py
 RUN DSH_SRC=/src/deepseek-harness python3 /tmp/dsh-sidebar-work-group-bots-vault.py
+# 扩展卡「导入会话」点开：导入 tab 挂在对话壳的右侧栏。主面板（插件）或
+# desk 整页（机器人 / 资料库等 .ddp.fv）盖住对话壳时，点击只把 tab 打开在
+# 盖层下面。本步在扩展卡 chat-import 的点击捕获里先回到对话（selectPanel(null)），
+# 并派发 desk-fv 关掉整页。必须排在 work-group 之后、pnpm build 之前。
+# 不改三卡归属，不改 dsh-chat-import@0.26.2，不改登录 URL，不改 DSH_REF。
+# 脚本要求 DSH_SRC。不打 Windows 检出。
+COPY deploy/docker/dsh-sidebar-chat-import-open.py /tmp/dsh-sidebar-chat-import-open.py
+RUN DSH_SRC=/src/deepseek-harness python3 /tmp/dsh-sidebar-chat-import-open.py
 WORKDIR /src/deepseek-harness
 RUN pnpm install
 RUN pnpm build
