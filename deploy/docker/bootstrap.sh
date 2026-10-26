@@ -110,14 +110,14 @@ done < "$home/.desk/run/instances.tsv"
 # ── 5) 各实例插件 ──
 # 本地 Docker 引擎是 dsh-v0.2.1-rc.3。安装 desk-panel、dsh-wx-answerer，
 # 钉死的 npm 包 dsh-better-sidebar@0.28.0（不要 0.19.1），
-# 以及仓内 file:plugin/dsh-client-ui-aqua（dsh-client-ui-aqua@1.4.2，不要 npm 1.3.1）。
+# 仓内 file:plugin/dsh-client-ui-aqua（dsh-client-ui-aqua@1.4.2，不要 npm 1.3.1），
+# 以及仓内 file:plugin/dsh-agents-md（dsh-agents-md@0.4.0）。
 # dsh-wx-answerer 是 main 上的微信编号作答（PR #1），继续安装，不在暂缓名单里。
-# better-sidebar 与 aqua 同样不在暂缓名单里：整容器重启要把它们留在卷上。
-# 下面两个仍不装：agents-md 在宿主侧会炸，chat-import 的 peer 盖不住 rc.3。
-# 已有卷里若还在，启动时卸掉。
+# better-sidebar、aqua、agents-md 都不在暂缓名单里：整容器重启要把它们留在卷上。
+# chat-import 仍不装（peer 盖不住 rc.3）。已有卷里若还在，启动时卸掉。
 # 恢复顺序见 docs/0.2-plugin-api-breakpoints.md：
-#   微信通知桥 → Bots / rooms → agents-md / chat-import
-DEFERRED_PLUGINS=(dsh-agents-md dsh-chat-import)
+#   微信通知桥 → Bots / rooms → chat-import
+DEFERRED_PLUGINS=(dsh-chat-import)
 
 install_plugin() { # $1=成员 $2=安装 spec $3=检测键（依赖名） $4=可选完整性探针（文件存在才算就绪）
   local u="$1" spec="$2" key="$3" probe="${4:-}"
@@ -189,6 +189,30 @@ reinstall_aqua_unless_pinned() { # $1=成员
   DSH_HOME="$home/desk-test/$u" node "$dsh" plugin --profile web remove dsh-client-ui-aqua >/dev/null 2>&1 || true
 }
 
+# install_plugin 只看包名。已是 0.4.0 且副本与仓库一致则留下。
+# 旧安装（含 link: 的 0.3.0）先卸，否则 add 报 already-installed。不要用 link: 装回去。
+reinstall_agents_md_unless_pinned() { # $1=成员
+  local u="$1"
+  local profile="$home/desk-test/$u/profiles/web"
+  local pkg="$profile/package.json"
+  local root="$profile/node_modules/dsh-agents-md"
+  local installed="$root/package.json"
+  local src="$repo/plugin/dsh-agents-md"
+  [ -f "$pkg" ] || return 0
+  grep -q '"dsh-agents-md"' "$pkg" || return 0
+  if [ -f "$installed" ] \
+    && grep -Eq '"version"[[:space:]]*:[[:space:]]*"0\.4\.0"' "$installed" \
+    && cmp -s "$src/package.json" "$installed" \
+    && cmp -s "$src/index.js" "$root/index.js" \
+    && cmp -s "$src/lib/catalog.js" "$root/lib/catalog.js" \
+    && cmp -s "$src/lib/scan.js" "$root/lib/scan.js" \
+    && cmp -s "$src/cordis.patch.yml" "$root/cordis.patch.yml"; then
+    return 0
+  fi
+  log "dsh-agents-md 不是 file: 0.4.0 副本，卸下后按钉重装（$u）"
+  DSH_HOME="$home/desk-test/$u" node "$dsh" plugin --profile web remove dsh-agents-md >/dev/null 2>&1 || true
+}
+
 # file: 装过一次后，清单变更不会自动进 profile。engines.dsh 变了就卸掉再装。
 reinstall_desk_panel_if_manifest_drifted() { # $1=成员
   local u="$1"
@@ -206,10 +230,12 @@ while IFS=$'\t' read -r u p h; do
   reinstall_desk_panel_if_manifest_drifted "$u"
   reinstall_sidebar_unless_pinned "$u"
   reinstall_aqua_unless_pinned "$u"
+  reinstall_agents_md_unless_pinned "$u"
   install_plugin "$u" "file:$repo/plugin/desk-panel" "dsh-desk-panel" || true
   install_plugin "$u" "link:$repo/plugin/dsh-wx-answerer" "dsh-wx-answerer" || true
   install_plugin "$u" "dsh-better-sidebar@0.28.0" "dsh-better-sidebar" || true
   install_plugin "$u" "file:$repo/plugin/dsh-client-ui-aqua" "dsh-client-ui-aqua" || true
+  install_plugin "$u" "file:$repo/plugin/dsh-agents-md" "dsh-agents-md" || true
 done < "$home/.desk/run/instances.tsv"
 
 # ── 5c) desk-panel 前端副本强制同步（幂等，原地写保 inode）──
