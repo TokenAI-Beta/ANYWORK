@@ -88,6 +88,11 @@ RUN DSH_SRC=/src/deepseek-harness PRESETS_SRC=/tmp/anywork-presets-template pyth
 # AC1 不改 index.ts。脚本要求 DSH_SRC。不打 Windows 检出。
 COPY deploy/docker/dsh-preset-alias.py /tmp/dsh-preset-alias.py
 RUN DSH_SRC=/src/deepseek-harness python3 /tmp/dsh-preset-alias.py
+# 聊天壳 Decision B：气泡、六个 token、技能行 reveal、Lexical 短代码块。
+# 不改别名表，不改 agent.cordis，不加 Electron 标题栏 / 双 424 / 整屏玻璃。
+# 必须排在 preset-alias 之后、pnpm build 之前。脚本要求 DSH_SRC。不打 Windows 检出。
+COPY deploy/docker/dsh-chat-shell-ui.py /tmp/dsh-chat-shell-ui.py
+RUN DSH_SRC=/src/deepseek-harness python3 /tmp/dsh-chat-shell-ui.py
 WORKDIR /src/deepseek-harness
 RUN pnpm install
 RUN pnpm build
@@ -143,6 +148,10 @@ RUN ANYWORK_SRC=/opt/anywork python3 /opt/anywork/deploy/docker/dsh-sidebar-bots
 # 分组已在 dsbuild、pnpm build 之前打进 SidebarRoot，这里不改 harness，不改 DSH_REF。
 # 脚本要求 ANYWORK_SRC。仓内未打补丁的 client.js 仍是「团队资料」，Windows 检出不会跑到。
 RUN ANYWORK_SRC=/opt/anywork python3 /opt/anywork/deploy/docker/dsh-sidebar-work-group-bots-vault.py
+# 四卡角色色：边条 / 圆点，不改气泡填色，不改能力面与别名。
+# 必须排在 use-path 与后续侧栏脚本之后（那些脚本的成功检查还认旧卡片）。
+# 只打 /opt/anywork 副本。脚本要求 ANYWORK_SRC。不打 Windows 检出，不改 DSH_REF。
+RUN ANYWORK_SRC=/opt/anywork python3 /opt/anywork/deploy/docker/dsh-chat-shell-ui.py
 
 COPY --from=dsbuild /src/deepseek-harness /opt/deepseek-harness
 
