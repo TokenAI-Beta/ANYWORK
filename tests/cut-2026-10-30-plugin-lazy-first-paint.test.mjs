@@ -176,6 +176,7 @@ test('desktop shell items stay outside this patch', () => {
     'packages/client/modules/src/client/entries.ts',
     'packages/client/modules/src/client/manifest.ts',
     'packages/client/modules/src/index.ts',
+    'packages/client/ui-settings-account/src/client/index.ts',
     'packages/client/web/src/boot.ts',
   ])
 })
