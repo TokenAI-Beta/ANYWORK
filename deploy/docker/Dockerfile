@@ -93,6 +93,11 @@ RUN DSH_SRC=/src/deepseek-harness python3 /tmp/dsh-preset-alias.py
 # 必须排在 preset-alias 之后、pnpm build 之前。脚本要求 DSH_SRC。不打 Windows 检出。
 COPY deploy/docker/dsh-chat-shell-ui.py /tmp/dsh-chat-shell-ui.py
 RUN DSH_SRC=/src/deepseek-harness python3 /tmp/dsh-chat-shell-ui.py
+# 首屏只预加载进台壳（侧栏 / 新会话）所需插件；其余 /plugins/?? 合并包进台后再拉。
+# 非关键插件失败只出重试条，不把整页打成 HARNESS「Failed to load plugins」。
+# 不改侧栏用量、不改 AC1b、不改 DSH_REF。必须排在 pnpm build 之前。脚本要求 DSH_SRC。
+COPY deploy/docker/dsh-plugin-lazy-first-paint.py /tmp/dsh-plugin-lazy-first-paint.py
+RUN DSH_SRC=/src/deepseek-harness python3 /tmp/dsh-plugin-lazy-first-paint.py
 WORKDIR /src/deepseek-harness
 RUN pnpm install
 RUN pnpm build
