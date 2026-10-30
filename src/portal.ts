@@ -632,13 +632,8 @@ if(!fr||fr.getAttribute('data-desk-collapsed')==='true')return;
 if(!t.closest('[class*=sidebarCol]'))return;
 var hit=t.closest('[class*=sessionRow]')||t.closest('[class*=newSession]');
 if(!hit)return;
-if(t.closest('[role="menu"],[role="dialog"],button[aria-haspopup],button[aria-expanded="true"]'))return;
-setTimeout(function(){
-try{
-if(document.querySelector('[role="menu"],[data-state="open"]'))return;
-deskCloseDrawer(0);
-}catch(_){deskCloseDrawer(0);}
-},260);
+/* cut 2026-10-30 mobile-more-sidebar-stay AC1b: close on session/new only; no broad menu/open guards */
+setTimeout(function(){deskCloseDrawer(0);},260);
 }catch(_){}},true);
 }catch(_){}}
 wireRowClose();
