@@ -95,12 +95,17 @@ COPY deploy/docker/dsh-chat-shell-ui.py /tmp/dsh-chat-shell-ui.py
 RUN DSH_SRC=/src/deepseek-harness python3 /tmp/dsh-chat-shell-ui.py
 # 首屏只预加载进台壳（侧栏 / 新会话）所需插件；其余 /plugins/?? 合并包进台后再拉。
 # 非关键插件失败只出重试条，不把整页打成 HARNESS「Failed to load plugins」。
-# 不改侧栏用量、不改 AC1b、不改 DSH_REF。必须排在 pnpm build 之前。脚本要求 DSH_SRC。
+# Cut 2026-10-30 plugin-lazy-retry：重试条再跑 activateDeferred（拆掉未 ACTIVE 的
+# managed 再拉）；settings-account 的桌面引导图拆成按需 chunk。不改侧栏用量、
+# 不改 AC1b、不改 AccountMenu、不改 DSH_REF。必须排在 pnpm build 之前。脚本要求 DSH_SRC。
 COPY deploy/docker/dsh-plugin-lazy-first-paint.py /tmp/dsh-plugin-lazy-first-paint.py
 RUN DSH_SRC=/src/deepseek-harness python3 /tmp/dsh-plugin-lazy-first-paint.py
 WORKDIR /src/deepseek-harness
 RUN pnpm install
 RUN pnpm build
+# Cut 2026-10-30 plugin-lazy-retry: account client.js must stay under the
+# 768KiB deferred cap, with onboarding webp in a separate chunk.
+RUN DSH_SRC=/src/deepseek-harness python3 /tmp/dsh-plugin-lazy-first-paint.py --check-account-bundle
 # 原生载荷（native/system）：默认构建只做 host-addon-only，*不会*产出静态 musl 的
 # Landlock 启动器 bin/landlock-run（它需要 musl-tools，见上面的 apt 安装）。
 # 缺它时容器内 Linux 沙箱链（bwrap → Landlock）两档运行器皆不可用 → agent 的
