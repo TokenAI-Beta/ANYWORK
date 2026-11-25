@@ -93,6 +93,11 @@ RUN DSH_SRC=/src/deepseek-harness python3 /tmp/dsh-preset-alias.py
 # 必须排在 preset-alias 之后、pnpm build 之前。脚本要求 DSH_SRC。不打 Windows 检出。
 COPY deploy/docker/dsh-chat-shell-ui.py /tmp/dsh-chat-shell-ui.py
 RUN DSH_SRC=/src/deepseek-harness python3 /tmp/dsh-chat-shell-ui.py
+# 一套主题 token + body[data-ds-dark-theme] 根切换（外观偏好只写这一处）。
+# 深色黑底白字，浅色白底黑字；会话消息去掉气泡。不改插件懒加载。
+# 必须排在 chat-shell 之后、plugin-lazy 与 pnpm build 之前。脚本要求 DSH_SRC。
+COPY deploy/docker/dsh-theme-tokens-root-switch.py /tmp/dsh-theme-tokens-root-switch.py
+RUN DSH_SRC=/src/deepseek-harness python3 /tmp/dsh-theme-tokens-root-switch.py
 # 首屏只预加载进台壳（侧栏 / 新会话）所需插件；其余 /plugins/?? 合并包进台后再拉。
 # 非关键插件失败只出重试条，不把整页打成 HARNESS「Failed to load plugins」。
 # 不改侧栏用量、不改 AC1b、不改 DSH_REF。必须排在 pnpm build 之前。脚本要求 DSH_SRC。
@@ -157,6 +162,9 @@ RUN ANYWORK_SRC=/opt/anywork python3 /opt/anywork/deploy/docker/dsh-sidebar-work
 # 必须排在 use-path 与后续侧栏脚本之后（那些脚本的成功检查还认旧卡片）。
 # 只打 /opt/anywork 副本。脚本要求 ANYWORK_SRC。不打 Windows 检出，不改 DSH_REF。
 RUN ANYWORK_SRC=/opt/anywork python3 /opt/anywork/deploy/docker/dsh-chat-shell-ui.py
+# 会话里的气泡样式改成纯文字。必须排在 chat-shell 的 desk 半段之后。
+# 不改 DSH_REF，不改插件懒加载。脚本要求 ANYWORK_SRC。
+RUN ANYWORK_SRC=/opt/anywork python3 /opt/anywork/deploy/docker/dsh-theme-tokens-root-switch.py
 
 COPY --from=dsbuild /src/deepseek-harness /opt/deepseek-harness
 

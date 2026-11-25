@@ -464,11 +464,24 @@ const DESK_MOBILE_CSS = `
   [class*="LVqHyW_header"] { padding: 4px 8px 4px 14px !important; }
   [class*="LVqHyW_header"] [class*="LVqHyW_actions"] { display: none !important; }
   [class*="LVqHyW_close"] { width: 40px !important; height: 40px !important; margin-left: 8px !important; }
-  /* 侧边栏抽屉化：展开时覆盖在内容上（不再压扁主内容）；不压暗、点右侧不自动收起（边看运行边用侧栏；关闭用收起钮/收起侧边栏） */
+  /* 侧栏：整屏贴边抽屉（popup-r2）。不压扁主内容，无浮窗、无拖条。颜色由壳 token，不在这里填色。 */
   [data-desk-frame]:not([data-desk-collapsed="true"]) { grid-template-columns: 0px minmax(0px, 1fr) 0px !important; }
   [data-desk-frame]:not([data-desk-collapsed="true"]) [class*="centerCol"] { grid-column: 2 !important; width: 100% !important; }
-  [data-desk-frame]:not([data-desk-collapsed="true"]) [class*="sidebarCol"] { position: fixed !important; left: 12px !important; top: 12px !important; bottom: 12px !important; margin: 0 !important; box-sizing: border-box !important; width: min(64vw, 280px) !important; height: auto !important; z-index: 70 !important; border-radius: 14px !important; box-shadow: 0 18px 60px rgba(8,12,20,.42) !important; }
+  [data-desk-frame]:not([data-desk-collapsed="true"]) [class*="sidebarCol"] {
+    position: fixed !important; left: 0 !important; top: 0 !important; right: 0 !important; bottom: 0 !important;
+    margin: 0 !important; box-sizing: border-box !important; width: 100% !important; max-width: none !important;
+    height: auto !important; z-index: 200 !important; border-radius: 0 !important; box-shadow: none !important;
+  }
+  [data-desk-frame]:not([data-desk-collapsed="true"]) [class*="sidebarCol"] > div {
+    margin: 0 !important; border-radius: 0 !important; box-shadow: none !important; border-width: 0 !important;
+    backdrop-filter: none !important; -webkit-backdrop-filter: none !important;
+  }
   [data-desk-frame]:not([data-desk-collapsed="true"]) [class*="handle"] { display: none !important; }
+  [data-desk-frame]:not([data-desk-collapsed="true"]) .haTdLq_root:not(.haTdLq_collapsed) .haTdLq_logoRow { flex-direction: row-reverse !important; justify-content: flex-end !important; gap: 6px !important; }
+  [data-desk-frame]:not([data-desk-collapsed="true"]) .haTdLq_root:not(.haTdLq_collapsed) .haTdLq_toggle svg { display: none !important; }
+  [data-desk-frame]:not([data-desk-collapsed="true"]) .haTdLq_root:not(.haTdLq_collapsed) .haTdLq_toggle::after { content: "✕"; font-size: 17px; line-height: 1; color: currentColor; }
+  [class*="sidebarCol"] { touch-action: manipulation; -webkit-tap-highlight-color: transparent; }
+  html[data-desk-wb] [data-dsh-aqua-ambient], html[data-desk-wb][data-dsh-aqua] canvas { display: none !important; }
   /* 主界面微调（第 4 项）：触控尺寸 / 输入字号 */
   [class*="CtUWPa_row"] button { min-width: 38px !important; min-height: 38px !important; }
   button[aria-label="发送消息"], button[aria-label="send message" i] { min-width: 44px !important; min-height: 44px !important; }
@@ -483,12 +496,6 @@ const DESK_MOBILE_CSS = `
   body { --dsw-font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", "Helvetica Neue", Helvetica, Arial, sans-serif !important; }
   [data-dsh-float] [role="treeitem"], [data-dsh-float] [role="dialog"] h2 { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", "Helvetica Neue", Helvetica, Arial, sans-serif !important; }
   [role="tooltip"] { display: none !important; }
-  /* 侧边栏从上往下缩：顶边把手拖拽 + clip 裁切（底边固定，最底部一行常驻）；打字（键盘弹起）时近扁平状态自动让位 */
-  [data-desk-frame][data-desk-sbshrink] [class*="sidebarCol"] { bottom: 12px !important; height: auto !important; overflow: hidden !important; transition: opacity .18s ease !important; }
-  html.desk-sb-typing [data-desk-frame]:not([data-desk-collapsed="true"]) [class*="sidebarCol"] { opacity: 0 !important; pointer-events: none !important; }
-  html.desk-sb-typing #desk-sb-grip { opacity: 0 !important; pointer-events: none !important; }
-  #desk-sb-grip { position: fixed; height: 34px; z-index: 75; align-items: center; justify-content: center; touch-action: none; cursor: grab; }
-  #desk-sb-grip > span { width: 46px; height: 20px; border-radius: 10px; background: #2c3340; border: 1px solid #475063; color: #9aa4b8; font-size: 11px; line-height: 18px; text-align: center; user-select: none; -webkit-user-select: none; letter-spacing: 1px; box-shadow: 0 2px 10px rgba(0,0,0,.4); }
 }
 
 /* 侧栏区域可滚动：底部 footer 按钮会压住树里最后几行工作区（实测 Ungrouped 行被 Import 按钮盖住） */
@@ -608,8 +615,6 @@ if(lastBlur===t&&Date.now()-lastBlurAt<400)return;
 setTimeout(function(){try{lastBlur=t;lastBlurAt=Date.now();t.blur();}catch(x){}},0);}catch(x){}},true);
 stripTitles();}catch(e){}}
 function boot(){if(!find())return false;
-if(!g){g=document.createElement('div');g.id='desk-sb-grip';g.innerHTML='<span>\u22ef</span>';
-g.style.display='none';document.body.appendChild(g);wireDrag();}
 if(!boot.__wired){boot.__wired=1;
 wireMobileUx();
 
@@ -625,32 +630,37 @@ var bs=document.querySelectorAll('button'),b=null;
 for(var i=0;i<bs.length;i++){var a=bs[i].getAttribute('aria-label')||'';if(a==='收起侧边栏'||a==='Collapse sidebar'){b=bs[i];break;}}
 if(b)b.click();
 }catch(_){}}
+function deskText(el){try{
+var n=el.closest('button,[role="button"],a')||el.closest('[class*=sessionRow],[class*=newSession]');
+if(!n)return '';
+return ((n.getAttribute('aria-label')||'')+' '+(n.innerText||'')).replace(/\s+/g,' ').trim();
+}catch(e){return '';}}
+function deskIsAc1Stay(el){
+if(el.closest('[class*=sessionRow]')||el.closest('[class*=newSession]'))return false;
+var s=deskText(el);
+if(!s||!/更多|More/.test(s))return false;
+if(/新会话|New chat|New session|自动化|Automation|插件|Plugins/i.test(s))return false;
+return true;}
+function deskIsAc1bHit(el){try{
+if(el.closest('[class*=newSession]'))return true;
+var s=deskText(el);if(!s)return false;
+if(/新会话|New chat|New session/i.test(s))return true;
+if(/自动化|Automation/i.test(s))return true;
+if(/插件|Plugins/i.test(s))return true;
+return false;}catch(e){return false;}}
 document.addEventListener('click',function(ev){try{
 var t=ev.target;if(!t||!t.closest)return;
 var fr=document.querySelector('[data-desk-frame]');
 if(!fr||fr.getAttribute('data-desk-collapsed')==='true')return;
 if(!t.closest('[class*=sidebarCol]'))return;
-var hit=t.closest('[class*=sessionRow]')||t.closest('[class*=newSession]');
+if(deskIsAc1Stay(t))return;
+var hit=t.closest('[class*=sessionRow]')||deskIsAc1bHit(t);
 if(!hit)return;
 /* cut 2026-10-30 mobile-more-sidebar-stay AC1b: close on session/new only; no broad menu/open guards */
 setTimeout(function(){deskCloseDrawer(0);},260);
 }catch(_){}},true);
 }catch(_){}}
 wireRowClose();
-function deskTheme(){try{
-var dk=(document.documentElement.style.colorScheme||'light')==='dark';
-var h=document.documentElement;
-if(dk)h.setAttribute('data-desk-dark','');else h.removeAttribute('data-desk-dark');
-if(document.body){
-if(dk){if(!document.body.hasAttribute('data-ds-dark-theme'))document.body.setAttribute('data-ds-dark-theme','');}
-else if(document.body.hasAttribute('data-ds-dark-theme')){document.body.removeAttribute('data-ds-dark-theme');}
-}
-}catch(_){}}
-if(document.body)deskTheme();else document.addEventListener('DOMContentLoaded',deskTheme);
-setInterval(deskTheme,1500);
-
-
-
 document.addEventListener('focusin',function(e){var t=e.target;
 focused=!!(t&&t.closest&&t.closest('[contenteditable="true"]'));if(focused)focusAt=Date.now();apply();});
 document.addEventListener('focusout',function(){setTimeout(function(){var a=document.activeElement;
@@ -793,7 +803,7 @@ export function startPortal(opts: PortalOptions) {
       // —— 工作台内小组件：移动端样式 + 用量 JSON ——
       if (req.method === 'GET' && path === '/portal/static/desk-mobile.css') {
         res.writeHead(200, { 'content-type': 'text/css; charset=utf-8', 'cache-control': 'no-cache' })
-        return res.end(DESK_MOBILE_CSS + DESK_MOBILE_THEME_CSS)
+        return res.end(DESK_MOBILE_CSS)
       }
       if (req.method === 'GET' && path === '/portal/api/usage') {
         if (!user) {
@@ -2626,124 +2636,3 @@ export function startPortal(opts: PortalOptions) {
   console.log(`[portal] listening on http://${opts.host}:${opts.port}`)
   return server
 }
-
-const DESK_MOBILE_THEME_CSS = `
-@media (max-width: 820px){html[data-desk-wb][data-desk-dark] body{
-  --dsw-alias-bg-base: #151515 !important;
-  --dsw-alias-bg-layer-1: #1E1E1D !important;
-  --dsw-alias-bg-layer-2: #262625 !important;
-  --dsw-alias-bg-layer-3: #2E2D2B !important;
-  --dsw-alias-bg-module-platform: #1A1A19 !important;
-  --dsw-alias-bg-multi-select: #262625 !important;
-  --dsw-alias-bg-skeleton: rgba(255,255,255,0.06) !important;
-  --dsw-alias-label-primary: #F0EFEC !important;
-  --dsw-alias-label-primary-dimmed: #DDDBD3 !important;
-  --dsw-alias-label-primary-bluish: #DDDBD3 !important;
-  --dsw-alias-label-secondary: #A8A69D !important;
-  --dsw-alias-label-caption: #A19E95 !important;
-  --dsw-alias-label-primary-inverted: #FFFFFF !important;
-  --dsw-alias-border-l1: rgba(255,255,255,0.08) !important;
-  --dsw-alias-border-l2: rgba(255,255,255,0.14) !important;
-  --dsw-alias-border-l4: rgba(255,255,255,0.28) !important;
-  --dsw-alias-border-inverted: rgba(255,255,255,0.08) !important;
-  --dsw-alias-border-inverted2: rgba(255,255,255,0.08) !important;
-  --dsw-alias-border-l2-darkmode-thin: rgba(255,255,255,0.10) !important;
-  --dsw-alias-button-primary-fill: #D97757 !important;
-  --dsw-alias-button-primary-hover: #E08A6A !important;
-  --dsw-alias-button-primary-dimmed: #4A2E22 !important;
-  --dsw-alias-brand-primary-new-colorprimary-new-color: #D97757 !important;
-  --dsw-alias-brand-primary: #F0EFEC !important;
-  --dsw-alias-interactive-bg-hover: rgba(255,255,255,0.07) !important;
-  --dsw-alias-interactive-bg-active: rgba(255,255,255,0.12) !important;
-  --dsw-alias-interactive-bg-hover-solid: #232322 !important;
-  --dsw-alias-interactive-bg-hover-accent: rgba(217,119,87,0.18) !important;
-  --dsw-alias-sidebar-nav-item-active-accent: #D97757 !important;
-  --dsw-specific-sidebar-nav-item-active-accent: #D97757 !important;
-  --dsw-alias-button-elevated-fill: #1E1E1D !important;
-  --dsw-alias-button-floating-fill: #1E1E1D !important;
-  --dsw-alias-tooltip-bg: #2E2D2B !important;
-  --dsw-alias-toast-bg: #2E2D2B !important;
-  --dsw-alias-bg-mask-1: rgba(0,0,0,0.55) !important;
-  --dsw-alias-bg-mask-2: rgba(0,0,0,0.35) !important;
-  --dsw-alias-bg-mask-3: rgba(0,0,0,0.55) !important;
-  --dsw-alias-bg-mask-drop: rgba(21,21,21,0.72) !important;
-  --dsw-alias-button-ghost-active-border: rgba(255,255,255,0.30) !important;
-  --dsw-elevation-stroke-color: rgba(255,255,255,0.16) !important;
-  --dsh-aqua-spot-color: hsla(15, 63%, 60%, 0.10) !important;
-  --dsw-alias-scrollbar-bg-l1: rgba(255,255,255,0.15) !important;
-  --dsw-alias-scrollbar-bg-l2: rgba(255,255,255,0.25) !important;
-  --dsw-alias-button-tool-bar-fill: rgba(38,38,37,0.65) !important;
-  --dsw-alias-button-tool-bar-fill-invisible: rgba(38,38,37,0.35) !important;
-  --dsw-alias-state-business-primary: #D97757 !important;
-  --dsw-alias-button-info-fill: #D97757 !important;
-  background: #151515 !important;
-}
-html[data-desk-dark][data-dsh-aqua] canvas{ display: none !important; }
-html[data-desk-dark] [class*="CtUWPa_card"]{ background: rgba(255,255,255,0.06) !important; border-color: rgba(255,255,255,0.12) !important; }
-html[data-desk-dark] [class*="CtUWPa_placeholder"]{ color: #A19E95 !important; }
-html[data-desk-dark] [class*="CtUWPa_add"]{ background: rgba(255,255,255,0.07) !important; color: #C9C6BD !important; }
-html[data-desk-dark] [class*="gb7XDG_chevron"], html[data-desk-dark] [class*="vtjdUa_triggerEffort"]{ color: #A19E95 !important; }
-html[data-desk-dark] [class*="CtUWPa_card"] button[aria-label*="发送"], html[data-desk-dark] [class*="CtUWPa_card"] button[aria-label*="send" i]{
-  background: #D97757 !important; border-color: #D97757 !important; color: #FFFFFF !important;
-}
-html[data-desk-dark] [class*="CtUWPa_card"] [class*="CtUWPa_primary"]{
-  background: #D97757 !important; border-color: #D97757 !important; color: #FFFFFF !important;
-}
-html[data-desk-wb][data-desk-dark] [data-desk-frame]:not([data-desk-collapsed="true"]) [class*="sidebarCol"]{
-  left: 0 !important; top: 0 !important; bottom: 0 !important;
-  width: 100% !important; max-width: none !important;
-  border-radius: 0 !important; box-shadow: none !important;
-  background: #111111 !important;
-}
-html[data-desk-wb][data-desk-dark] [data-desk-frame]:not([data-desk-collapsed="true"]) [class*="sidebarCol"] .haTdLq_root, html[data-desk-wb][data-desk-dark] [data-desk-frame]:not([data-desk-collapsed="true"]) [class*="sidebarCol"] > div{
-  background: transparent !important; border: 0 !important; box-shadow: none !important;
-  backdrop-filter: none !important; -webkit-backdrop-filter: none !important;
-}
-html[data-desk-wb][data-desk-dark] [data-desk-frame]:not([data-desk-collapsed="true"]) [class*="sidebarCol"] .haTdLq_root{
-  padding: 0 20px !important;
-}
-html[data-desk-wb][data-desk-dark] .haTdLq_brandIdentity .haTdLq_brandName{
-  font-size: 17px !important; font-weight: 600 !important; color: #F0EFEC !important;
-}
-html[data-desk-wb][data-desk-dark] .haTdLq_toggle svg{ width: 18px !important; height: 18px !important; }
-html[data-desk-wb][data-desk-dark] .haTdLq_newSession{
-  width: 100% !important; height: 46px !important; border-radius: 12px !important;
-  background: rgba(255,255,255,0.07) !important; border: 0 !important;
-  color: #F0EFEC !important; font-size: 15px !important;
-}
-html[data-desk-wb][data-desk-dark] .haTdLq_newSession:hover{ background: rgba(255,255,255,0.10) !important; }
-html[data-desk-wb][data-desk-dark] ._4ccpTW_sectionHeader{ font-size: 13px !important; color: #A8A69D !important; }
-html[data-desk-wb][data-desk-dark] ._root_1b2ny_3{
-  min-height: 40px !important; border-radius: 10px !important;
-  font-size: 15px !important; color: #D9D7D0 !important;
-}
-html[data-desk-wb][data-desk-dark] ._root_1b2ny_3:hover{ background: rgba(255,255,255,0.05) !important; }
-html[data-desk-wb][data-desk-dark] .haTdLq_footerActions > div > button, html[data-desk-wb][data-desk-dark] .haTdLq_footerActions > div > div{
-  width: 100% !important; height: 40px !important; border-radius: 10px !important;
-  font-size: 15px !important; color: #D9D7D0 !important;
-}
-html[data-desk-wb][data-desk-dark] .haTdLq_footerActions > div > button:hover, html[data-desk-wb][data-desk-dark] .haTdLq_footerActions > div > div:hover{ background: rgba(255,255,255,0.05) !important; }
-html[data-desk-wb][data-desk-dark] .LVqHyW_triggerRow{ border-radius: 10px !important; height: 48px !important; }
-html[data-desk-wb][data-desk-dark] ._9USomq_sessionRow{ box-shadow: none !important; }
-html[data-desk-wb][data-desk-dark] ._9USomq_sessionRow._9USomq_selected, html[data-desk-wb][data-desk-dark] ._9USomq_sessionRow._9USomq_sel{
-  background: rgba(255,255,255,0.10) !important;
-  box-shadow: none !important;
-  border-radius: 10px !important;
-}
-html[data-desk-wb][data-desk-dark] [data-desk-frame]:not([data-desk-collapsed="true"]) .haTdLq_root:not(.haTdLq_collapsed) .haTdLq_logoRow{ flex-direction: row-reverse !important; justify-content: flex-end !important; gap: 6px !important; }
-html[data-desk-wb][data-desk-dark] [data-desk-frame]:not([data-desk-collapsed="true"]) .haTdLq_root:not(.haTdLq_collapsed) .haTdLq_toggle svg{ display: none !important; }
-html[data-desk-wb][data-desk-dark] [data-desk-frame]:not([data-desk-collapsed="true"]) .haTdLq_root:not(.haTdLq_collapsed) .haTdLq_toggle::after{
-  content: "✕"; font-size: 17px; line-height: 1; color: #E8E6DE;
-}
-html[data-desk-wb][data-desk-dark] #desk-sb-grip{ display: none !important; }
-html[data-desk-wb][data-desk-dark] [class*="sidebarCol"], html[data-desk-wb][data-desk-dark] [class*="sidebarCol"] button, html[data-desk-wb][data-desk-dark] ._9USomq_sessionRow, html[data-desk-wb][data-desk-dark] ._9USomq_projectRow, html[data-desk-wb][data-desk-dark] ._root_1b2ny_3, html[data-desk-wb][data-desk-dark] .haTdLq_newSession{
-  touch-action: manipulation;
-  -webkit-tap-highlight-color: transparent;
-}
-@media (hover: none){html[data-desk-wb][data-desk-dark] ._root_1b2ny_3:hover{ background: transparent !important; }
-html[data-desk-wb][data-desk-dark] .haTdLq_newSession:hover{ background: rgba(255,255,255,0.07) !important; }
-html[data-desk-wb][data-desk-dark] .haTdLq_footerActions > div > button:hover, html[data-desk-wb][data-desk-dark] .haTdLq_footerActions > div > div:hover{ background: transparent !important; }}
-html[data-desk-wb][data-desk-dark]:not([data-dsh-aqua]) [class*="sidebarCol"]{ background: #111111 !important; }
-html[data-desk-wb][data-desk-dark]:not([data-dsh-aqua]) [class*="bubble"]{ background: rgba(255,255,255,0.10) !important; }
-html[data-desk-wb][data-desk-dark]:not([data-dsh-aqua]) pre, html[data-desk-wb][data-desk-dark]:not([data-dsh-aqua]) code{ background: rgba(255,255,255,0.08) !important; }}
-`;
