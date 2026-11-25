@@ -34,6 +34,19 @@ Shell items this patch does not edit: portal AC1b drawer close
 `data-desk-usage-mount`), and More → Usage. DSH_REF stays
 dsh-v0.2.1-rc.3. No Tokyo rollback path.
 
+Cut 2026-10-30 plugin-lazy-retry (follow-up, same script):
+
+- The retry bar calls ``activateDeferred`` again. ``retry()`` only
+  reconciles, and a failed deferred row is already in ``managed``, so a
+  second pass used to skip it. Non-ACTIVE deferred rows are removed from
+  the loader first. ``@deepseek-ai/dsh-client-ui-settings-account`` and
+  ``dsh-better-sidebar`` activate after the other deferred rows.
+- Desktop onboarding art (~2.4MB of webp) is a package-local chunk,
+  loaded when that overlay renders. The account entry (menu, Account)
+  stays on the deferred combo and must fit under the 768KiB cap. Web
+  does not mount the overlay, so the art is not a first-wave request.
+  AccountMenu is not edited.
+
 Invoked only from deploy/docker/Dockerfile with
 DSH_SRC=/src/deepseek-harness. DSH_SRC is required.
 """
@@ -41,8 +54,11 @@ import os
 import sys
 
 MARKER = "cut 2026-10-30 plugin-lazy-first-paint"
+RETRY_MARKER = "cut 2026-10-30 plugin-lazy-retry"
 
 MANIFEST = "packages/client/modules/src/client/manifest.ts"
+ACCOUNT = "packages/client/ui-settings-account/src/client/index.ts"
+LAZY = "packages/client/ui-settings-account/src/client/LazyDesktopOnboardingEntry.tsx"
 INDEX = "packages/client/modules/src/index.ts"
 ENTRIES = "packages/client/modules/src/client/entries.ts"
 BOOT = "packages/client/web/src/boot.ts"
@@ -270,13 +286,34 @@ ACTIVATE_OLD = """  private publish(snapshot: ClientEntryState): void {"""
 ACTIVATE_NEW = """  /**
    * Load rows kept off the first-paint path. Per-row failures stay on
    * {@link state} and do not reject, so a dropped script cannot replace the
-   * desk. {@link retry} fetches them again.
+   * desk.
+   * A later pass drops non-ACTIVE deferred rows from the loader and fetches
+   * them again. {@link retry} only reconciles, and the failed row is already
+   * in {@link managed}, so it would not see them. Settings-account and
+   * better-sidebar run last (cut 2026-10-30 plugin-lazy-retry).
    * @returns the deferred failures still outstanding after this pass.
    */
   async activateDeferred(): Promise<readonly { readonly id: string; readonly message: string }[]> {
     const loader = this.loader
     if (loader === undefined) throw new Error('client-modules: entries have not started')
-    const pending = this.desired.plugins.filter(row => row.deferred === true && !this.managed.has(row.id))
+    const deferred = this.desired.plugins.filter(row => row.deferred === true)
+    const pending: Array<typeof deferred[number]> = []
+    for (const row of deferred) {
+      const entry = this.managed.get(row.id)
+      if (entry?.fiber?.state === ACTIVE) continue
+      if (entry !== undefined) {
+        const fiber = entry.fiber
+        loader.remove(entry.id)
+        this.managed.delete(row.id)
+        this.revisions.delete(row.id)
+        removeOwnedStyles(row.id)
+        while (fiber?.inertia !== undefined) await fiber.inertia
+      }
+      pending.push(row)
+    }
+    const late = (id: string): boolean =>
+      id === '@deepseek-ai/dsh-client-ui-settings-account' || id === 'dsh-better-sidebar'
+    pending.sort((left, right) => Number(late(left.id)) - Number(late(right.id)))
     if (pending.length === 0) return this.snapshot.failures
     const pendingIds = new Set(pending.map(row => row.id))
     this.publish({
@@ -363,8 +400,9 @@ DISPOSE_NEW = """  /** Fetch deferred plugins after the desk is mounted. Failure
     button.style.cssText = 'height:32px;padding:0 12px;border:0;border-radius:8px;background:#f4efe6;color:#3a2a1a;font:inherit;cursor:pointer'
     button.addEventListener('click', () => {
       button.disabled = true
-      void this.modules.entries.retry().then(() => {
-        const left = this.modules.entries.state.getSnapshot().failures
+      // cut 2026-10-30 plugin-lazy-retry: retry() only reconciles. Deferred
+      // failures are already in managed, so the bar must activateDeferred again.
+      void this.modules.entries.activateDeferred().then(left => {
         if (left.length === 0) bar.remove()
         else button.disabled = false
       }, () => {
@@ -379,6 +417,38 @@ DISPOSE_NEW = """  /** Fetch deferred plugins after the desk is mounted. Failure
 
   /** Dispose the client plugin tree and whichever page owns the mount point. */
   async dispose(): Promise<void> {"""
+
+# Value import pulls the onboarding webp into client.js. Type-only stays erased.
+ACCOUNT_IMPORT_OLD = """import { DesktopOnboardingEntry, type DesktopOnboardingInjected } from './DesktopOnboardingEntry.tsx'"""
+ACCOUNT_IMPORT_NEW = """import type { DesktopOnboardingInjected } from './DesktopOnboardingEntry.tsx'
+import { LazyDesktopOnboardingEntry } from './LazyDesktopOnboardingEntry.tsx'"""
+
+ACCOUNT_REGISTER_OLD = """}, DesktopOnboardingEntry))"""
+ACCOUNT_REGISTER_NEW = """}, LazyDesktopOnboardingEntry))"""
+
+LAZY_BODY = """/** Load desktop onboarding art only when that overlay renders.
+ * cut 2026-10-30 plugin-lazy-retry
+ */
+import { lazy, Suspense, type ReactNode } from 'react'
+import type { InjectFace, PropsLocale, PropsRuntime } from '@deepseek-ai/dsh-client-ui-slots'
+import type { DesktopOnboardingInjected } from './DesktopOnboardingEntry.tsx'
+
+const LoadedDesktopOnboardingEntry = lazy(async () => ({
+  default: (await import('./DesktopOnboardingEntry.tsx')).DesktopOnboardingEntry,
+}))
+
+/**
+ * Suspend while the package-local onboarding chunk arrives.
+ * Web never mounts this, so the ~2.4MB webp stay off the deferred combo.
+ * @param props - shell overlay bindings and account-owned actions.
+ * @returns the deferred desktop introduction.
+ */
+export function LazyDesktopOnboardingEntry(
+  props: PropsRuntime<'shell.overlay'> & PropsLocale<'settings.account'> & InjectFace<DesktopOnboardingInjected>,
+): ReactNode {
+  return <Suspense fallback={null}><LoadedDesktopOnboardingEntry {...props} /></Suspense>
+}
+"""
 
 EDITS = [
     (MANIFEST, PHASE_OLD, PHASE_NEW),
@@ -396,6 +466,8 @@ EDITS = [
     (BOOT, TOTAL_OLD, TOTAL_NEW),
     (BOOT, MOUNT_OLD, MOUNT_NEW),
     (BOOT, DISPOSE_OLD, DISPOSE_NEW),
+    (ACCOUNT, ACCOUNT_IMPORT_OLD, ACCOUNT_IMPORT_NEW),
+    (ACCOUNT, ACCOUNT_REGISTER_OLD, ACCOUNT_REGISTER_NEW),
 ]
 
 
@@ -429,11 +501,56 @@ def read(src, rel):
         return handle.read()
 
 
+def write_lazy(src):
+    path = os.path.join(src, LAZY)
+    os.makedirs(os.path.dirname(path), exist_ok=True)
+    current = ""
+    if os.path.isfile(path):
+        with open(path, encoding="utf-8") as handle:
+            current = handle.read()
+    if current == LAZY_BODY:
+        return
+    with open(path, "w", encoding="utf-8") as handle:
+        handle.write(LAZY_BODY)
+
+
+def check_account_bundle(src):
+    """Fail the image build if the account entry is still one multi-MB deferred script."""
+    lib = os.path.join(src, "packages/client/ui-settings-account/lib")
+    entry = os.path.join(lib, "client.js")
+    if not os.path.isfile(entry):
+        sys.exit(f"missing {entry}")
+    cap = 768 * 1024
+    size = os.path.getsize(entry)
+    with open(entry, encoding="utf-8", errors="replace") as handle:
+        text = handle.read()
+    if size > cap:
+        sys.exit(
+            f"settings-account client.js is {size} bytes, over the {cap}-byte deferred combo cap"
+        )
+    if "data:image/webp;base64," in text:
+        sys.exit("settings-account client.js still inlines onboarding webp")
+    art = []
+    if os.path.isdir(lib):
+        for name in sorted(os.listdir(lib)):
+            if name == "client.js" or not name.endswith(".js") or not name.startswith("client."):
+                continue
+            path = os.path.join(lib, name)
+            with open(path, encoding="utf-8", errors="replace") as handle:
+                if "data:image/webp;base64," in handle.read():
+                    art.append(name)
+    if not art:
+        sys.exit("settings-account onboarding art chunk was not emitted")
+    print(f"settings-account client.js is {size} bytes; onboarding art is a separate chunk")
+
+
 def verify(src):
     manifest = read(src, MANIFEST)
     index = read(src, INDEX)
     entries = read(src, ENTRIES)
     boot = read(src, BOOT)
+    account = read(src, ACCOUNT)
+    lazy = read(src, LAZY)
     checks = [
         (manifest, "export type WebBootBatchPhase = 'bootstrap' | 'application' | 'deferred'"),
         (manifest, "deferred?: boolean"),
@@ -454,6 +571,15 @@ def verify(src):
         (boot, "data-dsh-plugin-retry"),
         (boot, "Some plugins did not finish loading."),
         (boot, MARKER),
+        (boot, RETRY_MARKER),
+        (entries, "loader.remove(entry.id)"),
+        (entries, "entry?.fiber?.state === ACTIVE"),
+        (entries, "'@deepseek-ai/dsh-client-ui-settings-account'"),
+        (entries, "'dsh-better-sidebar'"),
+        (entries, RETRY_MARKER),
+        (account, "LazyDesktopOnboardingEntry"),
+        (lazy, "import('./DesktopOnboardingEntry.tsx')"),
+        (lazy, RETRY_MARKER),
     ]
     for text, needle in checks:
         if needle not in text:
@@ -470,14 +596,28 @@ def verify(src):
     preload_loop = index.split("for (const batch of application)", 1)[1].split("for (const batch of bootstrap)", 1)[0]
     if "deferred" in preload_loop:
         sys.exit("application preload loop mentions deferred batches")
+    click = boot.split("button.addEventListener('click'", 1)[1].split("bar.append", 1)[0]
+    if ".retry()" in click:
+        sys.exit("plugin retry bar still calls retry()")
+    if "activateDeferred()" not in click:
+        sys.exit("plugin retry bar does not call activateDeferred")
+    if "import { DesktopOnboardingEntry" in account:
+        sys.exit("settings-account still statically imports the onboarding art graph")
+    if "dsh-better-sidebar" in index or "ui-settings-account" in index:
+        sys.exit("lazy-load patch must not pull account or better-sidebar into the shell closure")
 
 
 def main():
     src = require_src()
+    if "--check-account-bundle" in sys.argv:
+        check_account_bundle(src)
+        return
     for rel, old, new in EDITS:
         apply_edit(src, rel, old, new)
+    write_lazy(src)
     verify(src)
     print(f"{MARKER}: shell combos stay on first paint; other plugins load after mount")
+    print(f"{RETRY_MARKER}: retry re-activates deferred rows; account art is its own chunk")
 
 
 if __name__ == "__main__":
