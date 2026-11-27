@@ -110,7 +110,7 @@ NEW_TRIGGER = """      var trigger = h("button", { className: "ddb" + (wide ? ""
       );
       if (!embedded && !open) return h("div", null, trigger);"""
 
-OLD_RETURN = """      return h("div", null, trigger, h("div", { key: "panel", className: "ddp" + (wide ? " fv" : "") },
+OLD_RETURN = """      return h("div", null, trigger, h("div", { key: "panel", className: "ddp fv" },
         h("div", { className: "hd" },
           h("span", { className: "ico" }, dicon("bots", 22)),
           h("div", { style: { flex: 1, minWidth: 0 } },
@@ -123,7 +123,7 @@ OLD_RETURN = """      return h("div", null, trigger, h("div", { key: "panel", cl
       ));
     }"""
 NEW_RETURN = """      if (embedded) return h("div", { className: "bot-agents" }, kids);
-      return h("div", null, trigger, h("div", { key: "panel", className: "ddp" + (wide ? " fv" : "") },
+      return h("div", null, trigger, h("div", { key: "panel", className: "ddp fv" },
         h("div", { className: "hd" },
           h("span", { className: "ico" }, dicon("bots", 22)),
           h("div", { style: { flex: 1, minWidth: 0 } },

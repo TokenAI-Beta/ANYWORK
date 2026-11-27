@@ -1517,7 +1517,8 @@ window.__ModuleLoader__.load({
 .ddp .ug-row { display:flex; gap:12px; align-items:baseline; padding:5px 0; border-bottom:1px solid var(--dsw-alias-border-l2, #e8eaed); font-size:12.5px; }
 @media (max-width: 820px) { .duc-wrap { display:none !important; } }
 @media (max-width: 820px) {
-  .ddp.fv { left:0; border-left:0; }
+  /* cut 2026-10-31 sidebar-restore-fv: full-viewport sheet, not the 56px rail */
+  .ddp.fv { position:fixed; left:0; top:0; right:0; bottom:0; width:auto; max-width:none; height:auto; max-height:none; border-radius:0; border-left:0; transform:none; }
   .ddp.fv::before { display:none; }
   .ddp.fv .hd { padding:12px 16px 11px; }
   .ddp.fv .tabs { width:auto; margin:12px 0 0; }
@@ -1800,6 +1801,8 @@ body[data-ds-dark-theme] .ddp .agpill.cur { color:#e0b25c; }
             if (has !== document.body.classList.contains("desk-panel-open")) {
               document.body.classList.toggle("desk-panel-open", has);
             }
+            fvUntrap();
+            fvTrapKick();
           } catch (e) {}
         };
         var start = function () {
@@ -3225,6 +3228,99 @@ body[data-ds-dark-theme] .ddp .agpill.cur { color:#e0b25c; }
     var FV_SEQ = 0;
     var _fvObs = null;
     var _fvObsEl = null;
+    // The desk-panel-open observer can kick a frame before this line runs. `= 0` would drop it.
+    var _fvTrapRaf = _fvTrapRaf || 0;
+    function fvMobile() {
+      try { return !!(window.matchMedia && window.matchMedia("(max-width: 820px)").matches); } catch (e) { return false; }
+    }
+    function fvNeedsUntrap(el) {
+      var cls = "";
+      try { cls = (el.getAttribute && el.getAttribute("class")) || ""; } catch (e) { cls = ""; }
+      if (cls.indexOf("sidebarCol") >= 0) return true;
+      var c = null;
+      try { c = window.getComputedStyle(el); } catch (e2) { return false; }
+      if (!c) return false;
+      if (c.transform && c.transform !== "none") return true;
+      if (c.filter && c.filter !== "none") return true;
+      var bf = c.backdropFilter || c.webkitBackdropFilter || "";
+      if (bf && bf !== "none") return true;
+      if (c.perspective && c.perspective !== "none") return true;
+      var contain = c.contain || "";
+      if (contain && contain !== "none" && contain !== "normal") return true;
+      var wc = c.willChange || "";
+      if (wc.indexOf("transform") >= 0 || wc.indexOf("filter") >= 0 || wc.indexOf("perspective") >= 0) return true;
+      return false;
+    }
+    function fvPinAncestor(el) {
+      el.style.setProperty("transform", "none", "important");
+      el.style.setProperty("filter", "none", "important");
+      el.style.setProperty("-webkit-backdrop-filter", "none", "important");
+      el.style.setProperty("backdrop-filter", "none", "important");
+      el.style.setProperty("perspective", "none", "important");
+      el.style.setProperty("contain", "none", "important");
+      el.style.setProperty("will-change", "auto", "important");
+      el.setAttribute("data-desk-fv-untrap", "1");
+    }
+    function fvClearAncestor(el) {
+      el.style.removeProperty("transform");
+      el.style.removeProperty("filter");
+      el.style.removeProperty("-webkit-backdrop-filter");
+      el.style.removeProperty("backdrop-filter");
+      el.style.removeProperty("perspective");
+      el.style.removeProperty("contain");
+      el.style.removeProperty("will-change");
+      el.removeAttribute("data-desk-fv-untrap");
+    }
+    function fvClearSheet(panel) {
+      var props = ["position", "left", "top", "right", "bottom", "width", "max-width", "height", "max-height", "transform"];
+      for (var i = 0; i < props.length; i++) panel.style.removeProperty(props[i]);
+      panel.removeAttribute("data-desk-fv-untrap");
+    }
+    function fvPinSheet(panel) {
+      panel.style.setProperty("position", "fixed", "important");
+      panel.style.setProperty("left", "0", "important");
+      panel.style.setProperty("top", "0", "important");
+      panel.style.setProperty("right", "0", "important");
+      panel.style.setProperty("bottom", "0", "important");
+      panel.style.setProperty("width", "auto", "important");
+      panel.style.setProperty("max-width", "none", "important");
+      panel.style.setProperty("height", "auto", "important");
+      panel.style.setProperty("max-height", "none", "important");
+      panel.style.setProperty("transform", "none", "important");
+      panel.setAttribute("data-desk-fv-untrap", "1");
+    }
+    /* cut 2026-10-31 sidebar-restore-fv: keep .ddp.fv on the viewport if the rail collapses or aqua transforms the column */
+    function fvUntrap() {
+      var mobile = fvMobile();
+      var panels = document.querySelectorAll(".ddp.fv");
+      var marked = document.querySelectorAll("[data-desk-fv-untrap]");
+      if (!mobile || !panels.length) {
+        for (var i = 0; i < marked.length; i++) {
+          var n = marked[i];
+          if (n.classList && n.classList.contains("ddp")) fvClearSheet(n);
+          else fvClearAncestor(n);
+        }
+        return;
+      }
+      for (var p = 0; p < panels.length; p++) {
+        var panel = panels[p];
+        fvPinSheet(panel);
+        var el = panel.parentElement;
+        while (el && el !== document.body && el !== document.documentElement) {
+          if (el.getAttribute("data-desk-fv-untrap") === "1" || fvNeedsUntrap(el)) fvPinAncestor(el);
+          el = el.parentElement;
+        }
+      }
+    }
+    function fvTrapKick() {
+      if (_fvTrapRaf) return;
+      var step = function () {
+        _fvTrapRaf = 0;
+        try { fvUntrap(); } catch (e) { /* 忽略 */ }
+        if (document.querySelector(".ddp.fv") && fvMobile()) _fvTrapRaf = requestAnimationFrame(step);
+      };
+      _fvTrapRaf = requestAnimationFrame(step);
+    }
     function fvMeasure() {
       var left = 0;
       try {
@@ -3237,6 +3333,7 @@ body[data-ds-dark-theme] .ddp .agpill.cur { color:#e0b25c; }
         }
       } catch (e) { /* 忽略 */ }
       try { document.documentElement.style.setProperty("--desk-fv-left", left + "px"); } catch (e) { /* 忽略 */ }
+      try { fvTrapKick(); } catch (e) { /* 忽略 */ }
       try {
         var sc2 = document.querySelector('[class*="sidebarCol"]');
         if (sc2 && sc2 !== _fvObsEl && window.ResizeObserver) {
@@ -4205,7 +4302,7 @@ body[data-ds-dark-theme] .ddp .agpill.cur { color:#e0b25c; }
       kids.push(runDrawerEl());
       kids.push(drawerEl());
 
-      return h("div", null, trigger, h("div", { key: "panel", className: "ddp" + (wide ? " fv" : "") },
+      return h("div", null, trigger, h("div", { key: "panel", className: "ddp fv" },
         h("div", { className: "hd" },
           h("span", { className: "ico" }, dicon("bots", 22)),
           h("div", { style: { flex: 1, minWidth: 0 } },
@@ -4792,14 +4889,14 @@ body[data-ds-dark-theme] .ddp .agpill.cur { color:#e0b25c; }
       }
       bodyKids.push(modalEl());
 
-      return h("div", null, trigger, h("div", { key: "panel", className: "ddp" + (wide ? " fv" : "") },
+      return h("div", null, trigger, h("div", { key: "panel", className: "ddp fv" },
         h("div", { className: "hd" },
           h("span", { className: "ico" }, dicon("bots", 22)),
           h("div", { style: { flex: 1, minWidth: 0 } },
             h("div", { className: "t1" }, "Bots"),
             h("div", { className: "t2" }, tr("bts.sub"))
           ),
-          h("button", { className: "x", onClick: function () { setOpen(false); } }, "← " + tr("fv.back"))
+          h("button", { className: "x", onClick: function () { setOpen(false); } }, tr("fv.back"))
         ),
         h("div", { className: "bd" }, bodyKids)
       ));

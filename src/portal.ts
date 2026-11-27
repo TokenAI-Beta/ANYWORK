@@ -630,6 +630,8 @@ var t=ev.target;if(!t||!t.closest)return;
 var fr=document.querySelector('[data-desk-frame]');
 if(!fr||fr.getAttribute('data-desk-collapsed')==='true')return;
 if(!t.closest('[class*=sidebarCol]'))return;
+/* cut 2026-10-31 sidebar-restore-fv: .ddb/.ddp (机器人/资料库/用量 and the same desk sheets) do not arm the 56px rail */
+if(t.closest('.ddb')||t.closest('.ddp'))return;
 var hit=t.closest('[class*=sessionRow]')||t.closest('[class*=newSession]');
 if(!hit)return;
 /* cut 2026-10-30 mobile-more-sidebar-stay AC1b: close on session/new only; no broad menu/open guards */
